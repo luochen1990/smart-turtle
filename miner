@@ -1,0 +1,41 @@
+--lua
+os.loadAPI('rom/luo/api') ; for k , v in pairs(api) do loadstring(string.format("%s = api.%s" , k , k))() end ;
+
+slots = {
+	[1] = {fuel} ;
+	[2] = {stuff-1} ;
+	[3] = {...} ;
+} ;
+slot.checkList(slots , 2) ;
+
+miner = function(slots , forwardDis , digDis)
+	workMode.destroy = true ;
+	workMode.force = true ;
+	workMode.tryTime = 30 ;
+
+	f = function()
+		if (status.pos.y - status.pos.z * 2 + 100) % 5 == 0 then
+			link(scan('f' , forwardDis) , digExcept(slots , digDis)) ;
+		end ;
+	end ;
+	link(scan('l' , 6) , scan('u' , 6) , f) ;
+	status.turnTo('f') ;
+	slot.packUpAll() ;
+end ;
+
+args = {...} ;
+if #args < 1 or #args > 3 then
+	print("useage: miner slots [forwardDis] [digDis]") ;
+else
+	for k , v in ipairs(args) do
+		args[k] = tonumber(v) ;
+	end ;
+	if #args == 1 then
+		miner(args[1] , 100 , 1) ;
+	elseif #args == 2 then
+		miner(args[1] , args[2] , 1) ;
+	elseif #args == 3 then
+		miner(args[1] , args[2] , args[3]) ;
+	end ;
+end ;
+

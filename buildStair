@@ -1,0 +1,40 @@
+--lua
+os.loadAPI('rom/luo/api') ; for k , v in pairs(api) do loadstring(string.format("%s = api.%s" , k , k))() end ;
+
+slots = {
+	[1] = {'fuel'} ;
+	[2] = {'stair'} ;
+	[3] = {'platform'} ;
+} ;
+slot.checkList(slots) ;
+
+buildStair = function(hole , width , height)
+	workMode.destroy = true ;
+	workMode.force = true ;
+	move.go({x = width , y = width - 1}) ;
+	while status.pos.z < height do
+		move.go({x = 2}) ;
+		for i = 1 , hole do
+			link(scan('r' , width) , withParam(place.back , {2})) ;
+			move.go({x = 1 , z = 1}) ;
+		end ;
+		move.back() ;
+		link(scan('r' , width) , scan('f' , width) , withParam(place.down , {3})) ;
+		status.reset({pos = {x = 0 , y = 0 , z = 0} , dir = 'l'}) ;
+	end ;
+	move.to({x = 0 , y = 0}) ;
+	move.to({x = 0 , y = 0 , z = 0}) ;
+end ;
+
+local args = {...} ;
+for k , v in ipairs(args) do
+	args[k] = tonumber(v) ;
+end ;
+if #args == 3 then
+	buildStair(args[1] , args[2] , args[3]) ;
+	status.turnTo('f') ;
+	slot.packUpAll() ;
+else
+	print ("useage: buildStair holewidth width height") ;
+end
+

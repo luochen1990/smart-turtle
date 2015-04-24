@@ -1,0 +1,41 @@
+--lua
+os.loadAPI('rom/luo/printer3d') ;
+
+local args = {...} ;
+if #args ~= 2 then
+	print ('useage: printEDome a b (a >= b)') ;
+	return ;
+end ;
+
+slots = {
+	[1] = {'fuel'} ;
+	[2] = {'block'} ;
+} ;
+slot.checkList(slots) ;
+
+getBlueprint = function(a , b)
+	local ori = pos(b , a , 0) ;
+	local c = (a ^ 2 - b ^ 2) ^ 0.5 ;
+	local o1 = pos(b , a - c , 0) ;
+	local o2 = pos(b , a + c , 0) ;
+	return {
+		size = {x = b * 2 + 1 , y = a * 2 + 1 , z = b + 1} ;
+		color = function(p)
+			local v1 = status.posDif(p , o1) ;
+			local v2 = status.posDif(p , o2) ;
+			local d1 = (v1.x ^ 2 + v1.y ^ 2 + v1.z ^ 2) ^ 0.5 ;
+			local d2 = (v2.x ^ 2 + v2.y ^ 2 + v2.z ^ 2) ^ 0.5 ;
+			if d1 + d2 >= a * 2 and d1 + d2 < a * 2 + 2 then
+				return 2 ;
+			else 
+				return 0 ;
+			end ;
+		end ;
+	} ;
+end ;
+
+local a = tonumber(args[1]) ;
+local b = tonumber(args[2]) ;
+local blueprint = getBlueprint(a , b) ;
+printer3d.print3d(blueprint) ;
+

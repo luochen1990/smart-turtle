@@ -1,0 +1,974 @@
+--lua
+------------    Created by : luochen1990 (Luo)   ------------------------
+
+const = {
+	slotnum = 16 ;
+	needfuel = true ;
+	debuging = false ;
+	virtual = (turtle == nil) ;
+} ;
+
+useage = {
+	link = "link(p1, ..., [f])\n such as: link(go(1,0,2), scan('d',2), dig.down)\n" ;
+	go = "go(x, y, z, [p])\n such as: go(1,0,2)\n or: go(pos , [p])\n such as: go({x=1,z=2})\n" ;
+	scan = "scan(dir, times, [p])\n such as: scan('f',2)\n" ;
+	cycle = "cycle(dir, round, [times] , [p])\n such as: cycle('r', 'X##XX##X')\n" ;
+	digLine = "digLine(dir, maxdis, [p])\n" ;
+	digAll = "digAll(slots, [maxdis], [p])\n" ;
+	digExcept = "digExcept(slots, [maxdis], [p])\n" ;
+} ;
+
+------------------------------debuging code---------------------------------------
+
+baseAPIs = {
+	"turnLeft" , "turnRight" , "select" , 
+	"getItemCount" , "getItemSpace" , "getFuelLevel" , 
+	"refuel" , "compareTo" ,
+	"up" , "digUp" , "placeUp" , "detectUp" , "compareUp" , "attackUp" , "suckUp" , "dropUp" ,
+	"down" , "digDown" , "placeDown" , "detectDown" , "compareDown" , "attackDown" , "suckDown" , "dropDown" ,
+	"forward" , "dig" , "place" , "detect" , "compare" , "attack" , "suck" , "drop" ,
+} ;
+
+if const.virtual then turtle = {} end ;
+for i , k in ipairs(baseAPIs) do
+	local turtleWithoutEcho = turtle[k] ;
+	local run = function(...)
+		if turtleWithoutEcho then return turtleWithoutEcho(...) end ;
+		if i >= 1 and i <= 3 then return nil end ;
+		if i >= 4 and i <= 6 then return 10000 end ;
+		if i >= 7 and i <= 8 then return true end ;
+		if i >= 9 then return true end ;
+	end ;
+	turtle[k] = function(...)
+		local r = run(...) ;
+		if const.debuging or const.virtual then
+			print(status.toString()..' -- '..k..'('..table.concat({...} , ',')..'): ' , r) ;
+		end ;
+		return r ;
+	end ;
+end ;
+
+------------------------------base utils---------------------------------------
+
+withDefault = function (x , y)
+	if x == nil then return y else return x end ;
+end ;
+
+withParam = function (f , p)
+	return function ()
+		return f(unpack(p)) ;
+	end ;
+end ;
+
+math.randomseed(os.time())
+try = function (f , t)
+	if f() == true then return true end ;
+	local interval = 0.5 ;
+	local time = 0 ;
+	while time < t do
+		local x = (math.random() + 0.5) * interval ;
+		sleep (x) ;
+		if f() == true then return true end ;
+		time = time + x ;
+		interval = interval * 2 ;
+	end ;
+	return false ;
+end ;
+
+deepcopy = function (object)
+    local lookup_table = {} ;
+    local function _copy(object)
+        if type(object) ~= "table" then
+            return object ;
+        elseif lookup_table[object] then
+            return lookup_table[object] ;
+        end ;
+        local new_table = {} ;
+        lookup_table[object] = new_table ;
+        for index, value in pairs(object) do
+            new_table[_copy(index)] = _copy(value) ;
+        end ;
+        return setmetatable(new_table, getmetatable(object)) ;
+    end ;
+    return _copy(object) ;
+end ;
+
+memorized = function(f)
+	local mem = {} ;
+	setmetatable(mem , {__mode = "kv"}) ;
+	return function (...)
+		local r = mem[{...}] ;
+		if r == nil then
+			r = f(...) ;
+			mem[{...}] = r ;
+		end ;
+		return r ;
+	end ;
+end ;
+
+--------------------------------turtle status--------------------------------------
+
+workMode = {
+	destroy = false ;
+	force = false ;
+	tryTime = 10 ;
+	echo = false ;
+	autoRefuel = const.needfuel ;
+	
+	asDefault = function(p , default , changed)
+		if type(default) ~= 'table' then
+			changed , default = default , changed ;
+		end ;
+		if p == nil and default == nil and (not changed) then
+			return workMode ;
+		else
+			local r = {} ;
+			if p then
+				r = deepcopy(p) ;
+			end ;
+			for k , v in pairs(workMode) do
+				local dk = nil ;
+				if default then
+					dk = default[k] ;
+				end ;
+				r[k] = withDefault(withDefault(r[k] , dk) , v) ;
+			end ;
+			r.asDefault = nil ;
+			return r ;
+		end ;
+	end ;
+} ;
+
+status = {
+	pos = {x = 0 , y = 0 , z = 0} ;
+	dir = 'f' ;
+	lastPos = {x = 0 , y = 0 , z = 0} ;
+	slots = {fuel = 1} ;
+	
+	posAdd = function (a , b)
+		local r = {}
+		r.x = (a.x or 0) + (b.x or 0) ;
+		r.y = (a.y or 0) + (b.y or 0) ;
+		r.z = (a.z or 0) + (b.z or 0) ;
+		return r ;
+	end ;
+	posDif = function (a , b)
+		local r = {}
+		r.x = (a.x or 0) - (b.x or 0) ;
+		r.y = (a.y or 0) - (b.y or 0) ;
+		r.z = (a.z or 0) - (b.z or 0) ;
+		return r ;
+	end ;
+	posDis = function (a , b)
+		local dif = status.posDif (a , b or {}) ;
+		return math.abs(dif.x or 0) + math.abs(dif.y or 0) + math.abs(dif.z or 0) ;
+	end ;
+	dirDif = function (a , b)
+		return (status.numberedDirection[a] - status.numberedDirection[b] + 4) % 4 ;
+	end ;
+	
+	numberedDirection = {
+		f = 0 ; l = 1 ; b = 2 ; r = 3 ; u = 4 ; d = 5 ;
+	} ;
+	negativeDirection = {
+		f = 'b' ; b = 'f' ; l = 'r' ; r = 'l' ; u = 'd' ; d = 'u' ; 
+	} ;
+	outerDirection = {
+		f = 'forward' ; l = 'left' ; b = 'back' ; r = 'right' ; u = 'up' ; d = 'down' ;
+	} ;
+	innerDirection = {
+		[0] = 'f' ; [1] = 'l' ; [2] = 'b' ; [3] = 'r' ; [4] = 'u' ; [5] = 'd' ;
+		f = 'f' ; l = 'l' ; b = 'b' ; r = 'r' ; u = 'u' ; d = 'd' ;
+		F = 'f' ; L = 'l' ; B = 'b' ; R = 'r' ; U = 'u' ; D = 'd' ;
+		forward = 'f' ; left = 'l' ; back = 'b' ; right = 'r' ; up = 'u' ; down = 'd' ; 
+		[{x = 1}] = 'f' , [{x = -1}] = 'b' , [{y = 1}] = 'l' ,
+		[{y = -1}] = 'r' , [{z = 1}] = 'u' , [{z = -1}] = 'd' ,
+	} ;
+	dif = {
+		f = {x = 1} ; b = {x = -1} ; l = {y = 1} ;
+		r = {y = -1} ; u = {z = 1} ; d = {z = -1} ;
+	} ;
+	coord = {
+		f = 'x' ; b = 'x' ; l = 'y' ; r = 'y' ; u = 'z' ; d = 'z' ;
+	} ;
+	
+	turnTo = function(dir)
+		if status.numberedDirection[dir] > 3 then return end ;
+		local dirDif = (status.numberedDirection[dir] - status.numberedDirection[status.dir] + 4) % 4 ;
+		if dirDif == 1 then
+			turtle.turnLeft() ;
+		elseif dirDif == 2 then
+			turtle.turnLeft() ;
+			turtle.turnLeft() ;
+		elseif dirDif == 3 then
+			turtle.turnRight() ;
+		end ;
+		status.dir = dir ;
+	end ;
+	
+	reset = function(s)
+		local rotate = function(v)
+			return {x = -v.y , y = v.x , z = v.z} ;
+		end ;
+		s = withDefault(s , {pos = status.pos , dir = status.dir}) ;
+		s.pos = withDefault(s.pos , {x = 0 , y = 0 , z = 0}) ;
+		s.dir = withDefault(s.dir , 'f') ;
+		local old = {} ;
+		local rot = status.dirDif('f' , s.dir) ;
+		old.pos = status.posDif({x = 0 , y = 0 , z = 0} , s.pos) ;
+		old.dir = status.innerDirection[rot] ;
+		status.pos = status.posDif(status.pos , s.pos) ;
+		status.dir = status.innerDirection[status.dirDif(status.dir , s.dir)] ;
+		for i = 1 , rot do
+			old.pos = rotate(old.pos) ;
+			status.pos = rotate(status.pos) ;
+		end ;
+		return old ;
+	end ;
+	
+	toString = function(st)
+		local s = withDefault(st , status) ;
+		s.pos.x = withDefault(s.pos.x , 0) ;
+		s.pos.y = withDefault(s.pos.y , 0) ;
+		s.pos.z = withDefault(s.pos.z , 0) ;
+		return string.format('<%-2d %-2d %-2d %s>' , s.pos.x , s.pos.y , s.pos.z , s.dir) ;
+	end ;
+} ;
+
+----------------------------- base api Factory -----------------------------
+
+local apiFactory = function(op , dir)
+	local directionBindedApis = function(dir)
+		if dir == 'u' then
+			return turtle.up , turtle.digUp , turtle.placeUp , turtle.detectUp , turtle.compareUp , turtle.attackUp , turtle.suckUp , turtle.dropUp ;
+		elseif dir == 'd' then
+			return turtle.down , turtle.digDown , turtle.placeDown , turtle.detectDown , turtle.compareDown , turtle.attackDown , turtle.suckDown , turtle.dropDown ;
+		else
+			return turtle.forward , turtle.dig , turtle.place , turtle.detect , turtle.compare , turtle.attack , turtle.suck , turtle.drop ;
+		end ;
+	end ;
+	local mov , dig , pla , det , cmp , atk , suk , dro = directionBindedApis (dir) ;
+	
+	if op == 'move' then
+		return function(p)
+			p = workMode.asDefault(p) ;
+			
+			if p.echo then
+				io.write('M') ;
+				io.write(dir) ;
+				if p.destroy then io.write('*') else io.write(' ') end ;
+			end
+			
+			if p.autoRefuel then
+				refuel(status.pos.x + status.pos.y + status.pos.z) ;
+			end ;
+			
+			local r = false ;
+			if status.negativeDirection[dir] == status.dir then
+				r = turtle.back() ;
+			end ;
+			if not r then
+				status.turnTo(dir) ;
+				movx = function ()
+					if mov() then return true end ;
+					if p.destroy then
+						while dig() do end ;
+						if mov() then return true end ;
+					end ;
+					if p.force then
+						while atk() do end ;
+						if mov() then return true end ;
+					end ;
+					return false ;
+				end ;
+				r = try(movx , p.tryTime) ;
+			end
+			if r then
+				status.lastPos = status.pos ;
+				status.pos = status.posAdd (status.pos , status.dif[dir]) ;
+				if p.echo then print (' -> ' , status.toString()) end ;
+			else
+				if p.echo then print ('FALSE') end ;
+			end ;
+			return r ;
+		end ;
+
+	elseif op == 'place' then
+		return function(s , p)
+			if type(s) == 'table' then
+				s , p = p , s ;
+			end ;
+			
+			p = workMode.asDefault(p) ;
+
+			if s ~= nil then
+				if s >= 1 and s <= const.slotnum then
+					local count = turtle.getItemCount(s) ;
+					if count > 1 then
+						turtle.select(s) ;
+					else
+						if count == 1 and turtle.getItemSpace(s) == 0 then
+							local lastone = slot.last(s) ;
+							if lastone > s then
+								turtle.select(lastone) ;
+							else
+								slot.waitingForReloading(s , p.tryTime * 3) ;
+							end ;
+						else
+							slot.packUp(s) ;
+							turtle.select(s) ;
+							if not (turtle.getItemCount(s) > 1) then
+								if p.tryTime >= 10 then
+									print("More materials needed !") ;
+									slot.waitingForReloading(s , p.tryTime * 3) ;
+								else
+									return false ;
+								end ;
+							end ;
+						end ;
+					end ;
+				elseif s == 0 then
+					if p.destroy then
+						while dig() do end ;
+						return true ;
+					else
+						return not det() ;
+					end ;
+				else
+					return false ;
+				end ;
+			end ;
+			
+			if p.echo then
+				io.write('P') ;
+				io.write(dir) ;
+				if p.destroy then io.write('*') else io.write(' ') end ;
+			end
+			
+			local r = false ;
+			status.turnTo(dir) ;
+			plax = function ()
+				if pla() or cmp() then return true end ;
+				if p.destroy then
+					while dig() do end ;
+					if pla() or cmp() then return true end ;
+				end ;
+				if p.force then
+					while atk() do end ;
+					if pla() or cmp() then return true end ;
+				end ;
+				return false ;
+			end ;
+			r = try(plax , p.tryTime) ;
+			
+			if r then
+				if p.echo then print (' -- ' , status.toString()) end ;
+			else
+				if p.echo then print ('FALSE') end ;
+			end ;
+			return r ;
+		end ;
+
+	elseif op == 'detect' then
+		return function(p)
+			p = workMode.asDefault(p) ;
+			
+			if p.echo then
+				io.write(string.format('DET\t%s\t' , dir)) ;
+			end ;
+			
+			status.turnTo(dir) ;
+			local r = det() ;
+			if r then
+				if p.echo then print ('TRUE') end ;
+				if p.echo then print (status.toString()) end ;
+			else
+				if p.echo then print ('FALSE') end ;
+			end ;
+			return r ;
+		end ;
+
+	elseif op == 'dig' then
+		return function(p)
+			p = workMode.asDefault(p) ;
+			
+			if p.echo then
+				io.write(string.format('DIG\t%s\t' , dir)) ;
+			end ;
+
+			status.turnTo(dir) ;
+			local r = dig() ;
+			
+			if r then
+				if p.echo then print ('TRUE') end ;
+				if p.echo then print (status.toString()) end ;
+			else
+				if p.echo then print ('FALSE') end ;
+			end ;
+			return r ;
+		end ;
+
+	elseif op == 'compare' then
+		return function(s , p)
+			if type(s) == 'table' then
+				s , p = p , s ;
+			end ;
+			p = workMode.asDefault(p) ;
+			
+			if s ~= nil then
+				turtle.select(s) ;
+			end ;
+
+			if p.echo then
+				io.write(string.format('CMP\t%s\t' , dir)) ;
+			end ;
+			
+			status.turnTo(dir) ;
+			local r = cmp() ;
+			if r then
+				if p.echo then print ('TRUE') end ;
+				if p.echo then print (status.toString()) end ;
+			else
+				if p.echo then print ('FALSE') end ;
+			end ;
+			return r ;
+		end ;
+	
+	elseif op == 'attack' then
+		return function(p)
+			p = workMode.asDefault(p) ;
+			
+			if p.echo then
+				if p.destroy then
+					io.write(string.format('ATK\t%s*\t' , dir)) ;
+				else
+					io.write(string.format('ATK\t%s\t' , dir)) ;
+				end ;
+			end ;
+
+			status.turnTo(dir) ;
+			local r = atk() ;
+			
+			if r then
+				if p.echo then print ('TRUE') end ;
+				if p.echo then print (status.toString()) end ;
+			else
+				if p.echo then print ('FALSE') end ;
+			end ;
+			return r ;
+		end ;
+	
+	elseif op == 'suck' then
+		return function(p)
+			p = workMode.asDefault(p) ;
+			
+			if p.echo then
+				io.write(string.format('SUCK\t%s\t' , dir)) ;
+			end ;
+
+			status.turnTo(dir) ;
+			local r = suk() ;
+			
+			if r then
+				if p.echo then print ('TRUE') end ;
+				if p.echo then print (status.toString()) end ;
+			else
+				if p.echo then print ('FALSE') end ;
+			end ;
+			return r ;
+		end ;
+	
+	elseif op == 'drop' then
+		return function(s , count , p)
+			if type(s) == 'table' then
+				s , count , p = p , s , count ;
+			end ;
+			if type(count) == 'table' then
+				s , count , p = s , p , count ;
+			end ;
+			
+			if s ~= nil then
+				turtle.select(s) ;
+			end ;
+			
+			p = workMode.asDefault(p) ;
+			
+			if p.echo then
+				io.write(string.format('DROP\t%s\t' , dir)) ;
+			end
+			status.turnTo(dir) ;
+			local r = dro(count) ;
+			if r then
+				if p.echo then print ('TRUE') end ;
+				if p.echo then print (status.toString()) end ;
+			else
+				if p.echo then print ('FALSE') end ;
+			end ;
+			return r ;
+		end ;
+	end ;
+end ;
+
+
+-------------------------------generate base api----------------------
+
+slot = {
+	first = function(s)
+		turtle.select(s) ;
+		for i = 1 , s do
+			if turtle.compareTo(i) then
+				s = i ;
+				break ;
+			end ;
+		end ;
+		return s ;
+	end ;
+	
+	last = function(s)
+		turtle.select(s) ;
+		for i = const.slotnum , s , -1 do
+			if turtle.compareTo(i) then
+				s = i ;
+				break ;
+			end ;
+		end ;
+		return s ;
+	end ;
+	
+	count = function(s)
+		local c = turtle.getItemCount(s) ;
+		if c == 0 then return 0 end ;
+		turtle.select(s) ;
+		for i = s + 1 , const.slotnum do
+			if turtle.compareTo(i) then
+				c = c + turtle.getItemCount(i) ;
+			end ;
+		end ;
+		return c ;
+	end ;
+	
+	packUp = function(i)
+		-- use items in slots after i to make slot i as full as possible .
+		
+		count = turtle.getItemCount(i) ;
+		space = turtle.getItemSpace(i) ;
+		if count ~= 0 and space ~= 0 then
+			turtle.select(i) ;
+			for j = const.slotnum , i + 1 , -1 do 
+				if turtle.compareTo(j) then
+					got = turtle.getItemCount(j) ;
+					turtle.select(j) ;
+					if got >= space then
+						turtle.transferTo(i , space) ;
+						break ;
+					else 
+						turtle.transferTo(i , got) ;
+					end ;
+					turtle.select(i) ;
+				end ;
+			end ;
+		end ;
+	end ;
+	
+	packUpAll = function()
+		for i = 1 , const.slotnum do
+			slot.packUp(i) ;
+		end ;
+	end ;
+	
+	waitingForReloading = function(s , time , amont)
+		amont = withDefault(amont , 2) ;
+		print (string.format('Please reload slot%d to at least %d in %ds' , s , amont , time)) ;
+		local t = 0 ;
+		while slot.count(s) < amont do
+			sleep(2) ;
+			t = t + 1 ;
+			if t >= time then
+				forceTryBack(string.format('lack of stuff in slot%d' , s)) ;
+			end ;
+		end ;
+		io.write("Leaving soon ") ;
+		for i = 1 , 3 do sleep(2) io.write(".") end ;
+		print(" byebye!") ;
+		slot.packUp(s) ;
+	end ;
+	
+	checkList = function(list , must)
+		must = withDefault(must , #list) ;
+		print('Checking List (load them now):') ;
+		for s = 1 , #list do
+			local part1 = '['..s..']: <'..list[s][1]..'>' ;
+			if s > must then
+				part1 = '['..s..']: ['..list[s][1]..']' ;
+			end
+			local part2 = '' ;
+			if #list[s] > 1 then
+				part2 = ' * '..(list[s][2] + 1) ;
+			end
+			print(part1..part2) ;
+		end
+		for s = 1 , must do
+			local amont = withDefault(list[s][2] , 0) + 1 ;
+			local t = 0 ;
+			while slot.count(s) < amont do
+				sleep(2) ;
+				t = t + 1 ;
+				if t >= 30 then
+					forceTryBack('lack of <'..list[s][1]..'>') ;
+				end ;
+			end ;
+		end ;
+		io.write("Leaving soon ") ;
+		for i = 1 , 6 do sleep(1) io.write(".") end ;
+		print(" byebye!") ;
+		slot.packUpAll() ;
+	end ;
+	
+	firstnSlots = function(slots)
+		if type(slots) == 'number' then
+			local s = {} ;
+			for i = 1 , slots do
+				if const.needfuel then
+					s[#s + 1] = i + 1 ;
+				else
+					s[#s + 1] = i ;
+				end ;
+			end ;
+			slots = s ;
+		end ;
+		return slots ;
+	end ;
+} ;
+
+refuel = function(moves)
+	moves = math.max(1 , moves) ;
+	if not (turtle.getItemCount(status.slots.fuel) > 1) then
+		slot.packUp(status.slots.fuel) ;
+	end ;
+	while turtle.getFuelLevel() < moves and turtle.getItemCount(status.slots.fuel) > 1 do
+		turtle.select(status.slots.fuel) ;
+		turtle.refuel(1) ;
+	end ;
+	if not (turtle.getItemCount(status.slots.fuel) > 1) then
+		print("More fuel needed !") ;
+		slot.waitingForReloading(status.slots.fuel , 30) ;
+	end ;
+end ;
+
+
+move , place , detect , dig , compare , attack , suck , drop = {} , {} , {} , {} , {} , {} , {} , {} ;
+apiFactory = memorized(apiFactory) ;
+
+for k , v in pairs(status.innerDirection) do
+	move[k] = apiFactory ('move' , v) ;
+	place[k] = apiFactory ('place' , v) ;
+	detect[k] = apiFactory ('detect' , v) ;
+	dig[k] = apiFactory ('dig' , v) ;
+	compare[k] = apiFactory ('compare' , v) ;
+	attack[k] = apiFactory ('attack' , v) ;
+	suck[k] = apiFactory ('suck' , v) ;
+	drop[k] = apiFactory ('drop' , v) ;
+end ;
+
+------------------------------advanced apis in move---------------------------------
+
+move.to = function(dest , p) 
+	dest.x = withDefault(dest.x , status.pos.x) ;
+	dest.y = withDefault(dest.y , status.pos.y) ;
+	dest.z = withDefault(dest.z , status.pos.z) ;
+
+	local p1 = {destroy = false ; force = false ; tryTime = 0} ;
+	
+	while status.posDis(dest , status.pos) > 0 do
+		local moved = false ;
+		for k , v in pairs(status.dif) do
+			if status.posDis(dest , status.posAdd(status.pos , v)) < status.posDis(dest , status.pos) then
+				moved = moved or move[k](p1) ;
+				if moved then break end ;
+			end ;
+		end ;
+		if not moved then
+			for k , v in pairs(status.dif) do
+				if status.posDis(dest , status.posAdd(status.pos , v)) < status.posDis(dest , status.pos) then
+					moved = moved or move[k](p) ;
+					if moved then break end ;
+				end ;
+			end ;
+		end ;
+	end ;
+	return true ;
+end ;
+
+move.go = function(destv , p)
+	return move.to(status.posAdd(status.pos , destv) , p) ;
+end ;
+
+function forceTryBack(msg)
+	print (msg) ;
+	move.to({x = 0 , y = 0 , z = 0} , {destroy = true , force = true , tryTime = 10000 , autoRefuel = false , echo = const.debuging}) ;
+	status.turnTo('f') ;
+	slot.packUpAll() ;
+	error(string.format("FORCE BACK: %s" , msg)) ;
+end ;
+
+
+------------------------------recursive apis---------------------------------
+
+search = function(deep , check , p)
+	p = workMode.asDefault(p , true) ;
+	p.withStart = withDefault(p.withStart , false) ;
+	p.needBack = withDefault(p.needBack , true) ;
+	p.allowFail = withDefault(p.allowFail , true) ;
+	p.branch = withDefault(p.branch , true) ;
+	p.append = withDefault(p.append , function () return true end) ;
+	
+	local function tryRun (fun , pa)
+		if fun ~= nil then fun(unpack(pa)) end ;
+	end ;
+	
+	local startPos = status.pos ;
+	
+	local function rec (d , dir)
+		if d >= deep then
+			return p.append(startPos , dir , d) ;
+		end
+		tryRun (p.beforeArrive , {startPos , dir , d}) ;
+		if not move[dir](p) then
+			return false ;
+		end
+		tryRun (p.afterArrive , {startPos , dir , d}) ;
+		
+		local r = true ;
+		local branched = 0 ;
+		for i = 0 , 5 do
+			local next_dir = status.innerDirection[(status.numberedDirection[dir] + i) % 6] ;
+			if check(startPos , next_dir , d) then
+				if p.allowFail or r then
+					if p.branch or branched == 0 then
+						local ri = rec (d + 1 , next_dir) ;
+						if ri then
+							branched = branched + 1 ;
+						end ;
+					end ;
+					r = r and ri ;
+				end ;
+			end ;
+		end ;
+		
+		if p.needBack then
+			tryRun (p.beforeLeave , {startPos , dir , d}) ;
+			if not move[status.negativeDirection[dir]](p) then
+				forceTryBack('failed to backtrack') ;
+			end	;
+			tryRun (p.afterLeave , {startPos , dir , d}) ;
+		end ;
+		return r ;
+	end ;
+	
+	local r = true ;
+	local branched = 0 ;
+	local d = -1 ;
+	if p.withStart then 
+		d = 0 ;
+	end ;
+	for i = 0 , 5 do
+		local next_dir = status.innerDirection[i] ;
+		if check(startPos , next_dir , d) then
+			if p.allowFail or r then
+				if p.branch or branched == 0 then
+					if p.withStart then 
+						tryRun (p.afterArrive , {startPos , next_dir , d}) ;
+					end ;
+					local ri = rec (d + 1 , next_dir) ;
+					if p.withStart then 
+						tryRun (p.beforeLeave , {startPos , next_dir , d}) ;
+					end ;
+					if ri then
+						branched = branched + 1 ;
+					end ;
+				end ;
+				r = r and ri ;
+			end ;
+		end ;
+	end ;
+	return r ;
+end ;
+
+--------------------------------link function---------------------------
+
+link = function(...)
+	local p = deepcopy({...}) ;
+	local startPos = status.pos ;
+	
+	local bind = function(pi , fi , fj)
+		local beforeLeave = pi.beforeLeave ;
+		pi.beforeLeave = function(searchStartPos , searchDir , searchDeep)
+			if pi.linked(searchStartPos , searchDir , searchDeep , startPos) then
+				fj() ;
+			end ;
+			if beforeLeave ~= nil then
+				beforeLeave(searchStartPos , searchDir , searchDeep) ;
+			end ;
+			return r ;
+		end ;
+		return pi ;
+	end ;
+	
+	local f = {} ;
+	
+	if type(p[#p]) == 'function' then
+		f[#p] = p[#p] ; p[#p] = nil ;
+	else
+		f[#p + 1] = function() return true end ;
+	end ;
+	
+	for k , v in ipairs(p) do
+		if not (type(p[k]) == "table") then
+			error ("PARAM ERROR: api.link()") ;
+		end ;
+		f[k] = withParam(search , {p[k].deep , p[k].check , p[k]}) ;
+	end ;
+	
+	for k , v in ipairs(p) do
+		p[k] = bind(p[k] , f[k] , f[k + 1]) ;
+	end ;
+	
+	local r = f[1]() ;
+	return r ;
+end ;
+
+--------------------------------user tools---------------------------
+
+scan = function (dir , times , p)
+	p = workMode.asDefault(p , true) ;
+	p.withStart = withDefault(p.withStart , true) ;
+	p.step = withDefault(p.step , 1) ;
+	p.first = withDefault(p.first , 0) ;
+	
+	p.deep = p.first + (times - 1) * p.step + 1 ;
+	p.branch = false ;
+	p.check = function(searchStartPos , searchDir , searchDeep)
+		return searchDir == dir ;
+	end ;
+	p.linked = function (searchStartPos , searchDir , searchDeep , startPos)
+		local dis = status.posDis(status.pos , searchStartPos) ;
+		return dis >= p.first and ((dis - p.first) % p.step) == 0 ;
+	end ;
+	return p ;
+end ;
+
+cycle = function (dir , round , times , p)
+	if type(times) == 'table' then
+		p , times = times , p
+	end ;
+	p = workMode.asDefault(p , true) ;
+	p.withStart = withDefault(p.withStart , true) ;
+	p.first = withDefault(p.first , 0) ;
+	p.last = withDefault(p.last , p.first + #round * times - 1) ;
+	p.deep = p.last + 1 ;
+	p.branch = false ;
+	p.check = function(searchStartPos , searchDir , searchDeep)
+		return searchDir == dir ;
+	end ;
+	p.linked = function (searchStartPos , searchDir , searchDeep , startPos)
+		local dis = status.posDis(status.pos , searchStartPos) ;
+		if type(round) == 'table' then
+			return round[dis % #round + 1] > 0 ;
+		else
+			local c = string.char(string.byte(round , dis % #round + 1)) ;
+			return c ~= ' ' and c ~= '#' ;
+		end ;
+	end ;
+	return p ;
+end ;
+
+go = function (x , y , z , p)
+	local destv = false ;
+	if type(x) == 'table' then
+		destv , p = x , y ;
+	else
+		destv = pos(x , y , z) ;
+	end ;
+	p = workMode.asDefault(p , true) ;
+	p.withStart = true ;
+	p.deep = 0 ;
+	p.branch = false ;
+	p.afterArrive = function()
+		move.go(destv , p) ;
+	end ;
+	p.beforeLeave = function(searchStartPos)
+		move.to(searchStartPos) ;
+	end ;
+	p.check = function() return true end ;
+	p.linked = function() return true end ;
+	return p ;
+end ;
+
+digLine = function (dir , maxdis , p)
+	p = workMode.asDefault(p , {destroy = true}) ;
+	p.withStart = withDefault(p.withStart , true) ;
+	
+	p.deep = withDefault(maxdis , 100) ;
+	p.branch = false ;
+	p.check = function(searchStartPos , searchDir , searchDeep)
+		if searchDir ~= dir then return false end ;
+		if detect[searchDir]() then
+			dig[searchDir]() ;
+			return searchDeep + 1 < r.deep ;
+		end ;
+		return false ;
+	end ;
+	p.linked = function (searchStartPos , searchDir , searchDeep , startPos)
+		return false ;
+	end ;
+	return p ;
+end ;
+
+digAll = function (slots , maxdis , p)
+	p = workMode.asDefault(p , {destroy = true}) ;
+	p.withStart = withDefault(p.withStart , true) ;
+	local tmp = slot.firstnSlots(slots) ;
+	slots = tmp ;
+	
+	p.deep = withDefault(maxdis , 100) ;
+	p.branch = true ;
+	p.check = function(searchStartPos , searchDir , searchDeep)
+		for k , v in ipairs(slots) do
+			if compare[searchDir](v) then
+				dig[searchDir]() ;
+				return searchDeep + 1 < p.deep ;
+			end ;
+		end ;
+		return false ;
+	end ;
+	p.linked = function (searchStartPos , searchDir , searchDeep , startPos)
+		return false ;
+	end ;
+	return p ;
+end ;
+
+digExcept = function (slots , maxdis , p)
+	local tmp = slot.firstnSlots(slots) ;
+	slots = tmp ;
+	
+	local r = digAll(slots , maxdis , p) ;
+	r.check = function(searchStartPos , searchDir , searchDeep)
+		if detect[searchDir]() then
+			for k , v in ipairs(slots) do
+				if compare[searchDir](v) then
+					return false ;
+				end ;
+			end ;
+			dig[searchDir]() ;
+			return searchDeep + 1 < r.deep ;
+		else
+			return false ;
+		end ;
+	end ;
+	return r ;
+end ;
+
+pos = function(a , b , c)
+	return {x = a , y = b , z = c} ;
+end ;
+

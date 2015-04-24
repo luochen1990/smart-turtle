@@ -1,0 +1,12 @@
+--lua
+os.loadAPI('rom/luo/api') ; for k , v in pairs(api) do loadstring(string.format("%s = api.%s" , k , k))() end ;
+
+args = {...} ;
+if #args ~= 1 then
+	print("useage: refuel <n>") ;
+	print("<n> : the steps it need to move.") ;
+else 
+	refuel(tonumber(args[1])) ;
+	print(string.format("fuel level now : %d" , turtle.getFuelLevel())) ;
+end ;
+

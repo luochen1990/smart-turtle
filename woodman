@@ -1,0 +1,37 @@
+--lua
+os.loadAPI('rom/luo/api') ; for k , v in pairs(api) do loadstring(string.format("%s = api.%s" , k , k))() end ;
+
+slots = {
+	[1] = {'fuel'} ;
+	[2] = {'sapling'} ;
+	[3] = {'wood'} ;
+	[4] = {'fertilizer'} ;
+} ;
+api.slot.checkList(slots , 2) ;
+
+cutTree = function(nx , ny , step)
+	local count = 0 ;
+	local f = function() 
+		p = {destroy = true , force = true} ;
+		if api.compare.left(2) == false then 
+			api.move.go({y = 1} , p) ;
+			local height , finded = 0 , false ;
+			while api.detect.up() do
+				api.move.go({z = 1} , p) ;
+				height = height + 1 ;
+				finded = true ;
+			end ;
+			api.move.go({y = -1 , z = -height} , p) ;
+			api.place.left(2) ;
+			api.place.left(4 , {destroy = false , force = false , tryTime = 0}) ;
+			if finded then count = count + 1 end ;
+		end ;
+	end ;
+	step1 = api.scan('l' , ny , {step = step , first = 0}) ;
+	step2 = api.scan('f' , nx , {step = step , first = 1}) ;
+	api.link(step1 , step2 , f) ;
+	return count ;
+end ;
+
+print('Cutted Trees : ' , cutTree(5 , 5 , 5)) ;
+

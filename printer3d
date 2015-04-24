@@ -1,0 +1,35 @@
+--lua
+os.loadAPI('rom/luo/api') ; for k , v in pairs(api) do loadstring(string.format("%s = api.%s" , k , k))() end ;
+
+print3d = function(blueprint)
+	workMode.destroy = true ;
+	workMode.force = true ;
+	workMode.tryTime = 1000 ;
+	local f = function()
+		local slot = blueprint.color(api.status.pos)
+		if slot ~= nil then
+			api.place.forward(slot , {tryTime = 1000 , destroy = true}) ;
+		end ;
+	end ;
+	part1 = api.scan('l' , blueprint.size.y) ;
+	part2 = api.scan('u' , blueprint.size.z) ;
+	part3 = api.scan('f' , blueprint.size.x) ;
+	api.link(part1 , part2 , part3 , f) ;
+	status.turnTo('f') ;
+	slot.packUpAll() ;
+end ;
+
+bmp2blueprint = function(bmp)
+	r = {} ;
+	r.size = {x = #bmp , y = #bmp[1][1] , z = #bmp[1]} ;
+	r.color = function(p)
+		return bmp[r.size.x - p.x][r.size.z - p.z][r.size.y - p.y] ;
+	end ;
+	return r ;
+end ;
+
+printBmp = function(bmp)
+	blueprint = bmp2blueprint(bmp) ;
+	print3d(blueprint) ;
+end ;
+
