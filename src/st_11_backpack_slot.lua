@@ -2,13 +2,13 @@
 
 slot = {
 	findThat = function(cond, beginSlot) -- find something after beginSlot which satisfy cond
-		for i = beginSlot, const.turtle.backpackSlotsNum do
+		for i = default(1)(beginSlot), const.turtle.backpackSlotsNum do
 			if cond(turtle.getItemDetail(i)) then return i end
 		end
 		return nil
 	end,
 	findLastThat = function(cond, beginSlot)
-		for i = const.turtle.backpackSlotsNum, beginSlot, -1 do
+		for i = const.turtle.backpackSlotsNum, default(1)(beginSlot), -1 do
 			if cond(turtle.getItemDetail(i)) then return i end
 		end
 		return nil
@@ -20,11 +20,11 @@ slot = {
 		return slot.findLastThat(function(det) return det and det.name == name end, beginSlot)
 	end,
 	findSame = function(sn, beginSlot)
-		det = turtle.getItemDetail(sn)
+		local det = turtle.getItemDetail(sn)
 		if det then return slot.find(det.name, beginSlot) end
 	end,
 	findLastSame = function(sn, beginSlot)
-		det = turtle.getItemDetail(sn)
+		local det = turtle.getItemDetail(sn)
 		if det then return slot.findLast(det.name, beginSlot) end
 	end,
 	findEmpty = function(beginSlot)
@@ -34,7 +34,7 @@ slot = {
 		return slot.findLastThat(function(det) return not det end, beginSlot)
 	end,
 	findDroppable = function(beginSlot)
-		return slot.findThat(function(det) return const.cheapItems[det.name] end, beginSlot)
+		return slot.findThat(function(det) return det and const.cheapItems[det.name] end, beginSlot)
 	end,
 	countAll = function(countSingleSlot)
 		local cnt = 0
@@ -48,7 +48,7 @@ slot = {
 		return slot.countAll(function(det) if det and det.name == name then return det.count else return 0 end end)
 	end,
 	countSame = function(sn)
-		det = turtle.getItemDetail(sn)
+		local det = turtle.getItemDetail(sn)
 		if det then return slot.count(det.name) end
 	end,
 	fill = function(sn) -- use items in slots after sn to make slot sn as full as possible

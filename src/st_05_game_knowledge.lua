@@ -41,6 +41,7 @@ const = {
 	},
 	fuelHeatContent = {
 		["minecraft:lava_bucket"] = 1000,
+		["minecraft:charcoal"] = 80,
 		["minecraft:coal"] = 80,
 		["minecraft:oak_log"] = 15,
 		["minecraft:light_gray_carpet"] = 3,

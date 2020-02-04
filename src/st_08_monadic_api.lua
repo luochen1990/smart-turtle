@@ -16,12 +16,13 @@ end)
 turn.lateral = mkIO(function() return turn.to(workState:lateralDir()) end)
 for k, v in pairs(const.dir) do turn[k] = turn.to(v) end
 
-saveTurning = function(io)
+saveDir = function(io)
 	return mkIO(function()
-		local _facing, _aiming = workState.facing, workState.aiming
-		r = {io()}
-		turn.to(_facing)()
-		if _aiming ~= 0 then turn.to(vec(0, _aiming, 0)) end
+		local saved_facing = workState.facing
+		local saved_aiming = workState.aiming
+		local r = {io()}
+		turn.to(saved_facing)()
+		workState.aiming = saved_aiming
 		return unpack(r)
 	end)
 end
@@ -30,7 +31,7 @@ _wrapAimingSensitiveApi = function(apiName, wrap, rawApis)
 	if rawApis == nil then rawApis = {turtle[apiName..'Up'], turtle[apiName], turtle[apiName..'Down']} end
 	assert(#rawApis >= 3, "three rawApis must be provided")
 	return wrap(function(...)
-		rawApi = rawApis[2 - workState.aiming]
+		local rawApi = rawApis[2 - workState.aiming]
 		assert(rawApi ~= nil, "workState.aiming must be 0/1/-1")
 		return rawApi(...)
 	end)
@@ -66,32 +67,32 @@ end)
 isEmpty = -detect
 
 isNamed = mkIOfn(function(name)
-	ok, res = _aiming.inspect()
+	local ok, res = _aiming.inspect()
 	return ok and res.name == name
 end)
 
 isSame = mkIO(function()
-	ok, res = _aiming.inspect()
+	local ok, res = _aiming.inspect()
 	return ok and res.name == turtle.getItemDetail().name
 end)
 
 isTurtle = mkIO(function()
-	ok, res = _aiming.inspect()
+	local ok, res = _aiming.inspect()
 	return ok and const.turtleBlocks[res.name] == true
 end)
 
 isChest = mkIO(function()
-	ok, res = _aiming.inspect()
+	local ok, res = _aiming.inspect()
 	return ok and const.chestBlocks[res.name] == true
 end)
 
 isCheap = mkIO(function()
-	ok, res = _aiming.inspect()
+	local ok, res = _aiming.inspect()
 	return ok and const.cheapItems[res.name] == true
 end)
 
 isProtected = mkIO(function()
-	ok, res = _aiming.inspect()
+	local ok, res = _aiming.inspect()
 	return ok and (const.turtleBlocks[res.name] == true or const.chestBlocks[res.name] == true)
 end)
 
@@ -105,7 +106,7 @@ dig = mkIO(function()
 		slot.tidy()
 		if not slot.findLastEmpty() then
 			turtle.select(slot.findDroppable())
-			local io = (saveTurning(turn.lateral * -isChest * drop()) + drop())
+			local io = (saveDir(turn.lateral * -isChest * drop()) + drop())
 			io()
 		end
 	end
@@ -123,7 +124,8 @@ end)
 
 -- | use item, another use case of turtle.place
 use = mkIOfn(function(name)
-	if turtle.getItemDetail().name ~= name then
+	local det = turtle.getItemDetail()
+	if not det or det.name ~= name then
 		sn = slot.find(name)
 		if not sn then return false end
 		turtle.select(sn)
@@ -133,7 +135,11 @@ end)
 
 move = mkIO(function()
 	-- auto refuel
-	refuel(#(workState.beginPos .. workState.pos))
+	local ok = refuel(manhat(workState.beginPos .. workState.pos))
+	if not ok then
+		print("Out Of Fuel! now backing to beginPos...")
+		move.to(workState.beginPos)
+	end
 	--
 	local mov = _aiming.move
 	if workMode.destroy == 1 then
@@ -147,7 +153,7 @@ move = mkIO(function()
 	if workMode.retrySeconds > 0 and isTurtle() then -- only retry when blocked by turtle
 		mov = mov % workMode.retrySeconds
 	end
-	r = mov()
+	local r = mov()
 	if r then workState.pos = workState.pos + workState:aimingDir() end
 	-- record backPath
 	return r

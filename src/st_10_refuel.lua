@@ -3,7 +3,7 @@
 refuel = function(nStep)
 	nStep = math.max(1 , nStep)
 	while turtle.getFuelLevel() < nStep do
-		fuelSn = slot.findThat(function(det) return const.fuelHeatContent[det.name] end)
+		fuelSn = slot.findThat(function(det) return det and const.fuelHeatContent[det.name] end)
 		if not fuelSn then return false end
 		turtle.select(fuelSn)
 		while turtle.getFuelLevel() < nStep and turtle.getItemCount(fuelSn) > 0 do

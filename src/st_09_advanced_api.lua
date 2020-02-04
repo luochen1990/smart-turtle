@@ -35,7 +35,7 @@ move.to = function(destPos)
 			local detourDir
 			for _, d in ipairs(const.directions) do
 				if targetDir:dot(const.dir[d]) == 0 then
-					ok = (turn.to(const.dir[d]) .. move)()
+					local ok = (turn.to(const.dir[d]) .. move)()
 					if ok then detourDir = const.dir[d]; break end
 				end
 			end
@@ -49,7 +49,7 @@ move.to = function(destPos)
 			repeat
 				for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
 					candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
-					ok = (turn.to(candidateDir) .. move)()
+					local ok = (turn.to(candidateDir) .. move)()
 					if ok then
 						detourRotateCount = detourRotateCount + i
 						break
@@ -64,7 +64,16 @@ end
 
 move.go = function(destVec)
 	return mkIO(function()
-		move.to(workState.pos + destVec)()
+		return move.to(workState.pos + destVec)()
+	end)
+end
+
+savePos = function(io)
+	return mkIO(function()
+		local saved_pos = workState.pos
+		local r = {io()}
+		move.to(saved_pos)()
+		return unpack(r)
 	end)
 end
 

@@ -31,6 +31,21 @@ delay = function(f, args)
 	return function() return f(unpack(args)) end
 end
 
+memoize = function(f)
+	local mem = {}
+	setmetatable(mem, {__mode = "kv"})
+	return function(...)
+		local r = mem[{...}]
+		if r == nil then
+			r = f(...)
+			mem[{...}] = r
+		end
+		return r
+	end
+end
+
+-------------------------------- general utils ---------------------------------
+
 deepcopy = function(obj)
 	local lookup_table = {}
 	local function _copy(obj)
@@ -49,18 +64,5 @@ deepcopy = function(obj)
 	return _copy(obj)
 end
 
-memoize = function(f)
-	local mem = {}
-	setmetatable(mem, {__mode = "kv"})
-	return function(...)
-		local r = mem[{...}]
-		if r == nil then
-			r = f(...)
-			mem[{...}] = r
-		end
-		return r
-	end
-end
-
-math.randomseed(os.time()) -- set randomseed for math.random()
+math.randomseed(os.time() * 1000) -- set randomseed for math.random()
 
