@@ -3,7 +3,7 @@ Smart Turtle
 
 This script provide high level APIs for turtle robot in [ComputerCraft mod for Minecraft](https://github.com/dan200/ComputerCraft).
 
-You can access the [raw turtle APIs here](http://www.computercraft.info/wiki/Turtle_(API)).
+You can access the [raw turtle API document here](http://www.computercraft.info/wiki/Turtle_(API)).
 
 Features
 --------
