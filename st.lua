@@ -8,6 +8,9 @@ assert = function(...) if DEBUG then __assert(...) end end
 
 ----------------------------- vector improvement -------------------------------
 
+-- manhattan distance between pos `a` and ori
+manhat = function(a) return math.abs(a.x) + math.abs(a.y) + math.abs(a.z) end
+
 improveVector = function()
 	local mt = getmetatable(vector.new(0,0,0))
 	mt.__len = function(a) return math.abs(a.x) + math.abs(a.y) + math.abs(a.z) end -- use `#a`
@@ -547,10 +550,16 @@ end
 
 move.to = function(destPos)
 	return mkIO(function()
+		local latestDetourPos
 		while true do
+			-- attempt to approach destPos
 			rep(-move.toward(destPos))()
-			if workState.pos == destPos then return true end
 			v = workState.pos .. destPos
+			md = manhat(v)
+			if md <= 1 then return md == 0 end
+			if workState.pos == latestDetourPos then return false end
+			-- begin detouring
+			local detourBeginPos = workState.pos
 			local targetDir
 			for _, d in ipairs(const.directions) do
 				if v:dot(const.dir[d]) > 0 then targetDir = const.dir[d]; break end
@@ -568,7 +577,7 @@ move.to = function(destPos)
 			detourRotate = targetDir ^ detourDir
 			detourDirs = {targetDir, detourDir, detourDir % detourRotate, detourDir % detourRotate % detourRotate}
 			-- detourDirs decided
-
+			-- begin detouring loop
 			local detourRotateCount = 1
 			repeat
 				for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
@@ -580,13 +589,15 @@ move.to = function(destPos)
 					end
 				end
 			until (detourRotateCount % 4 == 0)
+			-- finish detouring
+			latestDetourPos = detourBeginPos
 		end
 	end)
 end
 
-move.go = function(destv)
+move.go = function(destVec)
 	return mkIO(function()
-		move.to(workState.pos + destv)()
+		move.to(workState.pos + destVec)()
 	end)
 end
 
