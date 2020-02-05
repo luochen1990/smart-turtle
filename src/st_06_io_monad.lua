@@ -29,6 +29,9 @@ end)()
 -- | pure : a -> IO a
 pure = function(x) return mkIO(function() return x end) end
 
+-- | try : IO a -> IO Bool
+try = function(io) return mkIO(function() io(); return true end) end
+
 -- | retry : Int -> IO Bool -> IO Bool
 -- , retry an io which might fail for several seconds before finally fail
 retry = function(retrySeconds)

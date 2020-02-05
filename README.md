@@ -47,6 +47,7 @@ Features
             - `io1 + io2`: if `io1` failed then execute `io2`
             - `rep(io)`: repeat `io` until it fail
             - `rep(-io)`: repeat `io` until it success
+            - `try(io)`: execute `io` and always return true
             - `io ^ n`: replicate `io` for `n` times
             - `io % t`: retry `io` for `t` seconds
     - advanced move apis which support obstacle avoidance
