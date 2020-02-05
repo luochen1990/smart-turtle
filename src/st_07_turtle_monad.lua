@@ -30,9 +30,6 @@ function workState:lateralDir() -- a direction which is perpendicular to aimingD
 	else return self.facing end
 end
 
-leftSide = memoize(function(d) return d % const.rotate.left end)
-rightSide = memoize(function(d) return d % const.rotate.right end)
-
 -- | run io with specified workMode fields
 with = function(wm_patch)
 	return function(io)

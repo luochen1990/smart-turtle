@@ -1,7 +1,7 @@
 ------------------------------- main coroutines --------------------------------
 
 gpsPos = mkIO(function()
-	x, y, z = gps.locate()
+	local x, y, z = gps.locate()
 	if x then return vec(x, y, z) else return nil end
 end)
 

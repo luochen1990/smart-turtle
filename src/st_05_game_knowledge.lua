@@ -49,6 +49,7 @@ const = {
 }
 
 const.ori = vec(0,0,0)
+const.positiveDir = vec(1,1,1)
 const.dir = {
 	['E'] = vec(1,0,0), ['W'] = vec(-1,0,0),
 	['U'] = vec(0,1,0), ['D'] = vec(0,-1,0),
@@ -59,4 +60,5 @@ const.rotate = {
 	left = const.dir.N ^ const.dir.W,
 	right = const.dir.N ^ const.dir.E,
 }
+for k, v in pairs(const.dir) do _ENV[k] = v -- define U/E/S/W/N/D
 
