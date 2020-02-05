@@ -135,7 +135,7 @@ end)
 
 move = mkIO(function()
 	-- auto refuel
-	local ok = refuel(manhat(workState.beginPos .. workState.pos))
+	local ok = refuel(manhat(workState.beginPos - workState.pos))
 	if not ok then
 		print("Out Of Fuel! now backing to beginPos...")
 		move.to(workState.beginPos)
@@ -143,12 +143,12 @@ move = mkIO(function()
 	--
 	local mov = _aiming.move
 	if workMode.destroy == 1 then
-		mov = mov + (rep(-(isCheap * dig)) .. mov)
+		mov = mov + (rep(isCheap * dig) * mov)
 	elseif workMode.destroy == 2 or workMode.destroy == true then
-		mov = mov + (rep(-(-isProtected * dig)) .. mov)
+		mov = mov + (rep(-isProtected * dig) * mov)
 	end
 	if workMode.violence then
-		mov = mov + (rep(-attack) .. mov)
+		mov = mov + (rep(attack) * mov)
 	end
 	if workMode.retrySeconds > 0 and isTurtle() then -- only retry when blocked by turtle
 		mov = mov % workMode.retrySeconds

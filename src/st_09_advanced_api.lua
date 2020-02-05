@@ -4,10 +4,10 @@
 move.toward = function(destPos)
 	return mkIO(function()
 		local ok = false
-		v = workState.pos .. destPos
+		local v = destPos - workState.pos
 		for _, d in ipairs(const.directions) do
 			if v:dot(const.dir[d]) > 0 then
-				ok = ok or (turn[d] .. move)()
+				ok = ok or (turn[d] * move)()
 				if ok then break end
 			end
 		end
@@ -20,9 +20,9 @@ move.to = function(destPos)
 		local latestDetourPos
 		while true do
 			-- attempt to approach destPos
-			rep(-move.toward(destPos))()
-			v = workState.pos .. destPos
-			md = manhat(v)
+			rep(move.toward(destPos))()
+			local v = destPos - workState.pos
+			local md = manhat(v)
 			if md <= 1 then return md == 0 end
 			if workState.pos == latestDetourPos then return false end
 			-- begin detouring
@@ -35,21 +35,21 @@ move.to = function(destPos)
 			local detourDir
 			for _, d in ipairs(const.directions) do
 				if targetDir:dot(const.dir[d]) == 0 then
-					local ok = (turn.to(const.dir[d]) .. move)()
+					local ok = (turn.to(const.dir[d]) * move)()
 					if ok then detourDir = const.dir[d]; break end
 				end
 			end
 			if not detourDir then return false end
 			-- init detourDir decided
-			detourRotate = targetDir ^ detourDir
-			detourDirs = {targetDir, detourDir, detourDir % detourRotate, detourDir % detourRotate % detourRotate}
+			local detourRotate = targetDir ^ detourDir
+			local detourDirs = {targetDir, detourDir, detourDir % detourRotate, detourDir % detourRotate % detourRotate}
 			-- detourDirs decided
 			-- begin detouring loop
 			local detourRotateCount = 1
 			repeat
 				for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
 					candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
-					local ok = (turn.to(candidateDir) .. move)()
+					local ok = (turn.to(candidateDir) * move)()
 					if ok then
 						detourRotateCount = detourRotateCount + i
 						break

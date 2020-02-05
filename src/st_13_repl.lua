@@ -10,6 +10,5 @@ v3 = vec(0,0,1)
 
 initWorkState()
 testMove = saveDir(savePos(move.go(leftSide(workState.facing) * 2)))
-print(math.random())
 if math.random() < 0.5 then testMove() end
 repl()

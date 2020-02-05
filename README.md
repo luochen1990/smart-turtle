@@ -43,13 +43,12 @@ Features
             - `dig`: dig toward the aiming direction
     - provide high level combinators to construct complex logic
         * usage description
-            - `io1 .. io2`: seqentially execute `io1` and `io2`
             - `io1 * io2`: if `io1` succeed then execute `io2`
             - `io1 + io2`: if `io1` failed then execute `io2`
-            - `io % t`: retry `io` for `t` seconds
+            - `rep(io)`: repeat `io` until it fail
+            - `rep(-io)`: repeat `io` until it success
             - `io ^ n`: replicate `io` for `n` times
-            - `rep(io)`: repeat `io` until it succeed
-            - `rep(-io)`: repeat `io` until it failed
+            - `io % t`: retry `io` for `t` seconds
     - advanced move apis which support obstacle avoidance
         * implementation idea
             - inspired by the wall-following algorithm for 2-dimensional maze

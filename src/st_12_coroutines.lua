@@ -6,7 +6,7 @@ gpsPos = mkIO(function()
 end)
 
 initWorkState = function()
-	(rep(-dig) .. use("minecraft:chest"))()
+	(rep(dig) * use("minecraft:chest"))()
 	local ok, r = turtle.inspect()
 	assert(ok, "failed to get facing direction (inspect failed)")
 	workState.facing = -const.dir[r.state.facing:sub(1,1):upper()]
@@ -15,7 +15,7 @@ initWorkState = function()
 	workState.pos = gpsPos()
 	assert(workState.pos ~= nil, "failed to get gps location!")
 	workState.beginPos = workState.pos
-	saveDir(turn.left .. use("minecraft:chest"))()
+	saveDir(turn.left * use("minecraft:chest"))()
 end
 
 main = function()

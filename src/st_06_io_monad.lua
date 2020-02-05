@@ -15,16 +15,14 @@ mkIO, mkIOfn = (function()
 	local _mkIOfn = function(f)
 		return function(...) return _mkIO(f, ...) end
 	end
-	_ioMetatable.__len = function(io) return _mkIO(function() local r; repeat r = io.run() until(r); return r end) end -- `#io` means repeat until succ,  (use `#-io` as repeat until fail)
+	_ioMetatable.__len = function(io) return _mkIO(function() local r; repeat r = io.run() until(r); return r end) end -- use `#io` as `rep(io)`, only works on lua5.2+
 	_ioMetatable.__call = function(io, ...) return io.run(...) end
-	_ioMetatable.__concat = function(io1, io2) return _mkIO(function() io1.run(); return io2.run() end) end -- `>>` in haskell
 	_ioMetatable.__mod = function(io, s) return retry(s)(io) end -- retry for a few seconds
 	_ioMetatable.__pow = function(io, n) return replicate(n)(io) end -- replicate a few times
 	_ioMetatable.__add = function(io1, io2) return _mkIO(function() return io1.run() or io2.run() end) end -- if io1 fail then io2
 	_ioMetatable.__mul = function(io1, io2) return _mkIO(function() return io1.run() and io2.run() end) end -- if io1 succ then io2
 	_ioMetatable.__div = function(io1, io2) return _mkIO(function() r = io1.run(); io2.run(); return r end) end -- `<*` in haskell
-
-	_ioMetatable.__unm = function(io) return _mkIO(function() return not io.run() end) end -- `fmap not` in haskell
+	_ioMetatable.__unm = function(io) return _mkIO(function() return not io.run() end) end -- use `-io` as `fmap not io` in haskell
 	return _mkIO, _mkIOfn
 end)()
 
@@ -70,12 +68,13 @@ end
 -- | repeatUntil : (a -> Bool) -> IO a -> IO a
 repeatUntil = function(stopCond)
 	return function(io)
-		return mkIO(function() local r; repeat r = io() until(stopCond(r)); return r end)
+		return mkIO(function() local c = 0; while not stopCond(io()) do c = c + 1 end; return c end)
 	end
 end
 
--- | repeat until succ,  (use `rep(-io)` as repeat until fail)
+-- | repeat until fail,  (use `rep(-io)` as repeat until success)
+-- , return successfully repeated times
 rep = function(io)
-	return mkIO(function() local r; repeat r = io() until(r); return r end)
+	return mkIO(function() local c = 0; while io() do c = c + 1 end; return c end)
 end
 
