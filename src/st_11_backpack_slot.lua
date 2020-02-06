@@ -52,21 +52,22 @@ slot = {
 		if det then return slot.count(det.name) end
 	end,
 	fill = function(sn) -- use items in slots after sn to make slot sn as full as possible
-		_sn = turtle.getSelectedSlot()
-		count = turtle.getItemCount(sn)
-		space = turtle.getItemSpace(sn)
+		local saved_sn = turtle.getSelectedSlot()
+		sn = default(saved_sn)(sn)
+		local count = turtle.getItemCount(sn)
+		local space = turtle.getItemSpace(sn)
 		if count ~= 0 and space ~= 0 then
 			turtle.select(sn)
 			for i = const.turtle.backpackSlotsNum, sn + 1, -1 do
 				if turtle.compareTo(i) then
-					got = turtle.getItemCount(i)
+					local got = turtle.getItemCount(i)
 					turtle.select(i)
 					turtle.transferTo(sn)
 					if got >= space then break end
 				end
 			end
 		end
-		turtle.select(_sn)
+		turtle.select(saved_sn)
 		return count ~= 0
 	end,
 	tidy = function()

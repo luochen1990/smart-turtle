@@ -3,6 +3,8 @@
 -- | identity : a -> a
 identity = function(x) return x end
 
+negate = function(x) return -x end
+
 -- | pipe : (a -> b) -> (b -> c) -> a -> c
 -- , pipe == flip compose
 pipe = function(f, ...)

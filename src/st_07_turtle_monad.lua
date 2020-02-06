@@ -1,12 +1,15 @@
 --------- the Turtle Monad ( ReaderT workMode (StateT workState IO) ) ----------
 
 workMode = {
-	destroy = 1, -- whether auto dig when move blocked: 0:no dig, 1:dig cheap items only, 2:dig all except protected
+	destroy = 1, -- whether auto dig when move blocked: 0:no dig, 1:dig cheap items only, 2:dig all non-protected
 	violence = false, -- whether auto attack when move blocked
 	retrySeconds = 2, -- seconds to retry before fail back when move blocked by other turtles
-	backpackWhiteList = {},
-	backpackBlackList = {},
-	backpackPinnedSlots = {},
+	workArea = nil, -- an electric fence
+	backpackWhiteList = {}, -- not used yet
+	backpackBlackList = {}, -- not used yet
+	backpackPinnedSlots = {}, -- not used yet
+	localFuelStation = nil, -- {pos = nil, dir = nil}, -- not used yet
+	localUnloadStation = nil, -- {pos = nil, dir = nil}, -- not used yet
 }
 
 workState = {
@@ -14,10 +17,8 @@ workState = {
 	facing = nil, -- current facing direction, const.dir.N/S/W/E
 	aiming = 0, -- 0:front, 1:up, -1:down
 	beginPos = nil, -- pos when the program start
-	localFuelStation = {pos = nil, dir = nil},
-	localUnloadStation = {pos = nil, dir = nil},
-	isDetouring = false,
-	interruptStack = {}, -- { {reason: "OutOfFuel"/"NeedUnload", pos: vec(100,0,0)} }
+	isDetouring = false, -- not very useful yet
+	interruptStack = {}, -- { {reason: "OutOfFuel"/"NeedUnload", pos: vec(100,0,0)} } -- not used yet
 }
 
 function workState:aimingDir()

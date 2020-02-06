@@ -1,21 +1,19 @@
 ------------------------------- main coroutines --------------------------------
 
-gpsPos = mkIO(function()
-	local x, y, z = gps.locate()
-	if x then return vec(x, y, z) else return nil end
-end)
-
+F, B, L, R, O = nil, nil, nil, nil, nil
 initWorkState = function()
-	(rep(dig) * use("minecraft:chest"))()
-	local ok, r = turtle.inspect()
-	assert(ok, "failed to get facing direction (inspect failed)")
-	workState.facing = -const.dir[r.state.facing:sub(1,1):upper()]
-	assert(workState.facing.y == 0, "failed to get facing direction (not a horizontal direction)")
+	if not (rep(dig) * use("minecraft:chest"))() then error("[initWorkState] please give me a chest") end
+	local ok, res = turtle.inspect()
+	if not ok then error("[initWorkState] failed to get facing direction (inspect failed)") end
+	workState.facing = -const.dir[res.state.facing:sub(1,1):upper()]
 	turtle.dig()
 	workState.pos = gpsPos()
-	assert(workState.pos ~= nil, "failed to get gps location!")
+	if workState.pos == nil then error("[initWorkState] failed to get gps location!") end
 	workState.beginPos = workState.pos
-	saveDir(turn.left * use("minecraft:chest"))()
+	saveDir(turn.left * use("minecraft:chest"))() --NOTE: not used yet
+	F, B, L, R = workState.facing, -workState.facing, leftSide(workState.facing), rightSide(workState.facing)
+	for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ENV[d]) end
+	O = workState.beginPos
 end
 
 main = function()

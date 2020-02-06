@@ -1,12 +1,13 @@
-------------------------------- advaneced move ---------------------------------
+------------------------------- advaneced apis ---------------------------------
 
 -- | attempt to approach destPos by one step
-move.toward = function(destPos)
+move.toward = function(destPos, cond)
 	return mkIO(function()
 		local ok = false
 		local v = destPos - workState.pos
+		local d0 = workState:aimingDir()
 		for _, d in ipairs(const.directions) do
-			if v:dot(const.dir[d]) > 0 then
+			if v:dot(const.dir[d]) > 0 and (not cond or cond(const.dir[d], d0)) then
 				ok = ok or (turn[d] * move)()
 				if ok then break end
 			end
@@ -75,5 +76,72 @@ savePos = function(io)
 		move.to(saved_pos)()
 		return unpack(r)
 	end)
+end
+
+-- save pos and dir
+savePosd = function(io)
+	return saveDir(savePos(io))
+end
+
+-- usage demo: save(currentPos)(move.to(vec(0,1,0)) * move.to(saved))
+save, saved = (function()
+	local saved_value = nil
+	local _save = mkIOfn(function(ioGetValue)
+		saved_value = {ioGetValue()}
+		return true
+	end)
+	local _saved = mkIO(function()
+		return unpack(saved_value)
+	end)
+	return _save, _saved
+end)()
+
+-- | this function scans a plane area
+-- , which is not as useful as the function scan()
+_scan2d = function(area)
+	assert(area and area.diag.x * area.diag.y * area.diag.z == 0, "[_scan2d(area)] area should be 2d, but got "..tostring(area))
+	return function(io)
+		return with({workArea = area})(mkIO(function()
+			local near = area.low
+			for _, p in ipairs(area:vertexes()) do
+				if (p - workState.pos):length() < (near - workState.pos):length() then near = p end
+			end
+			local far = area.low + area.high - near
+			if area:volume() <= 0 then return true end
+			if not move.to(near)() then return false end
+			io = try(saveDir(io))
+			local toward = move.toward(far, function(d, d0) return d ~= -d0 end)
+			local loop = save(currentDir) * toward * turn.to(fmap(negate)(saved)) * rep(io * move)
+			local run = io * toward * rep(io * move) * rep(loop)
+			run()
+			return true
+		end))
+	end
+end
+
+-- | a very useful function, scan over an 3d area (including trivial cases)
+-- , it scans layer by layer toward the mainDir
+-- , when you want to dig an area, you might want to choose your mainDir same as your dig direction
+-- , and when placing, choose your mainDir opposite to your place direction
+scan = function(area, mainDir)
+	mainDir = default(workState:aimingDir())(mainDir)
+	return function(io)
+		return with({workArea = area})(mkIO(function()
+			local projLen = (area.diag + const.positiveDir):dot(mainDir)
+			local low0, high0
+			if projLen == 0 then
+				return true
+			elseif projLen > 0 then
+				low0, high0 = area.low, (area.high - mainDir * (projLen - 1))
+			else --[[ if projLen < 0 then ]]
+				low0, high0 = (area.low + mainDir * (projLen + 1)), area.high
+			end
+			for i = 0, math.abs(projLen) - 1 do
+				local a = (low0 + mainDir * i) .. (high0 + mainDir * i)
+				_scan2d(a)(io)()
+			end
+			return true
+		end))
+	end
 end
 

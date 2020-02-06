@@ -29,6 +29,11 @@ end)()
 -- | pure : a -> IO a
 pure = function(x) return mkIO(function() return x end) end
 
+-- | fmap : (a -> b) -> IO a -> IO b
+fmap = function(f)
+	return mkIOfn(function(io) return f(io()) end)
+end
+
 -- | try : IO a -> IO Bool
 try = function(io) return mkIO(function() io(); return true end) end
 

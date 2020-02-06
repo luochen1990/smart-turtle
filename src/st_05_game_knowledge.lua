@@ -22,6 +22,7 @@ const = {
 	},
 	afterDig = {
 		["minecraft:stone"] = "minecraft:cobblestone",
+		["minecraft:grass_block"] = "minecraft:dirt",
 	},
 	valuableItems = {
 		"minecraft:diamond_ore",
@@ -60,5 +61,5 @@ const.rotate = {
 	left = const.dir.N ^ const.dir.W,
 	right = const.dir.N ^ const.dir.E,
 }
-for k, v in pairs(const.dir) do _ENV[k] = v -- define U/E/S/W/N/D
+for k, v in pairs(const.dir) do _ENV[k] = v end -- define U/E/S/W/N/D
 
