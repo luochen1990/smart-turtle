@@ -77,3 +77,19 @@ slot = {
 	end,
 }
 
+reserveSlot = mkIO(function() -- tidy backpack to reserve slot
+	if not slot.findLastEmpty() then
+		slot.tidy()
+		if not slot.findLastEmpty() then
+			local dropSn = slot.findDroppable()
+			if dropSn then
+				turtle.select(dropSn)
+				local drp = (saveDir(turn.lateral * -isChest * drop()) + drop())
+				return drp()
+			else -- nothing to drop
+				return false --TODO: back to unloadStation
+			end
+		end
+	end
+end)
+

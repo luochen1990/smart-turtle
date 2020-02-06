@@ -61,7 +61,7 @@ _aiming = {
 detect = _aiming.detect
 compare = _aiming.compare
 attack = _aiming.attack
-suck = _aiming.suck
+suck = reserveSlot * _aiming.suck
 drop = _aiming.drop
 
 -- | different from turtle.inspect, this only returns res
@@ -108,16 +108,7 @@ has = mkIOfn(function(name) return not not slot.find(name) end)
 select = mkIOfn(turtle.select)
 
 dig = mkIO(function()
-	-- tidy backpack to reserve slot
-	if not slot.findLastEmpty() then
-		slot.tidy()
-		if not slot.findLastEmpty() then
-			turtle.select(slot.findDroppable())
-			local io = (saveDir(turn.lateral * -isChest * drop()) + drop())
-			io()
-		end
-	end
-	--
+	reserveSlot() -- tidy backpack to reserve slot
 	return _aiming.dig()
 end)
 
@@ -146,12 +137,7 @@ end)
 
 move = mkIO(function()
 	-- auto refuel
-	local ok = refuel(2 * manhat(workState.pos + workState:aimingDir() - workState.beginPos))
-	if not ok then
-		print("Out Of Fuel! now backing to beginPos...")
-		move.to(workState.beginPos)()
-		error("waiting for more fuel...")
-	end
+	refuel(2 * manhat(workState.pos + workState:aimingDir() - workMode.fuelStation.pos))()
 	--
 	local mov = _aiming.move
 	if workMode.destroy == 1 then

@@ -145,3 +145,16 @@ scan = function(area, mainDir)
 	end
 end
 
+visitStation = mkIOfn(function(station)
+	assert(station.pos and station.dir, "[_visitStation] station.pos and station.dir is required!")
+	return (move.to(station.pos) * turn.to(station.dir))()
+end)
+
+transportLine = mkIOfn(function(sourceStation, destStation, fuelStation)
+	local fuelReservation = 2 * manhat(destStation - sourceStation) + manhat(destStation - fuelStation) + manhat(sourceStation - fuelStation)
+	if fuelStation then workMode.fuelStation = fuelStation end
+	while true do
+		if turtle.getFuelLevel() < fuelReservation then refuel(turtle.getFuelLimit() - 1000)() end
+		(visitStation(sourceStation) * suck() ^ 15 * visitStation(destStation) * drop() ^ 15)()
+	end
+end)

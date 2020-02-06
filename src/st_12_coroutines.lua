@@ -6,14 +6,17 @@ initWorkState = function()
 	local ok, res = turtle.inspect()
 	if not ok then error("[initWorkState] failed to get facing direction (inspect failed)") end
 	workState.facing = -const.dir[res.state.facing:sub(1,1):upper()]
+	F, B, L, R = workState.facing, -workState.facing, leftSide(workState.facing), rightSide(workState.facing)
+	for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ENV[d]) end
 	turtle.dig()
+	-- got facing
 	workState.pos = gpsPos()
 	if workState.pos == nil then error("[initWorkState] failed to get gps location!") end
 	workState.beginPos = workState.pos
-	saveDir(turn.left * use("minecraft:chest"))() --NOTE: not used yet
-	F, B, L, R = workState.facing, -workState.facing, leftSide(workState.facing), rightSide(workState.facing)
-	for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ENV[d]) end
 	O = workState.beginPos
+	-- got pos
+	saveDir(turn.left * use("minecraft:chest"))() and workMode.fuelStation = {pos = workState.pos, dir = L}
+	-- got fuelStation
 end
 
 main = function()

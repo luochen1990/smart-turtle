@@ -8,8 +8,8 @@ workMode = {
 	backpackWhiteList = {}, -- not used yet
 	backpackBlackList = {}, -- not used yet
 	backpackPinnedSlots = {}, -- not used yet
-	localFuelStation = nil, -- {pos = nil, dir = nil}, -- not used yet
-	localUnloadStation = nil, -- {pos = nil, dir = nil}, -- not used yet
+	fuelStation = nil, -- {pos = nil, dir = nil}
+	unloadStation = nil, -- {pos = nil, dir = nil}, -- not used yet
 }
 
 workState = {
