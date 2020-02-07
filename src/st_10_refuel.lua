@@ -1,10 +1,10 @@
 -------------------------------- auto refuel  ----------------------------------
 
-fuelEnough = mkIOfn(function(nStep)
+fuelEnough = markIOfn("fuelEnough(nStep)")(mkIOfn(function(nStep)
 	return turtle.getFuelLevel() >= nStep
-end)
+end))
 
-refuelFromBackpack = mkIOfn(function(nStep)
+refuelFromBackpack = markIOfn("refuelFromBackpack(nStep)")(mkIOfn(function(nStep)
 	nStep = math.max(1 , nStep)
 	local saved_sn = turtle.getSelectedSlot()
 	while turtle.getFuelLevel() < nStep do
@@ -22,27 +22,30 @@ refuelFromBackpack = mkIOfn(function(nStep)
 	end
 	turtle.select(saved_sn)
 	return true
-end)
+end))
 
-refuel = mkIOfn(function(nStep)
+refuelFromFuelStation = markIOfn("refuelFromFuelStation(nStep)")(mkIOfn(function(nStep)
+	print("Out of fuel, now backing to fuelStation...")
+	local fuelBeforeLeave = turtle.getFuelLevel()
+	local leavePos = workState.pos
+	local leaveDir = workState:aimingDir()
+	with({workArea = nil})(visitStation(workMode.fuelStation))()
+	local singleTripCost = turtle.getFuelLevel() - fuelBeforeLeave
+	print("Cost "..singleTripCost.." to reach the fuelStation, now refueling...")
+	rep(try(suck(1)) * -refuelFromBackpack(nStep))() -- repeat until full
+	print("Finished refueling, now back to work pos "..leavePos)
+	move.to(leavePos)()
+	turn.to(leaveDir)()
+end))
+
+refuel = markIOfn("refuel(nStep)")(mkIOfn(function(nStep)
 	nStep = math.max(1 , nStep)
 	local saved_sn = turtle.getSelectedSlot()
-	local succ = refuelFromBackpack(nStep)
+	local succ = refuelFromBackpack(nStep)()
 	if not succ then -- no fuel in backpack, go to fuelStation and attempt to full the tank
-		print("Out of fuel, now backing to fuelStation...")
-		--local fuelBeforeLeave = turtle.getFuelLevel()
-		local leavePos = workState.pos
-		local leaveDir = workState:aimingDir()
-		with({workArea = nil})(visitStation(workMode.fuelStation))()
-		--local singleTripCost = turtle.getFuelLevel() - fuelBeforeLeave
-		local refuelTarget = turtle.getFuelLimit() - 1000
-		print("refueling...")
-		rep(try(suck(1)) * -refuelFromBackpack(refuelTarget))() -- repeat until full
-		print("Refuel done, now back to work...")
-		move.to(leavePos)()
-		turn.to(leaveDir)()
+		refuelFromFuelStation(turtle.getFuelLimit() - 1000)
 	end
 	turtle.select(saved_sn)
 	return true
-end)
+end))
 
