@@ -42,6 +42,18 @@ markIOfn = function(name)
 	end
 end
 
+printC = function(fg, bg)
+	return function(...)
+		local saved_fg = term.getTextColor()
+		local saved_bg = term.getBackgroundColor()
+		term.setTextColor(default(saved_fg)(fg))
+		term.setBackgroundColor(default(saved_bg)(bg))
+		print(...)
+		term.setTextColor(saved_fg)
+		term.setBackgroundColor(saved_bg)
+	end
+end
+
 _waitForKeyPress = function(targetKey)
 	while true do
 		local ev, keyCode = os.pullEvent("key")
@@ -71,9 +83,9 @@ _waitForKeyCombination = function(targetKey1, targetKey2)
 	until (st == 2)
 end
 
-_printCallStack = function(beginDepth, count, color)
-	beginDepth = math.max(1, beginDepth or 1)
+_printCallStack = function(count, beginDepth, color)
 	count = math.max(0, count or 10)
+	beginDepth = math.max(1, beginDepth or 1 + #_callStack - count)
 	color = color or colors.orange
 	withColor(color)(function()
 		for dep = beginDepth, beginDepth + count - 1 do
@@ -84,14 +96,14 @@ _printCallStack = function(beginDepth, count, color)
 				break
 			end
 		end
-		print("[total call stack depth]", #_callStack)
+		printC(colors.grey)("[total call stack depth]", #_callStack)
 	end)()
 end
 
 _printCallStackCo = function()
 	while true do
 		_waitForKeyCombination(keys.leftCtrl, keys.p)
-		_printCallStack(1, 10, colors.blue)
+		_printCallStack(10, colors.blue)
 	end
 end
 
