@@ -30,11 +30,25 @@ gpsPos = function()
 	return x and vec(math.floor(x), math.floor(y), math.floor(z))
 end
 
-leftSide = memoize(function(d) return d % const.rotate.left end) -- left side of a horizontal direction
-rightSide = memoize(function(d) return d % const.rotate.right end) -- right side of a horizontal direction
+leftSide = memoize(function(d)
+	assert(d and d.x, "[leftSide(d)] d should be a vector")
+	return d % const.rotate.left
+end) -- left side of a horizontal direction
 
-lowPoint = function(p, q) return vec(math.min(p.x, q.x), math.min(p.y, q.y), math.min(p.z, q.z)) end
-highPoint = function(p, q) return vec(math.max(p.x, q.x), math.max(p.y, q.y), math.max(p.z, q.z)) end
+rightSide = memoize(function(d)
+	assert(d and d.x, "[rightSide(d)] d should be a vector")
+	return d % const.rotate.right
+end) -- right side of a horizontal direction
+
+lowPoint = function(p, q)
+	assert(p and p.x and q and q.x, "[lowPoint(p, q)] p and q should be vector")
+	return vec(math.min(p.x, q.x), math.min(p.y, q.y), math.min(p.z, q.z))
+end
+
+highPoint = function(p, q)
+	assert(p and p.x and q and q.x, "[highPoint(p, q)] p and q should be vector")
+	return vec(math.max(p.x, q.x), math.max(p.y, q.y), math.max(p.z, q.z))
+end
 
 mkArea = (function()
 	local _area_mt = {
@@ -54,6 +68,9 @@ mkArea = (function()
 		setmetatable(a, _area_mt)
 		return a
 	end
-	return function(p, q) return _mkArea(lowPoint(p, q), highPoint(p, q)) end
+	return function(p, q)
+		assert(p and p.x and q and q.x, "[mkArea(p, q)] p and q should be vector")
+		return _mkArea(lowPoint(p, q), highPoint(p, q))
+	end
 end)()
 

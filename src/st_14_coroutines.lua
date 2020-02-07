@@ -30,7 +30,7 @@ _test = {}
 --	os.run(_ENV, "/rom/programs/lua.lua")
 --end
 
-begin = function (...)
+begin = function(...)
 	_initWorkState()
 	if math.random() < 0.1 then _test.move() end
 	parallel.waitForAll(_mainCo, _replCo, _printCallStackCo, ...)
@@ -42,10 +42,21 @@ v1 = vec(1,0,0)
 v2 = vec(0,1,0)
 v3 = vec(0,0,1)
 
-_test.move = function() return savePosd(move.go(leftSide(workState.facing) * 2))() end
-_test.scan = function() return savePosd(scan(O .. (O + (U + R + F) * 2), D)(turn.U * try(dig) * place))() end
-_test.scan2d = function() return savePosd(_scan2d(O .. (O + (R + F) * 2))(turn.U * try(dig) * place))() end
-_test.transportLine = function() return transportLine({pos = vec(14,6,195), dir = W}, {pos = vec(8,6,193), dir = E})() end
+_test.move = markIO("_test.move")(mkIO(function()
+	return savePosd(move.go(leftSide(workState.facing) * 2))()
+end))
+
+_test.scan = markIO("_test.scan")(mkIO(function()
+	return savePosd(scan(O .. (O + (U + R + F) * 2), D)(turn.U * try(dig) * place))()
+end))
+
+_test.scan2d = markIO("_test.scan2d")(mkIO(function()
+	return savePosd(_scan2d(O .. (O + (R + F) * 2))(turn.U * try(dig) * place))()
+end))
+
+_test.transportLine = markIO("_test.transportLine")(mkIO(function()
+	return transportLine({pos = vec(14,6,195), dir = W}, {pos = vec(8,6,193), dir = E})()
+end))
 
 --------------------------------------------------------------------------------
 
