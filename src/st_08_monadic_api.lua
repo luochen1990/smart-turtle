@@ -61,8 +61,11 @@ _aiming = {
 detect = _aiming.detect
 compare = _aiming.compare
 attack = _aiming.attack
-suck = reserveSlot * _aiming.suck
 drop = _aiming.drop
+
+suck = mkIOfn(function(n)
+	return (reserveSlot * _aiming.suck(n))()
+end)
 
 -- | different from turtle.inspect, this only returns res
 inspect = mkIO(function()

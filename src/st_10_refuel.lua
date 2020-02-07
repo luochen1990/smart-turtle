@@ -33,7 +33,7 @@ refuel = mkIOfn(function(nStep)
 		--local fuelBeforeLeave = turtle.getFuelLevel()
 		local leavePos = workState.pos
 		local leaveDir = workState:aimingDir()
-		with(workArea = nil)(visitStation(workMode.fuelStation))()
+		with({workArea = nil})(visitStation(workMode.fuelStation))()
 		--local singleTripCost = turtle.getFuelLevel() - fuelBeforeLeave
 		local refuelTarget = turtle.getFuelLimit() - 1000
 		print("refueling...")
