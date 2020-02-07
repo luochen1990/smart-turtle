@@ -42,6 +42,17 @@ markIOfn = function(name)
 	end
 end
 
+-- | markIOfn2 : FunctionName -> (a -> b -> IO c) -> (a -> b -> IO c)
+markIOfn2 = function(name)
+	if not DEBUG then return function(x) return x end end
+	return function(iof2)
+		return function(...)
+			local iof = iof2(...)
+			return markIOfn(name)(iof)
+		end
+	end
+end
+
 printC = function(fg, bg)
 	return function(...)
 		local saved_fg = term.getTextColor()

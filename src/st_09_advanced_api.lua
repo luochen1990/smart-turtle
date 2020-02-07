@@ -45,7 +45,7 @@ move.to = markIOfn("move.to(destPos)")(function(destPos)
 			local detourRotate = targetDir ^ detourDir
 			local detourDirs = {targetDir, detourDir, detourDir % detourRotate, detourDir % detourRotate % detourRotate}
 			-- detourDirs decided
-			withColor(colors.grey)(function()
+			withColor(colors.gray)(function()
 				print("detouring... (destPos: "..tostring(destPos)..")")
 				print("             (targetDir: "..tostring(targetDir)..")")
 				print("             (detourDir: "..tostring(detourDir)..")")
@@ -103,7 +103,7 @@ end)()
 
 -- | this function scans a plane area
 -- , which is not as useful as the function scan()
-_scan2d = markIOfn("_scan2d(area)")(function(area)
+_scan2d = markIOfn2("_scan2d(area)(io)")(function(area)
 	assert(area and area.diag.x * area.diag.y * area.diag.z == 0, "[_scan2d(area)] area should be 2d, but got "..tostring(area))
 	return function(io)
 		return with({workArea = area})(mkIO(function()
@@ -128,7 +128,7 @@ end)
 -- , it scans layer by layer toward the mainDir
 -- , when you want to dig an area, you might want to choose your mainDir same as your dig direction
 -- , and when placing, choose your mainDir opposite to your place direction
-scan = markIOfn("scan(area, mainDir)")(function(area, mainDir)
+scan = markIOfn2("scan(area, mainDir)(io)")(function(area, mainDir)
 	mainDir = default(workState:aimingDir())(mainDir)
 	return function(io)
 		return with({workArea = area})(mkIO(function()
