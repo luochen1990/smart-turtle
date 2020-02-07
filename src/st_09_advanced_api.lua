@@ -1,7 +1,7 @@
 ------------------------------- advaneced apis ---------------------------------
 
 -- | attempt to approach destPos by one step
-move.toward = function(destPos, cond)
+move.toward = markIOfn("move.toward(destPos, cond)")(function(destPos, cond)
 	return mkIO(function()
 		local ok = false
 		local v = destPos - workState.pos
@@ -14,9 +14,9 @@ move.toward = function(destPos, cond)
 		end
 		return ok
 	end)
-end
+end)
 
-move.to = function(destPos)
+move.to = markIOfn("move.to(destPos)")(function(destPos)
 	return mkIO(function()
 		local latestDetourPos
 		while true do
@@ -45,6 +45,11 @@ move.to = function(destPos)
 			local detourRotate = targetDir ^ detourDir
 			local detourDirs = {targetDir, detourDir, detourDir % detourRotate, detourDir % detourRotate % detourRotate}
 			-- detourDirs decided
+			withColor(colors.yellow)(function()
+				print("detouring... (destPos: "..destPos..")")
+				print("             (targetDir: "..targetDir..")")
+				print("             (detourDir: "..detourDir..")")
+			end)()
 			-- begin detouring loop
 			local detourRotateCount = 1
 			repeat
@@ -61,44 +66,44 @@ move.to = function(destPos)
 			latestDetourPos = detourBeginPos
 		end
 	end)
-end
+end)
 
-move.go = function(destVec)
+move.go = markIOfn("move.go(destVec)")(function(destVec)
 	return mkIO(function()
 		return move.to(workState.pos + destVec)()
 	end)
-end
+end)
 
-savePos = function(io)
+savePos = markIOfn("savePos(io)")(function(io)
 	return mkIO(function()
 		local saved_pos = workState.pos
 		local r = {io()}
 		move.to(saved_pos)()
 		return unpack(r)
 	end)
-end
+end)
 
 -- save pos and dir
 savePosd = function(io)
 	return saveDir(savePos(io))
 end
 
--- usage demo: save(currentPos)(move.to(vec(0,1,0)) * move.to(saved))
+-- usage demo: save(currentPos) * move.to(vec(0,1,0)) * move.to(saved)
 save, saved = (function()
 	local saved_value = nil
-	local _save = mkIOfn(function(ioGetValue)
+	local _save = markIOfn("save(ioGetValue)")(mkIOfn(function(ioGetValue)
 		saved_value = {ioGetValue()}
 		return true
-	end)
-	local _saved = mkIO(function()
+	end))
+	local _saved = markIO("saved")(mkIO(function()
 		return unpack(saved_value)
-	end)
+	end))
 	return _save, _saved
 end)()
 
 -- | this function scans a plane area
 -- , which is not as useful as the function scan()
-_scan2d = function(area)
+_scan2d = markIOfn("_scan2d(area)")(function(area)
 	assert(area and area.diag.x * area.diag.y * area.diag.z == 0, "[_scan2d(area)] area should be 2d, but got "..tostring(area))
 	return function(io)
 		return with({workArea = area})(mkIO(function()
@@ -117,13 +122,13 @@ _scan2d = function(area)
 			return true
 		end))
 	end
-end
+end)
 
 -- | a very useful function, scan over an 3d area (including trivial cases)
 -- , it scans layer by layer toward the mainDir
 -- , when you want to dig an area, you might want to choose your mainDir same as your dig direction
 -- , and when placing, choose your mainDir opposite to your place direction
-scan = function(area, mainDir)
+scan = markIOfn("scan(area, mainDir)")(function(area, mainDir)
 	mainDir = default(workState:aimingDir())(mainDir)
 	return function(io)
 		return with({workArea = area})(mkIO(function()
@@ -143,18 +148,19 @@ scan = function(area, mainDir)
 			return true
 		end))
 	end
-end
-
-visitStation = mkIOfn(function(station)
-	assert(station.pos and station.dir, "[_visitStation] station.pos and station.dir is required!")
-	return (move.to(station.pos) * turn.to(station.dir))()
 end)
 
-transportLine = mkIOfn(function(sourceStation, destStation, fuelStation)
-	local fuelReservation = 2 * manhat(destStation - sourceStation) + manhat(destStation - fuelStation) + manhat(sourceStation - fuelStation)
+visitStation = markIOfn("visitStation(station)")(mkIOfn(function(station)
+	assert(station.pos and station.dir, "[_visitStation] station.pos and station.dir is required!")
+	return (move.to(station.pos) * turn.to(station.dir))()
+end))
+
+transportLine = markIOfn("transportLine(sourceStation, destStation, fuelStation)")(mkIOfn(function(sourceStation, destStation, fuelStation)
 	if fuelStation then workMode.fuelStation = fuelStation end
+	if not workMode.fuelStation then error("[transportLine] fuelStation must be provided") end
+	local fuelReservation = 2 * manhat(destStation.pos - sourceStation.pos) + manhat(destStation.pos - workMode.fuelStation.pos) + manhat(sourceStation.pos - workMode.fuelStation.pos)
 	while true do
 		if turtle.getFuelLevel() < fuelReservation then refuel(turtle.getFuelLimit() - 1000)() end
 		(visitStation(sourceStation) * suck() ^ 15 * visitStation(destStation) * drop() ^ 15)()
 	end
-end)
+end))
