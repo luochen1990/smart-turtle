@@ -23,13 +23,15 @@ maybe = function(dft, wrap)
 	return function(x) if x == nil then return dft else return wrap(x) end end
 end
 
--- | apply : a -> (a... -> b) -> b
-apply = function(args)
+-- | apply : a -> (a -> b) -> b
+apply = function(...)
+	local args = {...}
 	return function (f) return f(unpack(args)) end
 end
 
 -- | delay : (a -> b, a) -> IO b
-delay = function(f, args)
+delay = function(f, ...)
+	local args = {...}
 	return function() return f(unpack(args)) end
 end
 

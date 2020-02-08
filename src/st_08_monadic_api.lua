@@ -36,7 +36,7 @@ end)
 _wrapAimingSensitiveApi = function(apiName, wrap, rawApis)
 	if rawApis == nil then rawApis = {turtle[apiName..'Up'], turtle[apiName], turtle[apiName..'Down']} end
 	assert(#rawApis >= 3, "[init _aiming."..apiName.."] three rawApis must be provided")
-	return wrap(markFunc("_aiming."..apiName)(function(...)
+	return wrap(markFn("_aiming."..apiName)(function(...)
 		assert(workState.aiming and workState.aiming >= -1 and workState.aiming <= 1, "[_aiming."..apiName.."] workState.aiming must be 0/1/-1")
 		local rawApi = rawApis[2 - workState.aiming]
 		return rawApi(...)
@@ -160,27 +160,12 @@ move = markIO("move")(mkIO(function()
 	return r
 end))
 
-withColor = function(fg, bg)
-	return mkIOfn(function(io)
-		local saved_fg = term.getTextColor()
-		local saved_bg = term.getBackgroundColor()
-		term.setTextColor(default(saved_fg)(fg))
-		term.setBackgroundColor(default(saved_bg)(bg))
-		local r = {io()}
-		term.setTextColor(saved_fg)
-		term.setBackgroundColor(saved_bg)
-		return unpack(r)
-	end)
-end
-
 echo = mkIOfn(function(...)
 	for _, expr in ipairs({...}) do
 		local func, err = load("return "..expr, "echo_expr", "t", _ENV)
 		if not func then error(err) end
 		local r = func()
-		withColor(colors.gray)(function()
-			print("[echo] "..expr.." ==>", r)
-		end)()
+		printC(colors.gray)("[echo] "..expr.." ==>", r)
 	end
 	return true
 end)

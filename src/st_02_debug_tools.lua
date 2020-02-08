@@ -7,13 +7,13 @@ if DEBUG then assert = __assert else assert = function() end end
 
 _callStack = {}
 
--- | markFunc : FunctionName -> (a -> b) -> (a -> b)
-markFunc = function(name)
+-- | markFn : FunctionName -> (a -> b) -> (a -> b)
+markFn = function(name)
 	if not DEBUG then return function(x) return x end end
 	return function(func)
 		return function(...)
 			_callStack[#_callStack+1] = name
-			local r = {func()}
+			local r = {func(...)}
 			_callStack[#_callStack] = nil
 			return unpack(r)
 		end
@@ -53,16 +53,29 @@ markIOfn2 = function(name)
 	end
 end
 
-printC = function(fg, bg)
-	return function(...)
+withColor = function(fg, bg)
+	return (mkIOfn(function(io)
 		local saved_fg = term.getTextColor()
 		local saved_bg = term.getBackgroundColor()
 		term.setTextColor(default(saved_fg)(fg))
 		term.setBackgroundColor(default(saved_bg)(bg))
-		print(...)
+		local r = {io()}
 		term.setTextColor(saved_fg)
 		term.setBackgroundColor(saved_bg)
-	end
+		return unpack(r)
+	end))
+end
+
+printC = function(fg, bg)
+	return markFn("printC(fg, bg)(io)")(function(...)
+		return withColor(fg, bg)(delay(print, ...))()
+	end)
+end
+
+writeC = function(fg, bg)
+	return markFn("writeC(fg, bg)(io)")(function(...)
+		return withColor(fg, bg)(delay(write, ...))()
+	end)
 end
 
 _waitForKeyPress = function(targetKey)

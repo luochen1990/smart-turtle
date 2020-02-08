@@ -45,11 +45,7 @@ move.to = markIOfn("move.to(destPos)")(function(destPos)
 			local detourRotate = targetDir ^ detourDir
 			local detourDirs = {targetDir, detourDir, detourDir % detourRotate, detourDir % detourRotate % detourRotate}
 			-- detourDirs decided
-			withColor(colors.gray)(function()
-				print("detouring... (destPos: "..tostring(destPos)..")")
-				print("             (targetDir: "..tostring(targetDir)..")")
-				print("             (detourDir: "..tostring(detourDir)..")")
-			end)()
+			printC(colors.gray)("detouring... (toward "..const.dirName[targetDir]..", to "..tostring(destPos)..")")
 			-- begin detouring loop
 			local detourRotateCount = 1
 			repeat
