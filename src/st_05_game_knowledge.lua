@@ -62,6 +62,6 @@ const.rotate = {
 	right = const.dir.N ^ const.dir.E,
 }
 const.dirName = {}
-for k, v in pairs(const.dir) do const.dirName[v] = k end -- define U/E/S/W/N/D
+for k, v in pairs(const.dir) do const.dirName[v] = k end -- define const.dirName
 for k, v in pairs(const.dir) do _ENV[k] = v end -- define U/E/S/W/N/D
 
