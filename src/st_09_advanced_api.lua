@@ -27,6 +27,7 @@ move.to = markIOfn("move.to(destPos)")(function(destPos)
 			if md <= 1 then return md == 0 end
 			if workState.pos == latestDetourPos then return false end
 			-- begin detouring
+			workState.detouring = true
 			local detourBeginPos = workState.pos
 			local targetDir
 			for _, d in ipairs(const.directions) do
@@ -48,6 +49,7 @@ move.to = markIOfn("move.to(destPos)")(function(destPos)
 			printC(colors.gray)("detouring... (toward "..const.dirName[targetDir]..", to "..tostring(destPos)..")")
 			-- begin detouring loop
 			local detourRotateCount = 1
+			local detourBeginDis = manhat(destPos - detourBeginPos)
 			repeat
 				for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
 					candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
@@ -57,9 +59,10 @@ move.to = markIOfn("move.to(destPos)")(function(destPos)
 						break
 					end
 				end
-			until (detourRotateCount % 4 == 0)
+			until (manhat(destPos - workState.pos) < detourBeginDis)
 			-- finish detouring
 			latestDetourPos = detourBeginPos
+			workState.detouring = false
 		end
 	end)
 end)
@@ -127,7 +130,7 @@ end)
 scan = markIOfn2("scan(area, mainDir)(io)")(function(area, mainDir)
 	mainDir = default(workState:aimingDir())(mainDir)
 	return function(io)
-		return with({workArea = area})(mkIO(function()
+		return (mkIO(function()
 			local projLen = (area.diag + const.positiveDir):dot(mainDir)
 			local low0, high0
 			if projLen == 0 then
@@ -148,7 +151,13 @@ end)
 
 visitStation = markIOfn("visitStation(station)")(mkIOfn(function(station)
 	assert(station.pos and station.dir, "[_visitStation] station.pos and station.dir is required!")
-	return (move.to(station.pos) * turn.to(station.dir))()
+	local succ = (move.to(station.pos) * turn.to(station.dir))()
+	if not succ then
+		print("Failed to visit station "..tostring(station.pos)..", please help!")
+		--TODO: tell the swarm server
+		while true do sleep(1000000) end --waiting for help
+	end
+	return true
 end))
 
 transportLine = markIOfn("transportLine(sourceStation, destStation, fuelStation)")(mkIOfn(function(sourceStation, destStation, fuelStation)
@@ -156,7 +165,7 @@ transportLine = markIOfn("transportLine(sourceStation, destStation, fuelStation)
 	if not workMode.fuelStation then error("[transportLine] fuelStation must be provided") end
 	local fuelReservation = 2 * manhat(destStation.pos - sourceStation.pos) + manhat(destStation.pos - workMode.fuelStation.pos) + manhat(sourceStation.pos - workMode.fuelStation.pos)
 	while true do
-		if turtle.getFuelLevel() < fuelReservation then refuel(turtle.getFuelLimit() - 1000)() end
-		(visitStation(sourceStation) * suck() ^ 15 * visitStation(destStation) * drop() ^ 15)()
+		refuel(fuelReservation)()
+		;(visitStation(sourceStation) * suck() ^ 15 * visitStation(destStation) * drop() ^ 15)()
 	end
 end))

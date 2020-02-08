@@ -8,8 +8,8 @@ workMode = {
 	backpackWhiteList = {}, -- not used yet
 	backpackBlackList = {}, -- not used yet
 	backpackPinnedSlots = {}, -- not used yet
-	fuelStation = nil, -- {pos = nil, dir = nil}
-	unloadStation = nil, -- {pos = nil, dir = nil}, -- not used yet
+	fuelStation = nil, -- {pos, dir}
+	unloadStation = nil, -- {pos, dir}
 }
 
 workState = {
@@ -17,8 +17,9 @@ workState = {
 	facing = nil, -- current facing direction, const.dir.N/S/W/E
 	aiming = 0, -- 0:front, 1:up, -1:down
 	beginPos = nil, -- pos when the program start
-	isDetouring = false, -- not very useful yet
-	interruptStack = {}, -- { {reason: "OutOfFuel"/"NeedUnload", pos: vec(100,0,0)} } -- not used yet
+	isDetouring = false, -- only for inspect
+	isRefueling = false,
+	isUnloading = false,
 }
 
 function workState:aimingDir()

@@ -33,6 +33,29 @@ saveDir = markIOfn("saveDir(io)")(function(io)
 	end)
 end)
 
+reserveOneSlot = mkIO(function() -- tidy backpack to reserve 1 empty slot
+	if slot.findLastEmpty() then return true end
+	-- tidy backpack
+	slot.tidy()
+	if slot.findLastEmpty() then return true end
+	-- find something to drop
+	local dropSn = slot.findDroppable()
+	if dropSn then
+		turtle.select(dropSn)
+		local drp = (saveDir(turn.lateral * -isChest * drop()) + drop())
+		if drp() then return true end
+	end
+	-- if nothing to drop, back to unloadStation
+	if workMode.unloadStation and workMode.unloadStation.pos then
+		workState.unloading = true
+		--TODO: back to unloadStation
+		workState.unloading = false
+		return false
+	else
+		return false
+	end
+end)
+
 _wrapAimingSensitiveApi = function(apiName, wrap, rawApis)
 	if rawApis == nil then rawApis = {turtle[apiName..'Up'], turtle[apiName], turtle[apiName..'Down']} end
 	assert(#rawApis >= 3, "[init _aiming."..apiName.."] three rawApis must be provided")
@@ -64,7 +87,7 @@ attack = _aiming.attack
 drop = _aiming.drop
 
 suck = markIOfn("suck(n)")(mkIOfn(function(n)
-	return (reserveSlot * _aiming.suck(n))()
+	return (reserveOneSlot * _aiming.suck(n))()
 end))
 
 -- | different from turtle.inspect, this only returns res
@@ -110,10 +133,7 @@ has = markIOfn("has(itemName)")(mkIOfn(function(itemName) return not not slot.fi
 
 select = mkIOfn(turtle.select)
 
-dig = markIO("dig")(mkIO(function()
-	reserveSlot() -- tidy backpack to reserve slot
-	return _aiming.dig()
-end))
+dig = markIO("dig")( reserveOneSlot * _aiming.dig )
 
 -- | keep current slot not empty after place
 place = markIO("place")(mkIO(function()
@@ -140,7 +160,9 @@ end))
 
 move = markIO("move")(mkIO(function()
 	-- auto refuel
-	refuel(2 * manhat(workState.pos + workState:aimingDir() - workMode.fuelStation.pos))()
+	if not workState.refueling then
+		refuel(2 * manhat(workState.pos + workState:aimingDir() - workMode.fuelStation.pos))()
+	end
 	--
 	local mov = _aiming.move
 	if workMode.destroy == 1 then

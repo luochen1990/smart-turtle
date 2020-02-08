@@ -54,9 +54,8 @@ Features
         * implementation idea
             - inspired by the wall-following algorithm for 2-dimensional maze
             - first, we attempt to approach the destPos until blocked
-            - second, we choose a targetDir and a detourPlane for next step
-            - then we run the wall-following algorithm until facing to targetDir
-            - we repeat the above three steps until we arrive the destPos
+            - second, we choose a detourPlane to detour following wall until closer
+            - we repeat the above two steps until we arrive the destPos
         * usage description
             - `move.to(destPos)`: go to `destPos`
             - `move.go(destVec)`: go to `workState.pos + destVec`

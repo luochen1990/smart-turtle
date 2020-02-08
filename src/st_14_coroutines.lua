@@ -55,7 +55,11 @@ _test.scan2d = markIO("_test.scan2d")(mkIO(function()
 end))
 
 _test.transportLine = markIO("_test.transportLine")(mkIO(function()
-	return transportLine({pos = vec(14,6,195), dir = W}, {pos = vec(8,6,193), dir = E})()
+	local s = {pos = O + L * 2 + F * 2 + U * 3, dir = R}
+	local t = {pos = O + R * 4 + U, dir = L}
+	;(visitStation(s) * use("minecraft:chest"))()
+	;(visitStation(t) * use("minecraft:chest"))()
+	return transportLine(s, t)()
 end))
 
 --------------------------------------------------------------------------------
