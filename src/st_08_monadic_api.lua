@@ -9,8 +9,11 @@ if turtle then
 	}
 	turn.to = markIOfn("turn.to(d)")(mkIOfn(function(d)
 		assert(d and ((d.x and d.y and d.z) or (d.run)), "[turn.to(d)] d must be a vector (or IO vector)!")
-		if d.run then d = d.run() end -- in case d is IO vector
-		assert(math.abs(d.x + d.y + d.z) == 1 and d:length() == 1, "[turn.to(d)] d must be a dir, i.e. E/S/W/N/U/D")
+		if d.run then -- in case d is IO vector
+			d = d.run()
+			assert(d and ((d.x and d.y and d.z) or (d.run)), "[turn.to(d)] d must be a vector (or IO vector)!")
+		end
+		assert(manhat(d) == 1, "[turn.to(d)] d must be a dir, i.e. E/S/W/N/U/D")
 		workState.aiming = d.y
 		if d == workState.facing then return true
 		elseif d == -workState.facing then return turn.back()
@@ -36,19 +39,19 @@ if turtle then
 	end)
 
 	reserveOneSlot = mkIO(function() -- tidy backpack to reserve 1 empty slot
-		if slot.findLastEmpty() then return true end
+		if slot.findLastThat(slot.isEmpty) then return true end
 		-- tidy backpack
 		slot.tidy()
-		if slot.findLastEmpty() then return true end
+		if slot.findLastThat(slot.isEmpty) then return true end
 		-- find something to drop
-		local dropSn = slot.findDroppable()
+		local dropSn = slot.findThat(slot.isDroppable)
 		if dropSn then
 			turtle.select(dropSn)
 			local drp = (saveDir(turn.lateral * -isChest * drop()) + drop())
 			if drp() then return true end
 		end
 		-- if nothing to drop, back to unloadStation
-		if workMode.unloadStation and workMode.unloadStation.pos then
+		if workState.unloadStation and workState.unloadStation.pos then
 			workState.unloading = true
 			--TODO: back to unloadStation
 			workState.unloading = false
@@ -62,7 +65,6 @@ if turtle then
 		if rawApis == nil then rawApis = {turtle[apiName..'Up'], turtle[apiName], turtle[apiName..'Down']} end
 		assert(#rawApis >= 3, "[init _aiming."..apiName.."] three rawApis must be provided")
 		return wrap(markFn("_aiming."..apiName)(function(...)
-			assert(workState.aiming and workState.aiming >= -1 and workState.aiming <= 1, "[_aiming."..apiName.."] workState.aiming must be 0/1/-1")
 			local rawApi = rawApis[2 - workState.aiming]
 			return rawApi(...)
 		end))
@@ -133,7 +135,31 @@ if turtle then
 
 	has = markIOfn("has(itemName)")(mkIOfn(function(itemName) return not not slot.find(itemName) end))
 
-	select = mkIOfn(turtle.select)
+	select = mkIOfn(function(selector)
+		if type(selector) == "number" then
+			return turtle.select(selector)
+		elseif type(selector) == "string" then
+			local sn = slot.find(selector)
+			return sn ~= nil and turtle.select(sn)
+		elseif type(selector) == "function" then
+			local sn = slot.findThat(selector)
+			return sn ~= nil and turtle.select(sn)
+		else
+			error("[select(selector)] type of selector cannot be "..tostring(selector))
+		end
+	end)
+
+	selectLast = mkIOfn(function(selector)
+		if type(selector) == "string" then
+			local sn = slot.findLast(selector)
+			return sn ~= nil and turtle.select(sn)
+		elseif type(selector) == "function" then
+			local sn = slot.findLastThat(selector)
+			return sn ~= nil and turtle.select(sn)
+		else
+			error("[selectLast(selector)] type of selector cannot be "..tostring(selector))
+		end
+	end)
 
 	dig = markIO("dig")( reserveOneSlot * _aiming.dig )
 
@@ -163,7 +189,8 @@ if turtle then
 	move = markIO("move")(mkIO(function()
 		-- auto refuel
 		if not workState.refueling then
-			refuel(2 * manhat(workState.pos + workState:aimingDir() - workMode.fuelStation.pos))()
+			local backPos = ((workState.fuelStation and workState.fuelStation.pos) or workState.beginPos)
+			refuel(2 * manhat(workState.pos + workState:aimingDir() - backPos))()
 		end
 		--
 		local mov = _aiming.move

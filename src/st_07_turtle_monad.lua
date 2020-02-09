@@ -10,15 +10,15 @@ if turtle then
 		backpackWhiteList = {}, -- not used yet
 		backpackBlackList = {}, -- not used yet
 		backpackPinnedSlots = {}, -- not used yet
-		fuelStation = nil, -- {pos, dir}
-		unloadStation = nil, -- {pos, dir}
 	}
 
 	workState = {
-		pos = nil, -- current pos
-		facing = nil, -- current facing direction, const.dir.N/S/W/E
+		pos = const.ori, -- current pos
+		facing = const.dir.E, -- current facing direction, const.dir.N/S/W/E
 		aiming = 0, -- 0:front, 1:up, -1:down
-		beginPos = nil, -- pos when the program start
+		beginPos = const.ori, -- pos when the program start
+		fuelStation = nil, -- {pos, dir}
+		unloadStation = nil, -- {pos, dir}
 		isDetouring = false, -- only for inspect
 		isRefueling = false,
 		isUnloading = false,

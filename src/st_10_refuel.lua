@@ -10,7 +10,7 @@ if turtle then
 		nStep = math.max(1 , nStep)
 		local saved_sn = turtle.getSelectedSlot()
 		while turtle.getFuelLevel() < nStep do
-			local fuelSn = slot.findThat(function(det) return det and const.fuelHeatContent[det.name] end)
+			local fuelSn = slot.findThat(slot.isFuel)
 			if fuelSn then
 				turtle.select(fuelSn)
 				local det = turtle.getItemDetail(fuelSn)
@@ -18,6 +18,7 @@ if turtle then
 				while turtle.getFuelLevel() < nStep and turtle.getItemCount(fuelSn) > 0 do
 					if turtle.getItemCount(fuelSn) < 2 then slot.fill(fuelSn) end
 					turtle.refuel(math.max(1, (nStep - turtle.getFuelLevel()) / heat))
+					if turtle.getItemDetail().name ~= det.name then break end -- in case of lava-bucket
 				end
 			else -- no more fuel in backpack
 				turtle.select(saved_sn)
@@ -30,11 +31,11 @@ if turtle then
 
 	refuelFromFuelStation = markIOfn("refuelFromFuelStation(nStep)")(mkIOfn(function(nStep)
 		workState.refueling = true
-		print("Out of fuel, now backing to fuelStation "..tostring(workMode.fuelStation.pos))
+		print("Out of fuel, now backing to fuelStation "..tostring(workState.fuelStation.pos))
 		local fuelBeforeLeave = turtle.getFuelLevel()
 		local leavePos = workState.pos
 		local leaveDir = workState:aimingDir()
-		with({workArea = nil})(visitStation(workMode.fuelStation))()
+		with({workArea = nil})(visitStation(workState.fuelStation))()
 		local singleTripCost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
 		print("Cost "..singleTripCost.." to reach the fuelStation, now refueling ("..nStep..")...")
 		rep(try(suck()) * -refuelFromBackpack(nStep + singleTripCost * 2))() -- repeat until enough
@@ -52,7 +53,7 @@ if turtle then
 		local succ = false
 		if refuelFromBackpack(nStep)() then succ = true end
 		-- no fuel in backpack, go to fuelStation
-		if not succ and workMode.fuelStation and workMode.fuelStation.pos then
+		if not succ and workState.fuelStation and workState.fuelStation.pos then
 			succ = refuelFromFuelStation(nStep)()
 		end
 		turtle.select(saved_sn)

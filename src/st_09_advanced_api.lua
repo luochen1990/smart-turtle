@@ -48,7 +48,7 @@ if turtle then
 				local detourRotate = targetDir ^ detourDir
 				local detourDirs = {targetDir, detourDir, detourDir % detourRotate, detourDir % detourRotate % detourRotate}
 				-- detourDirs decided
-				printC(colors.gray)("detouring... (toward "..const.dirName[targetDir]..", to "..tostring(destPos)..")")
+				printC(colors.gray)("detouring... (toward "..showDir(targetDir)..", to "..tostring(destPos)..")")
 				-- begin detouring loop
 				local detourRotateCount = 1
 				local detourBeginDis = manhat(destPos - detourBeginPos)
@@ -163,12 +163,21 @@ if turtle then
 	end))
 
 	transportLine = markIOfn("transportLine(sourceStation, destStation, fuelStation)")(mkIOfn(function(sourceStation, destStation, fuelStation)
-		if fuelStation then workMode.fuelStation = fuelStation end
-		if not workMode.fuelStation then error("[transportLine] fuelStation must be provided") end
-		local fuelReservation = 2 * manhat(destStation.pos - sourceStation.pos) + manhat(destStation.pos - workMode.fuelStation.pos) + manhat(sourceStation.pos - workMode.fuelStation.pos)
+		if fuelStation then workState.fuelStation = fuelStation end
+		if not workState.fuelStation then error("[transportLine] fuelStation must be provided") end
+		local fuelReservation = 2 * manhat(destStation.pos - sourceStation.pos) + manhat(destStation.pos - workState.fuelStation.pos) + manhat(sourceStation.pos - workState.fuelStation.pos)
+		local cnt = 0
 		while true do
 			refuel(fuelReservation)()
-			;(visitStation(sourceStation) * suck() ^ 15 * visitStation(destStation) * drop() ^ 15)()
+			;(visitStation(sourceStation) * rep(suck()) * visitStation(destStation) * rep(select(slot.isNonEmpty) * drop()))()
+			cnt = cnt + 1
+			if not slot.findThat(slot.isNonEmpty) then
+				printC(colors.gray)("[transportLine] finished "..cnt.." trips, now have a rest for 20 seconds...")
+				sleep(20)
+			else
+				printC(colors.gray)("[transportLine] the destStation chest is full, waiting for space...")
+				;(rep(-retry(300)(select(slot.isNonEmpty) * drop())) * rep(select(slot.isNonEmpty) * drop()))()
+			end
 		end
 	end))
 

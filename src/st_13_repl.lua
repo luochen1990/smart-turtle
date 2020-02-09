@@ -94,8 +94,7 @@ function _replMainCo()
 		package.path = dir .. "?;" .. dir .. "?.lua;" .. dir .. "?/init.lua;" .. path
 	end
 
-	term.clear()
-	term.setCursorPos(1,1)
+	--term.clear(); term.setCursorPos(1,1)
 	printC(_replStyle.helloColor)(_replStyle.helloText)
 	printC(_replStyle.tipsColor)(_replStyle.tipsText)
 
