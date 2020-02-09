@@ -5,7 +5,12 @@ if turtle then
 	turn = {
 		left = markIO("turn.left")(mkIO(function() turtle.turnLeft(); workState.facing = leftSide(workState.facing); return true end)),
 		right = markIO("turn.right")(mkIO(function() turtle.turnRight(); workState.facing = rightSide(workState.facing); return true end)),
-		back = markIO("turn.back")(mkIO(function() turtle.turnLeft(); turtle.turnLeft(); workState.facing = -workState.facing; return true end)),
+		around = markIO("turn.around")(mkIO(function() turtle.turnLeft(); turtle.turnLeft(); workState.facing = -workState.facing; return true end)),
+		back = markIO("turn.back")(mkIO(function()
+			if workState.aiming == 0 then turtle.turnLeft(); turtle.turnLeft(); workState.facing = -workState.facing
+			else workState.aiming = -workState.aiming end
+			return true
+		end)),
 	}
 	turn.to = markIOfn("turn.to(d)")(mkIOfn(function(d)
 		assert(d and ((d.x and d.y and d.z) or (d.run)), "[turn.to(d)] d must be a vector (or IO vector)!")
@@ -16,7 +21,7 @@ if turtle then
 		assert(manhat(d) == 1, "[turn.to(d)] d must be a dir, i.e. E/S/W/N/U/D")
 		workState.aiming = d.y
 		if d == workState.facing then return true
-		elseif d == -workState.facing then return turn.back()
+		elseif d == -workState.facing then return turn.around()
 		elseif d == leftSide(workState.facing) then return turn.left()
 		elseif d == rightSide(workState.facing) then return turn.right()
 		else return true end
