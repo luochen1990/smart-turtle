@@ -47,6 +47,79 @@ mkWorkerInfo = function(opts) -- not used yet
 	return w
 end
 
+function openWirelessModem()
+	for _, mSide in ipairs( peripheral.getNames() ) do
+		if peripheral.getType( mSide ) == "modem" then
+			local modem = peripheral.wrap( mSide )
+			if modem.isWireless() then
+				rednet.open(mSide)
+				return true
+			end
+		end
+	end
+	return false
+end
+
+telnetServerCo = function(ignoreDeposit)
+	local eventQueue = {}
+	local listenCo = function()
+		while true do
+			--printC(colors.gray)("[telnet] listening")
+			local senderId, msg, _ = rednet.receive("telnet")
+			--printC(colors.gray)("[telnet] received from " .. senderId .. ": " .. msg)
+			local queueTail = #eventQueue + 1
+			if ignoreDeposit then queueTail = 1 end
+			eventQueue[queueTail] = {senderId, msg}
+		end
+	end
+	local execCo = function()
+		local sleepInterval = 1
+		while true do
+			if #eventQueue == 0 then
+				sleepInterval = math.min(0.5, sleepInterval * 1.1)
+				--printC(colors.gray)("[telnet] waiting "..sleepInterval)
+				sleep(sleepInterval)
+			else -- if #eventQueue > 0 then
+				--printC(colors.gray)("[telnet] executing "..#eventQueue)
+				sleepInterval = 0.02
+				local sender, msg = unpack(table.remove(eventQueue, 1))
+				printC(colors.gray)("[telnet] exec cmd from " .. sender .. ": " .. msg)
+				if msg == "exit" then break end
+				func, err = load("return "..msg, "telnet_cmd", "t", _ENV)
+				if func then
+					ok, res = pcall(func)
+					if ok then
+						printC(colors.green)(res)
+					else
+						printC(colors.yellow)(res)
+					end
+				else
+					printC(colors.orange)(err)
+				end
+			end
+		end
+	end
+	parallel.waitForAny(listenCo, execCo)
+end
+
+telnetFollowMeCo = function()
+	local p0 = gpsPos()
+	local sended_p = p0
+	while true do
+		sleep(0.02)
+		local p1 = gpsPos()
+		if (p1 ~= sended_p) then
+			local v = p1 - p0
+			if rednet.broadcast("move.to(O + vec("..v.x..","..v.y..","..v.z.."))()", "telnet") then
+				printC(colors.gray)("move.to(O + vec("..v.x..","..v.y..","..v.z.."))()")
+			else
+				printC(colors.yellow)("failed to call rednet.broadcast(), please check your modem")
+			end
+			sended_p = p1
+		end
+	end
+end
+
 -- | interactive register complex station
 registerStation = mkIOfn(function()
 end)

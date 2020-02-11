@@ -25,8 +25,8 @@ if turtle then
 			return false
 		end
 		printC(colors.gray)("turtle pos = "..tostring(p0))
-		if turtle.getFuelLevel() < 2 then
-			printC(colors.orange)("[_correctCoordinateSystemWithGps] please refuel me")
+		if not refuelFromBackpack(2)() then
+			printC(colors.orange)("[_correctCoordinateSystemWithGps] I need some fuel")
 			return false
 		end
 		local succ = retry(5)(turtle.back)()
@@ -56,15 +56,15 @@ if turtle then
 	_initTurtleState = markFn("_initTurtleState")(function()
 		local succ = _correctCoordinateSystemWithGps()
 		if not succ then
-			printC(colors.orange)("[_initTurtleState] WARN: failed to get gps pos and dir!")
+			printC(colors.yellow)("WARN: failed to get gps pos and dir!")
 		end
 		workState.fuelStation = default(workState.fuelStation)(requestFuelStation())
 		if not workState.fuelStation then
-			printC(colors.orange)("[_initTurtleState] WARN: failed to get fuelStation!")
+			printC(colors.yellow)("WARN: failed to get fuelStation!")
 		end
 		workState.unloadStation = default(workState.fuelStation)(requestUnloadStation())
 		if not workState.unloadStation then
-			printC(colors.orange)("[_initTurtleState] WARN: failed to get unloadStation!")
+			printC(colors.yellow)("WARN: failed to get unloadStation!")
 		end
 		return not not (succ and workState.fuelStation and workState.unloadStation)
 	end)
@@ -100,8 +100,18 @@ _test = {}
 --	os.run(_ENV, "/rom/programs/lua.lua")
 --end
 
+_initComputer = function()
+	local succ = openWirelessModem()
+	if not succ then
+		printC(colors.yellow)("WARN: wireless modem not found!")
+		return false
+	end
+	return true
+end
+
 begin = function(...)
 	term.clear(); term.setCursorPos(1,1)
+	_initComputer()
 	if turtle then _initTurtleState() end
 	parallel.waitForAll(_mainCo, _replCo, _printCallStackCo, ...)
 end
