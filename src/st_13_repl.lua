@@ -64,7 +64,6 @@ end
 
 function _replMainCo()
 	_replState.running = true
-	local historyFileHandle = fs.open("/history", "w")
 	local tEnv = {
 		["exit"] = mkIO(function()
 			_replState.running = false
@@ -135,7 +134,7 @@ function _replMainCo()
 			if #_replState.history > _replState.historyLimit then
 				table.remove(_replState.history, 1)
 			end
-			writeLines(historyFileHandle, _replState.history)
+			writeLines("/history", _replState.history)
 		end
 
 		local nForcePrint = 0
@@ -184,6 +183,5 @@ function _replMainCo()
 		end
 
 	end
-	historyFileHandle.close()
 end
 
