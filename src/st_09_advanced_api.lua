@@ -90,6 +90,11 @@ if turtle then
 		return saveDir(savePos(io))
 	end
 
+	-- save pos and posture
+	saveState = function(io)
+		return savePosture(savePos(io))
+	end
+
 	-- usage demo: save(currentPos) * move.to(vec(0,1,0)) * move.to(saved)
 	save, saved = (function()
 		local saved_value = nil
@@ -116,7 +121,7 @@ if turtle then
 				local far = area.low + area.high - near
 				if area:volume() <= 0 then return true end
 				if not move.to(near)() then return false end
-				io = try(io)
+				io = saveDir(try(io))
 				local toward = move.toward(far, function(d, d0) return d ~= -d0 end)
 				local loop = save(currentDir) * toward * turn.to(fmap(negate)(saved)) * rep(io * move)
 				local run = io * toward * rep(io * move) * rep(loop)
