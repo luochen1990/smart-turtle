@@ -5,6 +5,7 @@ if turtle then
 	workMode = {
 		destroy = 1, -- whether auto dig when move blocked: 0:no dig, 1:dig cheap items only, 2:dig all non-protected
 		violence = false, -- whether auto attack when move blocked
+		detour = true, -- whether to detour when move.to or move.go blocked
 		retrySeconds = 2, -- seconds to retry before fail back when move blocked by other turtles
 		workArea = nil, -- an electric fence
 		backpackWhiteList = {}, -- not used yet

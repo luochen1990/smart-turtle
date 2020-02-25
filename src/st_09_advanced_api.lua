@@ -27,6 +27,7 @@ if turtle then
 				local v = destPos - workState.pos
 				local md = manhat(v)
 				if md <= 1 then return md == 0 end
+				if not workMode.detour then return false end
 				if workState.pos == latestDetourPos then return false end
 				-- begin detouring
 				workState.detouring = true
