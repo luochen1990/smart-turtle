@@ -46,10 +46,10 @@ if turtle then
 				end
 				if not detourDir then return false end
 				-- init detourDir decided
-				local detourRotate = targetDir ^ detourDir
-				local detourDirs = {targetDir, detourDir, detourDir % detourRotate, detourDir % detourRotate % detourRotate}
+				local rot = dirRotationBetween(targetDir, detourDir)
+				local detourDirs = {targetDir, detourDir, rot(detourDir), rot(rot(detourDir))}
 				-- detourDirs decided
-				printC(colors.gray)("detouring... (toward "..showDir(targetDir)..", to "..tostring(destPos)..")")
+				printC(colors.gray)("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
 				-- begin detouring loop
 				local detourRotateCount = 1
 				local detourBeginDis = manhat(destPos - detourBeginPos)

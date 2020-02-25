@@ -57,10 +57,7 @@ const.dir = {
 	['S'] = vec(0,0,1), ['N'] = vec(0,0,-1),
 }
 const.directions = {"U", "E", "S", "W", "N", "D"}
-const.rotate = {
-	left = const.dir.N ^ const.dir.W,
-	right = const.dir.N ^ const.dir.E,
-}
+const.rotate = { left = const.dir.D, right = const.dir.U, }
 for k, v in pairs(const.dir) do _ENV[k] = v end -- define U/E/S/W/N/D
 
 showDir = function(d)

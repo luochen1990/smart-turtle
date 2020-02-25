@@ -5,14 +5,14 @@ manhat = function(a) return math.abs(a.x) + math.abs(a.y) + math.abs(a.z) end
 
 _hackVector = function()
 	local mt = getmetatable(vector.new(0,0,0))
-	mt.__tostring = function(a) return "<"..a.x..", "..a.y..", "..a.z..">" end
+	mt.__tostring = function(a) return "<"..a.x..","..a.y..","..a.z..">" end
 	mt.__len = manhat -- use `#v` as `manhat(v)`, only available on lua5.2+
 	mt.__eq = function(a, b) return a.x == b.x and a.y == b.y and a.z == b.z end
 	mt.__lt = function(a, b) return a.x < b.x and a.y < b.y and a.z < b.z end
 	mt.__le = function(a, b) return a.x <= b.x and a.y <= b.y and a.z <= b.z end
 	mt.__mod = function(a, b) return a:cross(b) end -- use `a % b` as `a:cross(b)`
 	mt.__concat = function(a, b) return mkArea(a, b) end
-	mt.__pow = function(a, b) return -a:cross(b):normalize() end -- use `a ^ b` to get rotate axis from `a` to `b` so that: forall a, b, a:cross(b) ~= 0 and a:dot(b) == 0  --->  (exists k, a * (a ^ b)) == b * k)
+	mt.__pow = function(a, b) error("`v1 ^ v2` not implemented yet!") end
 end
 
 _hackVector()
@@ -38,6 +38,13 @@ rightSide = memoize(function(d)
 	assert(d and d.x, "[rightSide(d)] d should be a vector")
 	return d % const.rotate.right
 end) -- right side of a horizontal direction
+
+dirRotationBetween = function(va, vb)
+	if va == vb then return identity
+	elseif va == -vb then return negate end
+	local rotAxis = -va:cross(vb):normalize()
+	return function(v) return v % rotAxis end
+end
 
 lowPoint = function(p, q)
 	assert(p and p.x and q and q.x, "[lowPoint(p, q)] p and q should be vector")

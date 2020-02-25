@@ -6,10 +6,10 @@ if turtle then
 	_correctCoordinateSystem = markFn("_correctCoordinateSystem(pos, facing)")(function(pos, facing)
 		assert(pos and pos.x, "[_correctCoordinateSystem(pos, facing)] pos must be a vector, but got"..tostring(pos))
 		assert(facing and facing.y == 0 and manhat(facing) == 1, "[_correctCoordinateSystem(pos, facing)] facing must be a dir"..tostring(facing))
-		local oldpos, olddir = workState.pos, workState.facing
-		local offset = pos - oldpos -- use this to correct all locally maintained positions
-		local dirOffset = facing ^ olddir
-		workState.beginPos = (workState.beginPos % dirOffset) + offset
+		local old_pos, old_facing = workState.pos, workState.facing
+		local offset = pos - old_pos -- use this to correct all locally maintained positions
+		local rot = dirRotationBetween(facing, old_facing)
+		workState.beginPos = rot(workState.beginPos) + offset
 		O = workState.beginPos
 		workState.pos = pos
 		workState.facing = facing
