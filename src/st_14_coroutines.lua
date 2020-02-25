@@ -19,7 +19,7 @@ if turtle then
 	end)
 
 	_correctCoordinateSystemWithGps = markFn("_correctCoordinateSystemWithGps")(function()
-		local p0 = retry(5)(gpsPos)()
+		local p0 = gpsPos(5)
 		if not p0 then
 			printC(colors.orange)("[_correctCoordinateSystemWithGps] make sure you have wireless modem and gps station nearby")
 			return false
@@ -34,7 +34,7 @@ if turtle then
 			printC(colors.orange)("[_correctCoordinateSystemWithGps] cannot move back, please help to clean the road")
 			return false
 		end
-		local p1 = retry(5)(gpsPos)()
+		local p1 = gpsPos(5)
 		if not p1 then
 			printC(colors.orange)("[_correctCoordinateSystemWithGps] no gps signal here, please try somewhere else")
 			repeat turtle.dig(); turtle.attack() until ( turtle.forward() )

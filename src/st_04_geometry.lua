@@ -18,16 +18,15 @@ end
 _hackVector()
 vec = vector.new
 
-gpsLocate = function()
-	local x, y, z = gps.locate()
-	--if x then return vec(x, y, z) else return nil end
-	return x and vec(x, y, z)
+gpsLocate = function(timeoutSeconds)
+	local x, y, z = gps.locate(timeoutSeconds)
+	if x then return vec(x, y, z) else return timeoutSeconds == nil and gpsLocate() end
 end
 
-gpsPos = function()
-	local x, y, z = gps.locate()
-	--if x then return vec(math.floor(x), math.floor(y), math.floor(z)) else return nil end
-	return x and vec(math.floor(x), math.floor(y), math.floor(z))
+gpsPos = function(timeoutSeconds)
+	local x, y, z = gps.locate(timeoutSeconds)
+	if x then return vec(math.floor(x), math.floor(y), math.floor(z))
+	else return timeoutSeconds == nil and gpsPos() end
 end
 
 leftSide = memoize(function(d)
