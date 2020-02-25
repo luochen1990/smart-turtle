@@ -29,15 +29,22 @@ gpsPos = function(timeoutSeconds)
 	else return timeoutSeconds == nil and gpsPos() end
 end
 
-leftSide = memoize(function(d)
-	assert(d and d.x, "[leftSide(d)] d should be a vector")
+-- left side of a horizontal direction
+leftSide = function(d)
+	assert(d and d.y == 0, "[leftSide(d)] d should be a horizontal direction")
 	return d % const.rotate.left
-end) -- left side of a horizontal direction
+end
 
-rightSide = memoize(function(d)
-	assert(d and d.x, "[rightSide(d)] d should be a vector")
+-- right side of a horizontal direction
+rightSide = function(d)
+	assert(d and d.y == 0, "[rightSide(d)] d should be a horizontal direction")
 	return d % const.rotate.right
-end) -- right side of a horizontal direction
+end
+
+lateralSide = function(d) -- a direction which is perpendicular to dir `d`
+	if d.y == 0 then return const.dir.U
+	else return const.dir.E or const.dir.F end
+end
 
 dirRotationBetween = function(va, vb)
 	if va == vb then return identity

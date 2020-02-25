@@ -39,16 +39,19 @@ if turtle then
 				-- targetDir decided
 				local detourDir
 				for _, d in ipairs(const.directions) do
-					if targetDir:dot(const.dir[d]) == 0 then
+					if d ~= 'D' and targetDir:dot(const.dir[d]) == 0 then --NOTE: prefer not to go down
 						local ok = (turn.to(const.dir[d]) * move)()
 						if ok then detourDir = const.dir[d]; break end
 					end
 				end
-				if not detourDir then return false end
+				if not detourDir then
+					detourDir = lateralSide(targetDir)
+					-- turn.to(detourDir) --TODO: not sure whether need this line
+				end
 				-- init detourDir decided
 				local rot = dirRotationBetween(targetDir, detourDir)
 				local detourDirs = {targetDir, detourDir, rot(detourDir), rot(rot(detourDir))}
-				-- detourDirs decided
+				-- detourDirs (i.e. detour plane) decided
 				printC(colors.gray)("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
 				-- begin detouring loop
 				local detourRotateCount = 1
