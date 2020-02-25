@@ -70,3 +70,42 @@ end
 
 math.randomseed(os.time() * 1000) -- set randomseed for math.random()
 
+---------------------------------- fs utils ------------------------------------
+
+readLines = function(fileHandle)
+	local isTempHandle = false
+	if type(fileHandle) == "string" then -- file path/name used
+		fileHandle = fs.open(fileHandle, 'r')
+		isTempHandle = true
+	end
+	if not fileHandle then return nil end
+	local res = {}
+	local line
+	while true do
+		line = fileHandle.readLine()
+		if not line then break end
+		table.insert(res, line)
+	end
+	if isTempHandle then
+		fileHandle.close()
+	end
+	return res
+end
+
+writeLines = function(fileHandle, ls, mode)
+	local isTempHandle = false
+	mode = default('w')(mode)
+	if type(fileHandle) == "string" then -- file path/name used
+		fileHandle = fs.open(fileHandle, mode)
+		isTempHandle = true
+	end
+	for _, s in ipairs(ls) do
+		fileHandle.writeLine(s)
+	end
+	if isTempHandle then
+		fileHandle.close()
+	else
+		fileHandle.flush()
+	end
+end
+
