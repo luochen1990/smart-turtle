@@ -45,11 +45,12 @@ Features
         * usage description
             - `io1 * io2`: if `io1` succeed then execute `io2`
             - `io1 + io2`: if `io1` failed then execute `io2`
-            - `rep(io)`: repeat `io` until it fail
-            - `rep(-io)`: repeat `io` until it success
-            - `try(io)`: execute `io` and always return true
             - `io ^ n`: replicate `io` for `n` times
-            - `io % t`: retry `io` for `t` seconds
+            - `rep(io)`: repeat `io` until it fail
+            - `retry(io)`: retry `io` until it success, with sleep interval increased
+            - `retry(t)(io)`: retry `io` for `t` seconds
+            - `try(io)`: execute `io` and always return true
+            - `-io`: execute `io` and reverse the success/fail result
     - advanced move apis which support obstacle avoidance
         * implementation idea
             - inspired by the wall-following algorithm for 2-dimensional maze

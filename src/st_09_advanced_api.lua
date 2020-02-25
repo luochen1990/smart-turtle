@@ -182,7 +182,7 @@ if turtle then
 				sleep(20)
 			else
 				printC(colors.gray)("[transportLine] the destStation chest is full, waiting for space...")
-				;(rep(-retry(300)(select(slot.isNonEmpty) * drop())) * rep(select(slot.isNonEmpty) * drop()))()
+				;(retry(select(slot.isNonEmpty) * drop()) * rep(select(slot.isNonEmpty) * drop()))()
 			end
 		end
 	end))

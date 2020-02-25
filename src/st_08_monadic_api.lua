@@ -217,7 +217,7 @@ if turtle then
 			mov = mov + (rep(attack) * mov)
 		end
 		if workMode.retrySeconds > 0 and isTurtle() then -- only retry when blocked by turtle
-			mov = mov % workMode.retrySeconds
+			mov = retry(workMode.retrySeconds)(mov)
 		end
 		mov = -isProtected * mov
 		local r = mov()
