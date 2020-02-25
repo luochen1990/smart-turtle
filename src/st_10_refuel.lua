@@ -18,7 +18,8 @@ if turtle then
 				while turtle.getFuelLevel() < nStep and turtle.getItemCount(fuelSn) > 0 do
 					if turtle.getItemCount(fuelSn) < 2 then slot.fill(fuelSn) end
 					turtle.refuel(math.max(1, (nStep - turtle.getFuelLevel()) / heat))
-					if turtle.getItemDetail().name ~= det.name then break end -- in case of lava-bucket
+					local det2 = turtle.getItemDetail()
+					if det2 and det2.name ~= det.name then break end -- in case of lava-bucket
 				end
 			else -- no more fuel in backpack
 				turtle.select(saved_sn)
