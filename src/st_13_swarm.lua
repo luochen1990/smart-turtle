@@ -47,19 +47,6 @@ mkWorkerInfo = function(opts) -- not used yet
 	return w
 end
 
-function openWirelessModem()
-	for _, mSide in ipairs( peripheral.getNames() ) do
-		if peripheral.getType( mSide ) == "modem" then
-			local modem = peripheral.wrap( mSide )
-			if modem.isWireless() then
-				rednet.open(mSide)
-				return true
-			end
-		end
-	end
-	return false
-end
-
 telnetServerCo = function(ignoreDeposit)
 	local eventQueue = {}
 	local listenCo = function()
@@ -100,24 +87,6 @@ telnetServerCo = function(ignoreDeposit)
 		end
 	end
 	parallel.waitForAny(listenCo, execCo)
-end
-
-telnetFollowMeCo = function()
-	local p0 = gpsPos()
-	local sended_p = p0
-	while true do
-		sleep(0.02)
-		local p1 = gpsPos()
-		if (p1 ~= sended_p) then
-			local v = p1 - p0
-			if rednet.broadcast("move.to(O + vec("..v.x..","..v.y..","..v.z.."))()", "telnet") then
-				printC(colors.gray)("move.to(O + vec("..v.x..","..v.y..","..v.z.."))()")
-			else
-				printC(colors.yellow)("failed to call rednet.broadcast(), please check your modem")
-			end
-			sended_p = p1
-		end
-	end
 end
 
 -- | interactive register complex station
@@ -167,6 +136,11 @@ end)
 inspectStation = mkIO(function()
 end)
 
+swarmServiceCo = function()
+	rednet.receive()
+	rednet.send()
+end
+
 requestFuelStation = mkIO(function()
 	return O and {pos = O + B, dir = B}
 end)
@@ -174,3 +148,12 @@ end)
 requestUnloadStation = mkIO(function()
 	return O and {pos = O + B + U * 2, dir = B}
 end)
+
+requestNearestProviderStation = mkIOfn(function(itemName, itemCount, startPos)
+	itemCount = default(1)(itemCount)
+	startPos = default(workState.pos)(startPos)
+	rednet.send()
+	rednet.receive()
+	return O and {pos = O + B, dir = B}
+end)
+

@@ -5,7 +5,7 @@ if turtle then
 	-- | provide current real pos and facing dir to correct the coordinate system
 	_correctCoordinateSystem = markFn("_correctCoordinateSystem(pos, facing)")(function(pos, facing)
 		assert(pos and pos.x, "[_correctCoordinateSystem(pos, facing)] pos must be a vector, but got"..tostring(pos))
-		assert(facing and facing.y == 0 and vec.manhat(facing) == 1, "[_correctCoordinateSystem(pos, facing)] facing must be a dir"..tostring(facing))
+		assert(facing and facing.y == 0 and vec.manhat(facing) == 1, "[_correctCoordinateSystem(pos, facing)] facing must be a dir, but got "..tostring(facing))
 		local old_pos, old_facing = workState.pos, workState.facing
 		local offset = pos - old_pos -- use this to correct all locally maintained positions
 		local rot = dirRotationBetween(facing, old_facing)
@@ -92,6 +92,21 @@ if turtle then
 end
 
 _mainCo = function()
+	local label = os.getComputerLabel()
+	if turtle then
+		if string.sub(label, 1, 6) == "guard-" then
+			local d = string.sub(label, 7, 7)
+			if const.dir[d] then
+				if d == "D" then
+					followYouCo(D)
+				else
+					followYouCo(const.dir[d])
+				end
+			end
+		end
+	elseif pocket then
+		followMeCo()
+	end
 end
 
 _test = {}

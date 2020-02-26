@@ -109,3 +109,18 @@ writeLines = function(fileHandle, ls, mode)
 	end
 end
 
+--------------------------------- rednet utils ---------------------------------
+
+function openWirelessModem()
+	for _, mSide in ipairs( peripheral.getNames() ) do
+		if peripheral.getType( mSide ) == "modem" then
+			local modem = peripheral.wrap( mSide )
+			if modem.isWireless() then
+				rednet.open(mSide)
+				return true
+			end
+		end
+	end
+	return false
+end
+
