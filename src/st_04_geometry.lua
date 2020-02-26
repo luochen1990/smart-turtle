@@ -1,22 +1,36 @@
 ----------------------------------- geometry -----------------------------------
 
--- manhattan distance between pos `a` and ori
-manhat = function(a) return math.abs(a.x) + math.abs(a.y) + math.abs(a.z) end
-
 _hackVector = function()
 	local mt = getmetatable(vector.new(0,0,0))
-	mt.__tostring = function(a) return "<"..a.x..","..a.y..","..a.z..">" end
-	mt.__len = manhat -- use `#v` as `manhat(v)`, only available on lua5.2+
+	mt.__tostring = function(a) return "("..a.x..","..a.y..","..a.z..")" end
 	mt.__eq = function(a, b) return a.x == b.x and a.y == b.y and a.z == b.z end
 	mt.__lt = function(a, b) return a.x < b.x and a.y < b.y and a.z < b.z end
 	mt.__le = function(a, b) return a.x <= b.x and a.y <= b.y and a.z <= b.z end
 	mt.__mod = function(a, b) return a:cross(b) end -- use `a % b` as `a:cross(b)`
-	mt.__concat = function(a, b) return mkArea(a, b) end
-	mt.__pow = function(a, b) error("`v1 ^ v2` not implemented yet!") end
+	mt.__concat = function(a, b) return mkArea(a, b) end -- use `a .. b` as `mkArea(a, b)`
+	mt.__pow = function(a, b) return b - a end -- use `a ^ b` as `b - a`
 end
-
 _hackVector()
-vec = vector.new
+
+vec = {
+	zero = vector.new(0,0,0),
+	one = vector.new(1,1,1),
+	unitX = vector.new(1,0,0),
+	unitY = vector.new(0,1,0),
+	unitZ = vector.new(0,0,1),
+	isVec = (function()
+		local mt = getmetatable(vector.new(0,0,0))
+		return function(x) return getmetatable(x) == mt end
+	end)(),
+	floor = function(v)
+		return vec(math.floor(v.x), math.floor(v.y), math.floor(v.z))
+	end,
+	-- | manhattan distance between pos `v` and vec.zero
+	manhat = function(v) return math.abs(v.x) + math.abs(v.y) + math.abs(v.z) end,
+}
+setmetatable(vec, {
+	__call = function(_, ...) return vector.new(...) end,
+})
 
 gpsLocate = function(timeoutSeconds)
 	local x, y, z = gps.locate(timeoutSeconds)

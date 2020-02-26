@@ -49,12 +49,10 @@ const = {
 	},
 }
 
-const.ori = vec(0,0,0)
-const.positiveDir = vec(1,1,1)
 const.dir = {
-	['E'] = vec(1,0,0), ['W'] = vec(-1,0,0),
-	['U'] = vec(0,1,0), ['D'] = vec(0,-1,0),
-	['S'] = vec(0,0,1), ['N'] = vec(0,0,-1),
+	['E'] = vec.unitX, ['W'] = -vec.unitX,
+	['U'] = vec.unitY, ['D'] = -vec.unitY,
+	['S'] = vec.unitZ, ['N'] = -vec.unitZ,
 }
 const.directions = {"U", "E", "S", "W", "N", "D"}
 const.rotate = { left = const.dir.D, right = const.dir.U, }

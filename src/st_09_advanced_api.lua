@@ -25,7 +25,7 @@ if turtle then
 				-- attempt to approach destPos
 				rep(move.toward(destPos))()
 				local v = destPos - workState.pos
-				local md = manhat(v)
+				local md = vec.manhat(v)
 				if md <= 1 then return md == 0 end
 				if not workMode.detour then return false end
 				if workState.pos == latestDetourPos then return false end
@@ -55,7 +55,7 @@ if turtle then
 				printC(colors.gray)("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
 				-- begin detouring loop
 				local detourRotateCount = 1
-				local detourBeginDis = manhat(destPos - detourBeginPos)
+				local detourBeginDis = vec.manhat(destPos - detourBeginPos)
 				repeat
 					for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
 						candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
@@ -65,7 +65,7 @@ if turtle then
 							break
 						end
 					end
-				until (manhat(destPos - workState.pos) < detourBeginDis)
+				until (vec.manhat(destPos - workState.pos) < detourBeginDis)
 				-- finish detouring
 				latestDetourPos = detourBeginPos
 				workState.detouring = false
@@ -142,7 +142,7 @@ if turtle then
 		mainDir = default(workState:aimingDir())(mainDir)
 		return function(io)
 			return (mkIO(function()
-				local projLen = (area.diag + const.positiveDir):dot(mainDir)
+				local projLen = (area.diag + vec.one):dot(mainDir)
 				local low0, high0
 				if projLen == 0 then
 					return true
@@ -174,7 +174,7 @@ if turtle then
 	transportLine = markIOfn("transportLine(sourceStation, destStation, fuelStation)")(mkIOfn(function(sourceStation, destStation, fuelStation)
 		if fuelStation then workState.fuelStation = fuelStation end
 		if not workState.fuelStation then error("[transportLine] fuelStation must be provided") end
-		local fuelReservation = 2 * manhat(destStation.pos - sourceStation.pos) + manhat(destStation.pos - workState.fuelStation.pos) + manhat(sourceStation.pos - workState.fuelStation.pos)
+		local fuelReservation = 2 * vec.manhat(destStation.pos - sourceStation.pos) + vec.manhat(destStation.pos - workState.fuelStation.pos) + vec.manhat(sourceStation.pos - workState.fuelStation.pos)
 		local cnt = 0
 		while true do
 			refuel(fuelReservation)()

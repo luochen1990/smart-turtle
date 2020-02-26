@@ -14,10 +14,10 @@ if turtle then
 	}
 
 	workState = {
-		pos = const.ori, -- current pos
+		pos = vec.zero, -- current pos
 		facing = const.dir.E, -- current facing direction, const.dir.N/S/W/E
 		aiming = 0, -- 0:front, 1:up, -1:down
-		beginPos = const.ori, -- pos when the program start
+		beginPos = vec.zero, -- pos when the program start
 		fuelStation = nil, -- {pos, dir}
 		unloadStation = nil, -- {pos, dir}
 		isDetouring = false, -- only for inspect

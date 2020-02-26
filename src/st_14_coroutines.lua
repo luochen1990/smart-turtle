@@ -5,7 +5,7 @@ if turtle then
 	-- | provide current real pos and facing dir to correct the coordinate system
 	_correctCoordinateSystem = markFn("_correctCoordinateSystem(pos, facing)")(function(pos, facing)
 		assert(pos and pos.x, "[_correctCoordinateSystem(pos, facing)] pos must be a vector, but got"..tostring(pos))
-		assert(facing and facing.y == 0 and manhat(facing) == 1, "[_correctCoordinateSystem(pos, facing)] facing must be a dir"..tostring(facing))
+		assert(facing and facing.y == 0 and vec.manhat(facing) == 1, "[_correctCoordinateSystem(pos, facing)] facing must be a dir"..tostring(facing))
 		local old_pos, old_facing = workState.pos, workState.facing
 		local offset = pos - old_pos -- use this to correct all locally maintained positions
 		local rot = dirRotationBetween(facing, old_facing)
@@ -42,7 +42,7 @@ if turtle then
 		end
 		repeat turtle.dig(); turtle.attack() until ( turtle.forward() )
 		local d = p0 - p1
-		if manhat(d) ~= 1 then
+		if vec.manhat(d) ~= 1 then
 			printC(colors.gray)("p0 = "..tostring(p0))
 			printC(colors.gray)("p1 = "..tostring(p1))
 			printC(colors.gray)("p0 - p1 = "..tostring(d))

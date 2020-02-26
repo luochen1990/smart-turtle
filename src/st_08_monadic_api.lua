@@ -18,7 +18,7 @@ if turtle then
 			d = d.run()
 			assert(d and ((d.x and d.y and d.z) or (d.run)), "[turn.to(d)] d must be a vector (or IO vector)!")
 		end
-		assert(manhat(d) == 1, "[turn.to(d)] d must be a dir, i.e. E/S/W/N/U/D")
+		assert(vec.manhat(d) == 1, "[turn.to(d)] d must be a dir, i.e. E/S/W/N/U/D")
 		workState.aiming = d.y
 		if d == workState.facing then return true
 		elseif d == -workState.facing then return turn.around()
@@ -204,7 +204,7 @@ if turtle then
 		-- auto refuel
 		if not workState.refueling then
 			local backPos = ((workState.fuelStation and workState.fuelStation.pos) or workState.beginPos)
-			refuel(2 * manhat(workState.pos + workState:aimingDir() - backPos))()
+			refuel(2 * vec.manhat(workState.pos + workState:aimingDir() - backPos))()
 		end
 		--
 		local mov = _aiming.move
