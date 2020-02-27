@@ -19,46 +19,11 @@ _replStyle = {
 	runCommandDefaultColor = colors.lightGray,
 }
 
--- | convert a value to string for printing
-function show(value)
-	local metatable = getmetatable( value )
-	if type(metatable) == "table" and type(metatable.__tostring) == "function" then
-		return tostring( value )
-	else
-		local ok, serialised = pcall( textutils.serialise, value )
-		if ok then
-			return serialised
-		else
-			return tostring( value )
-		end
-	end
-end
-
-function showTableAsTuple(t) --NOTE: `{1, nil, 2}` will print as `1` instead of `1, nil, 2`
-	local s = "nil"
-	for i, x in ipairs(t) do
-		if i == 1 then s = show(x) else s = s..", "..show(x) end
-	end
-	return s
+function abortableRun(io)
+	parallel.waitForAny(function() io() end, function() _waitForKeyCombination(keys.leftCtrl, keys.c) end)
 end
 
 function _replCo()
-	local _cleanLineCo = function()
-		while true do
-			_waitForKeyCombination(keys.leftCtrl, keys.u)
-			term.clearLine()
-			local c, l = term.getCursorPos()
-			term.setCursorPos(#_replStyle.promptText + 1, l)
-		end
-	end
-	local _cleanCo = function()
-		while true do
-			_waitForKeyCombination(keys.leftCtrl, keys.l)
-			term.clear()
-			term.setCursorPos(1,1)
-		end
-	end
-	--parallel.waitForAll(_replMainCo, _cleanCo, _cleanLineCo)
 	_replMainCo()
 end
 
@@ -98,37 +63,66 @@ function _replMainCo()
 	printC(_replStyle.helloColor)(_replStyle.helloText)
 	printC(_replStyle.tipsColor)(_replStyle.tipsText)
 
-	while _replState.running do
+	local replReadLine = withColor(_replStyle.commandColor)(function()
 		writeC(_replStyle.promptColor)(_replStyle.promptText)
-
-		local s = withColor(_replStyle.commandColor)(function() return read( nil, _replState.history,
-			function( sLine )
-				if settings.get( "lua.autocomplete" ) then
-					local nStartPos = string.find( sLine, "[a-zA-Z0-9_%.:]+$" )
-					if nStartPos then
-						sLine = string.sub( sLine, nStartPos )
-					end
-					if #sLine > 0 then
-						-- modified for IO monad
-						local t = {}
-						for _, s in ipairs( textutils.complete( sLine, tEnv ) ) do
-							local r = s
-							if string.sub(s, #s) == "." then
-								for _, s2 in ipairs( textutils.complete( sLine .. s, tEnv ) ) do
-									if s2 == "run(" then
-										r = string.sub(s, 1, #s - 1)
-									end
+		return read( nil, _replState.history, function( sLine )
+			if settings.get( "lua.autocomplete" ) then
+				local nStartPos = string.find( sLine, "[a-zA-Z0-9_%.:]+$" )
+				if nStartPos then
+					sLine = string.sub( sLine, nStartPos )
+				end
+				if #sLine > 0 then
+					-- modified for IO monad
+					local t = {}
+					for _, s in ipairs( textutils.complete( sLine, tEnv ) ) do
+						local r = s
+						if string.sub(s, #s) == "." then
+							for _, s2 in ipairs( textutils.complete( sLine .. s, tEnv ) ) do
+								if s2 == "run(" then
+									r = string.sub(s, 1, #s - 1)
 								end
 							end
-							t[#t + 1] = r
 						end
-						return t
-						--
+						t[#t + 1] = r
 					end
+					return t
+					--
 				end
-				return nil
-			end)
-		end)()
+			end
+			return nil
+		end)
+	end)
+
+	local replReadLineWithKeyshot = (function()
+		local _gotLine, _cleanLineCo, _cleanScreenCo, _readLineCo, _readLineWithKeyshotCo
+		_cleanLineCo = function()
+			_waitForKeyCombination(keys.leftCtrl, keys.u)
+			term.clearLine()
+			local c, l = term.getCursorPos()
+			term.setCursorPos(1, l)
+			_readLineWithKeyshotCo()
+		end
+		_cleanScreenCo = function()
+			_waitForKeyCombination(keys.leftCtrl, keys.l)
+			term.clear()
+			term.setCursorPos(1, 1)
+			_readLineWithKeyshotCo()
+		end
+		_readLineCo = function()
+			_gotLine = replReadLine()
+		end
+		_readLineWithKeyshotCo = function()
+			parallel.waitForAny(_readLineCo, _cleanScreenCo, _cleanLineCo)
+		end
+
+		return function()
+			_readLineWithKeyshotCo()
+			return _gotLine
+		end
+	end)()
+
+	local replLoopBody = function()
+		local s = replReadLineWithKeyshot()
 		if s:match("%S") and _replState.history[#_replState.history] ~= s then
 			table.insert( _replState.history, s )
 			if #_replState.history > _replState.historyLimit then
@@ -153,7 +147,7 @@ function _replMainCo()
 		end
 
 		if func then
-			withColor(_replStyle.runCommandDefaultColor)(function()
+			abortableRun(withColor(_replStyle.runCommandDefaultColor)(function()
 				_replState.callStack = _callStack
 				_callStack = {}
 				local res1 = { pcall( func ) }
@@ -164,24 +158,27 @@ function _replMainCo()
 						_callStack = {}
 						local res2 = { pcall( res1[1].run ) }
 						if table.remove(res2, 1) then
-							printC(_replStyle.resultColor)( showTableAsTuple( res2 ) )
+							printC(_replStyle.resultColor)( showFields( unpack(res2) ) )
 						else
-							_printCallStack()
+							_printCallStack(10, nil, _replStyle.errorStackColor)
 							printError( res2[1] )
 						end
 					else
 						-- other case just simply print
-						printC(_replStyle.resultColor)( showTableAsTuple( res1 ) )
+						printC(_replStyle.resultColor)( showFields( unpack(res1) ) )
 					end
 				else
 					_printCallStack(10, nil, _replStyle.errorStackColor)
 					printError( res1[1] )
 				end
-			end)()
+			end))
 		else
 			printError( e )
 		end
+	end
 
+	while _replState.running do
+		replLoopBody()
 	end
 end
 

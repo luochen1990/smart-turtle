@@ -70,6 +70,37 @@ end
 
 math.randomseed(os.time() * 1000) -- set randomseed for math.random()
 
+-------------------------------- string utils ----------------------------------
+
+-- | convert a value to string for printing
+function show(value)
+	local metatable = getmetatable( value )
+	if type(metatable) == "table" and type(metatable.__tostring) == "function" then
+		return tostring( value )
+	else
+		local ok, serialised = pcall( textutils.serialise, value )
+		if ok then
+			return serialised
+		else
+			return tostring( value )
+		end
+	end
+end
+
+-- | convert a list to string for printing
+-- , NOTE: `showList({1, nil, 2}, ",")` will print as "1" instead of "1,nil,2"
+function showList(ls, spliter, placeholder)
+	local s = placeholder or ""
+	for i, x in ipairs(ls) do
+		if i == 1 then s = show(x) else s = s..(spliter or "\n")..show(x) end
+	end
+	return s
+end
+
+showFields = function(...) return showList({...}, ", ", "nil") end
+showWords = function(...) return showList({...}, " ", "") end
+showLines = function(...) return showList({...}, "\n", "") end
+
 ---------------------------------- fs utils ------------------------------------
 
 readLines = function(fileHandle)

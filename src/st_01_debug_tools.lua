@@ -110,7 +110,7 @@ end
 _printCallStack = function(count, beginDepth, color)
 	count = math.max(0, count or 10)
 	beginDepth = math.max(1, beginDepth or 1 + #_callStack - count)
-	color = color or colors.orange
+	color = color or colors.gray
 	withColor(color)(function()
 		for dep = beginDepth, beginDepth + count - 1 do
 			local record = _callStack[dep]
@@ -127,7 +127,7 @@ end
 _printCallStackCo = function()
 	while true do
 		_waitForKeyCombination(keys.leftCtrl, keys.p)
-		_printCallStack(10, colors.blue)
+		_printCallStack(10, nil, colors.blue)
 	end
 end
 
