@@ -49,11 +49,12 @@ retry = function(arg)
 			local maxInterval = 0.1 -- begin at 0.1 second
 			local waitedSeconds = 0.0
 			while (not retrySeconds) or (waitedSeconds < retrySeconds) do -- state: {waitedSeconds, maxInterval}
-				local interval = math.min(retrySeconds - waitedSeconds, math.random() * maxInterval)
-				sleep (interval)
+				local t = math.random() * maxInterval
+				if retrySeconds then t = math.min(retrySeconds - waitedSeconds, t) end
+				sleep(t)
 				r = io()
 				if r then return r end
-				waitedSeconds = waitedSeconds + interval
+				waitedSeconds = waitedSeconds + t
 				maxInterval = math.min(300, maxInterval * 1.01) -- wait for 5 minutes at most
 			end
 			return r
