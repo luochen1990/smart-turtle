@@ -25,31 +25,44 @@ if turtle then
 			return false
 		end
 		printC(colors.gray)("turtle pos = "..tostring(p0))
+		-- got p0 (i.e. pos) here
 		if not refuelFromBackpack(2)() then
 			printC(colors.orange)("[_correctCoordinateSystemWithGps] I need some fuel")
 			return false
 		end
-		local succ = retry(5)(turtle.back)()
-		if not succ then
-			printC(colors.orange)("[_correctCoordinateSystemWithGps] cannot move back, please help to clean the road")
-			return false
+		-- ready to get p1 (i.e. dir) here
+		local getFacing = function(go, goBack, calcDir)
+			local succ = retry(5)(go)()
+			if not succ then
+				return nil
+			end
+			local p1 = gpsPos(5)
+			if not p1 then
+				repeat turtle.dig(); turtle.attack() until ( goBack() )
+				return nil
+			end
+			repeat turtle.dig(); turtle.attack() until ( goBack() )
+			local d = calcDir(p1)
+			if vec.manhat(d) ~= 1 then
+				printC(colors.gray)("p0 = "..tostring(p0))
+				printC(colors.gray)("p1 = "..tostring(p1))
+				printC(colors.gray)("p0 - p1 = "..tostring(d))
+				printC(colors.orange)("[_correctCoordinateSystemWithGps] weird gps positoin, please check your gps server")
+				return nil
+			end
+			return d
 		end
-		local p1 = gpsPos(5)
-		if not p1 then
-			printC(colors.orange)("[_correctCoordinateSystemWithGps] no gps signal here, please try somewhere else")
-			repeat turtle.dig(); turtle.attack() until ( turtle.forward() )
-			return false
+		local d
+		if not turtle.detect() then
+			d = getFacing(turtle.forward, turtle.back, function(p1) return p1 - p0 end)
 		end
-		repeat turtle.dig(); turtle.attack() until ( turtle.forward() )
-		local d = p0 - p1
-		if vec.manhat(d) ~= 1 then
-			printC(colors.gray)("p0 = "..tostring(p0))
-			printC(colors.gray)("p1 = "..tostring(p1))
-			printC(colors.gray)("p0 - p1 = "..tostring(d))
-			printC(colors.orange)("[_correctCoordinateSystemWithGps] weird gps positoin, please check your gps server")
+		d = d or getFacing(turtle.back, turtle.forward, function(p1) return p0 - p1 end)
+		if not d then
+			printC(colors.orange)("[_correctCoordinateSystemWithGps] cannot move forward/back and gps locate, please try somewhere else nearby")
 			return false
 		end
 		printC(colors.gray)("turtle facing = "..showDir(d))
+		-- got pos and dir here
 		return _correctCoordinateSystem(p0, d)
 	end)
 
