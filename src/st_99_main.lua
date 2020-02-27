@@ -122,8 +122,6 @@ _mainCo = function()
 	end
 end
 
-_test = {}
-
 --_replCo = function()
 --	os.run(_ENV, "/rom/programs/lua.lua")
 --end
@@ -142,36 +140,6 @@ begin = function(...)
 	_initComputer()
 	if turtle then _initTurtleState() end
 	parallel.waitForAll(_mainCo, _replCo, _printCallStackCo, ...)
-end
-
------------------------------------- tests -------------------------------------
-
-if turtle and DEBUG then
-	_test.move = markIO("_test.move")(mkIO(function()
-		return savePosd(move.go(leftSide(workState.facing) * 2))()
-	end))
-
-	_test.scan = markIO("_test.scan")(mkIO(function()
-		return savePosd(scan(O .. (O + (U + R + F) * 2), D)(turn.U * try(dig) * place))()
-	end))
-
-	_test.scan2d = markIO("_test.scan2d")(mkIO(function()
-		return savePosd(_scan2d(O .. (O + (R + F) * 2))(turn.U * try(dig) * place))()
-	end))
-
-	_test.transportLine = markIO("_test.transportLine")(mkIO(function()
-		local s = {pos = O + L * 2 + F * 2 + U * 3, dir = R}
-		local t = {pos = O + R * 4 + U, dir = L}
-		;(visitStation(s) * use("minecraft:chest"))()
-		;(visitStation(t) * use("minecraft:chest"))()
-		return transportLine(s, t)()
-	end))
-
-	_test.transportLineTemp = markIO("_test.transportLineTemp")(mkIO(function()
-		local s = {pos = vec(188, 65, 27), dir = S}
-		local t = {pos = vec(197, 69, -70), dir = N}
-		return transportLine(s, t)()
-	end))
 end
 
 --------------------------------------------------------------------------------
