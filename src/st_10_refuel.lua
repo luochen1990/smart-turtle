@@ -34,8 +34,7 @@ if turtle then
 		workState.refueling = true
 		print("Out of fuel, now backing to fuelStation "..tostring(workState.fuelStation.pos))
 		local fuelBeforeLeave = turtle.getFuelLevel()
-		local leavePos = workState.pos
-		local leaveDir = workState:aimingDir()
+		local leavePos, leaveFacing, leaveAiming = workState.pos, workState.facing, workState.aiming
 		with({workArea = nil})(visitStation(workState.fuelStation))()
 		local singleTripCost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
 		print("Cost "..singleTripCost.." to reach the fuelStation, now refueling ("..nStep..")...")
@@ -44,15 +43,18 @@ if turtle then
 		if not isChest() then -- the fuelStation is not available, waiting for help
 			printC(colors.orange)("[refuelFromFuelStation] the fuel station on "..tostring(workState.fuelStation.pos).." is not available, waiting for help...")
 			retry(enoughRefuel)() --TODO: try to update fuelStation info
-		end
-		rep(retry(suck()) * -enoughRefuel)() -- repeat until enough
-		if os.getComputerLabel() then
-			rep(suck() * -greedyRefuel)() -- try to full the tank
+		else
+			rep(retry(suck()) * -enoughRefuel)() -- repeat until enough
+			if os.getComputerLabel() then
+				rep(suck() * -greedyRefuel)() -- try to full the tank
+			end
 		end
 		print("Finished refueling, now back to work pos "..tostring(leavePos))
 		move.to(leavePos)()
-		turn.to(leaveDir)()
+		turn.to(leaveFacing)()
+		workState.aiming = leaveAiming
 		workState.refueling = false
+		return true
 	end))
 
 	refuel = markIOfn("refuel(nStep)")(mkIOfn(function(nStep)
