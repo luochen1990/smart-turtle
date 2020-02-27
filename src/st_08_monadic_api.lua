@@ -141,8 +141,11 @@ if turtle then
 		return ok and (const.cheapItems[res.name] or const.cheapItems[const.afterDig[res.name]]) == true
 	end)
 
+	isWorkArea = mkIO(function()
+		if workMode.workArea and workMode.workArea:contains(workState.pos) and not workMode.workArea:contains(workState.pos + workState:aimingDir()) then return false else return true end
+	end)
+
 	isProtected = mkIO(function()
-		if workMode.workArea and workMode.workArea:contains(workState.pos) and not workMode.workArea:contains(workState.pos + workState:aimingDir()) then return true end
 		local ok, res = _aiming.inspect()
 		return ok and (const.turtleBlocks[res.name] == true or const.chestBlocks[res.name] == true)
 	end)
@@ -209,18 +212,17 @@ if turtle then
 		--
 		local mov = _aiming.move
 		if workMode.destroy == 1 then
-			mov = mov + (rep(isCheap * dig) * mov)
+			mov = mov + rep(isCheap * dig) * mov
 		elseif workMode.destroy == 2 or workMode.destroy == true then
-			mov = mov + (rep(dig) * mov)
+			mov = mov + rep(-isProtected * dig) * mov
 		end
 		if workMode.violence then
-			mov = mov + (rep(attack) * mov)
+			mov = mov + rep(attack) * mov
 		end
-		if workMode.retrySeconds > 0 and isTurtle() then -- only retry when blocked by turtle
-			mov = retry(workMode.retrySeconds)(mov)
+		if workMode.retrySeconds > 0 then --NOTE: only worth retry when blocked by turtle
+			mov = mov + isTurtle * retry(workMode.retrySeconds)(mov)
 		end
-		mov = -isProtected * mov
-		local r = mov()
+		local r = (isWorkArea * mov)()
 		if r then workState.pos = workState.pos + workState:aimingDir() end
 		return r
 	end))

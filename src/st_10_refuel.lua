@@ -56,7 +56,8 @@ if turtle then
 	end))
 
 	refuel = markIOfn("refuel(nStep)")(mkIOfn(function(nStep)
-		nStep = math.max(1 , nStep)
+		nStep = math.max(1 , nStep or 1)
+		if nStep <= turtle.getFuelLevel() then return true end
 		if nStep > turtle.getFuelLimit() then return false end
 		local saved_sn = turtle.getSelectedSlot()
 		local succ = false
