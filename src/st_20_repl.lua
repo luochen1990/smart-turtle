@@ -10,6 +10,13 @@ _replStyle = {
 	helloText = "Welcome to Smart Turtle",
 	helloColor = colors.lime,
 	tipsText = "(This is a REPL, long press Ctrl+T to exit, press Ctrl+P to print call stack)",
+	helpText = [[
+	Long press Ctrl+T -- exit this REPL
+	Ctrl+C -- abort running command
+	Ctrl+P -- print current call stack
+	Ctrl+L -- clean screen
+	Ctrl+U -- clean current line
+	]],
 	tipsColor = colors.gray,
 	promptText = "st> ",
 	promptColor = colors.blue,
@@ -26,12 +33,8 @@ end
 function _replMainCo()
 	_replState.running = true
 	local tEnv = {
-		["exit"] = mkIO(function()
-			_replState.running = false
-		end),
-		["help"] = mkIO(function()
-			print(_replStyle.tipsText)
-		end),
+		["exit"] = mkIO(function() _replState.running = false end),
+		["help"] = mkIO(function() print(_replStyle.helpText) end),
 	}
 	setmetatable( tEnv, { __index = _ENV } )
 
