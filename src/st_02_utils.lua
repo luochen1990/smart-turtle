@@ -70,6 +70,42 @@ end
 
 math.randomseed(os.time() * 1000) -- set randomseed for math.random()
 
+-- | eval an expr or a peice of code
+eval = function(code, env, readOnlyEnv)
+	if readOnlyEnv then setmetatable(env, {__index = readOnlyEnv}) end
+
+	local func = load("return unpack(table.pack(" .. code .. "));", "=lua", "t", env)
+	if not func then
+		func, compileErr = load(code, "=lua", "t", env)
+	end
+
+	if func then
+		local old_stack = deepcopy(_callStack)
+		local res1 = { pcall( func ) }
+		if table.remove(res1, 1) then
+			if #res1 == 1 and type(res1[1]) == "table" and type(res1[1].run) == "function" then
+				-- directly run a single IO monad
+				local res2 = { pcall( res1[1].run ) }
+				if table.remove(res2, 1) then
+					return true, res2
+				else
+					local new_stack = _callStack
+					_callStack = old_stack
+					return false, {msg = res2[1], stack = new_stack}
+				end
+			else -- trivial case
+				return true, res1
+			end
+		else
+			local new_stack = _callStack
+			_callStack = old_stack
+			return false, {msg = res1[1], stack = new_stack}
+		end
+	else
+		return false, {msg = '[compile error] '..compileErr, stack = nil}
+	end
+end
+
 -------------------------------- string utils ----------------------------------
 
 -- | convert a value to string for printing

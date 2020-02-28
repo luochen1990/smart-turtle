@@ -107,20 +107,21 @@ _waitForKeyCombination = function(targetKey1, targetKey2)
 	until (st == 2)
 end
 
-_printCallStack = function(count, beginDepth, color)
+_printCallStack = function(count, beginDepth, color, stack)
+	stack = default(_callStack)(stack)
 	count = math.max(0, count or 10)
-	beginDepth = math.max(1, beginDepth or 1 + #_callStack - count)
+	beginDepth = math.max(1, beginDepth or 1 + #stack - count)
 	color = color or colors.gray
 	withColor(color)(function()
 		for dep = beginDepth, beginDepth + count - 1 do
-			local record = _callStack[dep]
+			local record = stack[dep]
 			if record then
 				print("[stack #"..dep.."]", record)
 			else
 				break
 			end
 		end
-		printC(colors.grey)("[total call stack depth]", #_callStack)
+		printC(colors.grey)("[total call stack depth]", #stack)
 	end)()
 end
 

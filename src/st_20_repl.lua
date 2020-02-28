@@ -32,9 +32,6 @@ function _replMainCo()
 		["help"] = mkIO(function()
 			return _replStyle.tipsText
 		end),
-		["_echo"] = function( ... )
-			return ...
-		end,
 	}
 	setmetatable( tEnv, { __index = _ENV } )
 
@@ -111,39 +108,6 @@ function _replMainCo()
 		end
 	end)()
 
-	local replEval = function(s)
-		local func = load("return _echo(" .. s .. ");", "=lua", "t", tEnv)
-		if not func then
-			func, compileErr = load(s, "=lua", "t", tEnv)
-		end
-
-		if func then
-			_replState.latestCallStack = _callStack
-			_callStack = {}
-			local res1 = { pcall( func ) }
-			if table.remove(res1, 1) then
-				if #res1 == 1 and type(res1[1]) == "table" and type(res1[1].run) == "function" then
-					-- directly run a single IO monad
-					_replState.latestCallStack = _callStack
-					_callStack = {}
-					local res2 = { pcall( res1[1].run ) }
-					if table.remove(res2, 1) then
-						return true, res2
-					else
-						return false, res2[1]
-					end
-				else
-					-- other case just simply print
-					return true, res1
-				end
-			else
-				return false, res1[1]
-			end
-		else
-			return false, '[compile error] '..compileErr
-		end
-	end
-
 	while _replState.running do
 		local s = replReadLineWithHotkeys()
 		if s:match("%S") and _replState.history[#_replState.history] ~= s then
@@ -154,15 +118,16 @@ function _replMainCo()
 			writeLines("/.st_repl_history", _replState.history)
 		end
 
-		local co1 = withColor(_replStyle.runCommandDefaultColor)(function() return replEval(s) end)
+		local co1 = withColor(_replStyle.runCommandDefaultColor)(function() return eval(s, tEnv) end)
 		local co2 = delay(_waitForKeyCombination, keys.leftCtrl, keys.c)
 		local raceWinner, ok, res = race(co1, co2)
 		if raceWinner == 1 then
 			if ok then
 				printC(_replStyle.resultColor)(showFields(unpack(res)))
 			else
-				_printCallStack(10, nil, _replStyle.errorStackColor)
-				printError(res)
+				_replState.latestCallStack = res.stack
+				if res.stack then _printCallStack(10, nil, _replStyle.errorStackColor, res.stack) end
+				printError(res.msg)
 			end
 		end
 	end
