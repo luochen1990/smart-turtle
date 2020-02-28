@@ -2,7 +2,8 @@
 
 _hackVector = function()
 	local mt = getmetatable(vector.new(0,0,0))
-	mt.__tostring = function(a) return "("..a.x..","..a.y..","..a.z..")" end
+	mt.__tostring = function(a) return "<"..a.x..","..a.y..","..a.z..">" end
+	mt.__literal = function(a) return "vec("..a.x..","..a.y..","..a.z..")" end
 	mt.__eq = function(a, b) return a.x == b.x and a.y == b.y and a.z == b.z end
 	mt.__lt = function(a, b) return a.x < b.x and a.y < b.y and a.z < b.z end
 	mt.__le = function(a, b) return a.x <= b.x and a.y <= b.y and a.z <= b.z end
@@ -80,7 +81,8 @@ end
 mkArea = (function()
 	local _area_mt = {
 		__add = function(a, b) return _mkArea(lowPoint(a.low, b.low), highPoint(a.high, b.high)) end,
-		__tostring = function(a) return tostring(a.low).." .. "..tostring(a.high) end,
+		__tostring = function(a) return tostring(a.low)..".."..tostring(a.high) end,
+		__literal = function(a) return "mkArea("..literal(a.low)..","..literal(a.high)..")" end,
 	}
 	local _mkArea = function(low, high) -- including
 		local a = {

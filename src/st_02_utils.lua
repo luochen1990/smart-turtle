@@ -161,6 +161,49 @@ showFields = function(...) return showList({...}, ", ", "nil") end
 showWords = function(...) return showList({...}, " ", "") end
 showLines = function(...) return showList({...}, "\n", "") end
 
+function literal(val)
+	local ty = type(val)
+	if ty == "table" then
+		local mt = getmetatable(val)
+		if type(mt) == "table" then
+			if type(mt.__literal) == "function" then
+				return mt.__literal(val)
+			else
+				return nil
+			end
+		else
+			return _literalTable(val)
+		end
+	elseif ty == "string" then
+		return _literalString(val)
+	elseif ty == "function" then
+		return nil
+	else
+		return tostring(val)
+	end
+end
+
+function _literalTable(value)
+	local s = "{"
+	for i, v in ipairs(value) do
+		if i > 1 then s = s .. "," end
+		s = s .. literal(v)
+	end
+	local sp = #value > 0
+	for k, v in pairs(value) do
+		if type(k) ~= "number" or k > #value then
+			if sp then s = s .. "," end
+			sp = true
+			s = s .. k .. "=" .. literal(v) --TODO: wrap special key with [] and escape
+		end
+	end
+	return s .. "}"
+end
+
+function _literalString(val)
+	return '"'..val..'"' --TODO: escape special chars
+end
+
 ------------------------------ coroutine utils ---------------------------------
 
 function race(...)
