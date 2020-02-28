@@ -104,7 +104,40 @@ if turtle then
 	end
 end
 
-_startupCo = function()
+_printCallStackCo = function()
+	while true do
+		_waitForKeyCombination(keys.leftCtrl, keys.p)
+		_printCallStack(10, nil, colors.blue)
+	end
+end
+
+_inspectSystemStateCo = function()
+	while true do
+		_waitForKeyCombination(keys.leftCtrl, keys.i)
+		if turtle then
+			printC(colors.green)('turtle workMode =', show(workMode))
+			printC(colors.green)('turtle workState =', show(workState))
+		end
+	end
+end
+
+_inspectCo = function()
+	parallel.waitForAny(_printCallStackCo, _inspectSystemStateCo)
+end
+
+_initComputer = function()
+	local succ = openWirelessModem()
+	if not succ then
+		printC(colors.yellow)("WARN: wireless modem not found!")
+		return false
+	end
+	return true
+end
+
+_startupMainCo = function()
+	local code = readFile("/st_startup.lua")
+	if code then eval(code, {}, _ENV) end
+
 	local label = os.getComputerLabel()
 	if turtle then
 		if string.sub(label, 1, 6) == "guard-" then
@@ -122,19 +155,22 @@ _startupCo = function()
 	end
 end
 
-_initComputer = function()
-	local succ = openWirelessModem()
-	if not succ then
-		printC(colors.yellow)("WARN: wireless modem not found!")
-		return false
-	end
-	return true
+_startupCo = function()
+	parallel.waitForAny(_startupMainCo, _inspectCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.c))
 end
 
-_mainCo = function(...)
+_replCo = function()
+	parallel.waitForAny(_replMainCo, _inspectCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.d))
+end
+
+_main = function(...)
+	-- init system state
 	term.clear(); term.setCursorPos(1,1)
 	_initComputer()
 	if turtle then _initTurtleState() end
-	parallel.waitForAll(_startupCo, _replCo, _printCallStackCo, ...)
+	-- run startup script
+	_startupCo()
+	-- run repl
+	_replCo()
 end
 

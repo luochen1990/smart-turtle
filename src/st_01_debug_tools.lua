@@ -78,35 +78,6 @@ writeC = function(fg, bg)
 	end)
 end
 
-_waitForKeyPress = function(targetKey)
-	while true do
-		local ev, keyCode = os.pullEvent("key")
-		if ev == "key" and keyCode == targetKey then
-			--print("[ev] key("..keys.getName(keyCode)..")")
-			return keyCode
-		end
-	end
-end
-
-_waitForKeyCombination = function(targetKey1, targetKey2)
-	local st = 0 -- matched length
-	repeat
-		if st == 0 then
-			_waitForKeyPress(targetKey1)
-			st = 1
-		elseif st == 1 then
-			local ev, keyCode = os.pullEvent()
-			if ev == "key_up" and keyCode == targetKey1 then
-				--print("[ev] key_up("..keys.getName(keyCode)..")")
-				st = 0
-			elseif ev == "key" and keyCode == targetKey2 then
-				--print("[ev] key("..keys.getName(keyCode)..")")
-				st = 2
-			end
-		end
-	until (st == 2)
-end
-
 _printCallStack = function(count, beginDepth, color, stack)
 	stack = default(_callStack)(stack)
 	count = math.max(0, count or 10)
@@ -123,12 +94,5 @@ _printCallStack = function(count, beginDepth, color, stack)
 		end
 		printC(colors.grey)("[total call stack depth]", #stack)
 	end)()
-end
-
-_printCallStackCo = function()
-	while true do
-		_waitForKeyCombination(keys.leftCtrl, keys.p)
-		_printCallStack(10, nil, colors.blue)
-	end
 end
 

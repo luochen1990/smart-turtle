@@ -25,15 +25,16 @@ if turtle then
 		isUnloading = false,
 	}
 
-	function workState:aimingDir()
-		if self.aiming == 0 then return self.facing
-		else return vec(0, self.aiming, 0) end
-	end
-
-	function workState:lateralDir() -- a direction which is perpendicular to aimingDir
-		if self.aiming == 0 then return const.dir.U
-		else return self.facing end
-	end
+	setmetatable(workState, {__index = {
+		aimingDir = function()
+			if workState.aiming == 0 then return workState.facing
+			else return vec(0, workState.aiming, 0) end
+		end,
+		lateralDir = function()
+			if workState.aiming == 0 then return const.dir.U
+			else return workState.facing end
+		end,
+	}})
 
 	-- | run io with specified workMode fields
 	with = function(wm_patch)

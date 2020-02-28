@@ -110,16 +110,17 @@ end
 
 -- | convert a value to string for printing
 function show(value)
-	local metatable = getmetatable( value )
-	if type(metatable) == "table" and type(metatable.__tostring) == "function" then
-		return tostring( value )
-	else
-		local ok, serialised = pcall( textutils.serialise, value )
-		if ok then
-			return serialised
+	local ty = type(value)
+	if ty == "table" then
+		local mt = getmetatable(value)
+		if type(mt) == "table" and type(mt.__tostring) == "function" then
+			return tostring(value)
 		else
-			return tostring( value )
+			local ok, serialised = pcall(textutils.serialise, value)
+			if ok then return serialised else return tostring(value) end
 		end
+	else
+		return tostring(value)
 	end
 end
 
@@ -149,7 +150,52 @@ function race(...)
 	return id, unpack(res)
 end
 
+------------------------------ ui event utils ----------------------------------
+
+_waitForKeyPress = function(targetKey)
+	while true do
+		local ev, keyCode = os.pullEvent("key")
+		if ev == "key" and keyCode == targetKey then
+			--print("[ev] key("..keys.getName(keyCode)..")")
+			return keyCode
+		end
+	end
+end
+
+_waitForKeyCombination = function(targetKey1, targetKey2)
+	local st = 0 -- matched length
+	repeat
+		if st == 0 then
+			_waitForKeyPress(targetKey1)
+			st = 1
+		elseif st == 1 then
+			local ev, keyCode = os.pullEvent()
+			if ev == "key_up" and keyCode == targetKey1 then
+				--print("[ev] key_up("..keys.getName(keyCode)..")")
+				st = 0
+			elseif ev == "key" and keyCode == targetKey2 then
+				--print("[ev] key("..keys.getName(keyCode)..")")
+				st = 2
+			end
+		end
+	until (st == 2)
+end
+
 ---------------------------------- fs utils ------------------------------------
+
+readFile = function(fileHandle)
+	local isTempHandle = false
+	if type(fileHandle) == "string" then -- file path/name used
+		fileHandle = fs.open(fileHandle, 'r')
+		isTempHandle = true
+	end
+	if not fileHandle then return nil end
+	local res = fileHandle.readAll()
+	if isTempHandle then
+		fileHandle.close()
+	end
+	return res
+end
 
 readLines = function(fileHandle)
 	local isTempHandle = false

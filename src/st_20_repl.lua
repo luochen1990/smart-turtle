@@ -26,10 +26,6 @@ _replStyle = {
 	runCommandDefaultColor = colors.lightGray,
 }
 
-function _replCo()
-	_replMainCo()
-end
-
 function _replMainCo()
 	_replState.running = true
 	local tEnv = {
