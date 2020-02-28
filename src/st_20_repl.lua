@@ -32,7 +32,7 @@ function _replMainCo()
 		["exit"] = mkIO(function() _replState.running = false end),
 		["help"] = mkIO(function() print(_replStyle.helpText) end),
 	}
-	setmetatable( tEnv, { __index = _ENV } )
+	setmetatable( tEnv, { __index = _ST } )
 
 	-- Replace our package.path, so that it loads from the current directory, rather
 	-- than from /rom/programs. This makes it a little more friendly to use and

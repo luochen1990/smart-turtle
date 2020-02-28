@@ -14,7 +14,7 @@ if turtle then
 		workState.pos = pos
 		workState.facing = facing
 		F, B, L, R = facing, -facing, leftSide(facing), rightSide(facing)
-		for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ENV[d]) end
+		for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ST[d]) end
 		return true
 	end)
 
@@ -88,7 +88,7 @@ if turtle then
 		if not ok then error("[_initTurtleState] failed to get facing direction (inspect failed)") end
 		workState.facing = -const.dir[res.state.facing:sub(1,1):upper()]
 		F, B, L, R = workState.facing, -workState.facing, leftSide(workState.facing), rightSide(workState.facing)
-		for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ENV[d]) end
+		for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ST[d]) end
 		turtle.dig()
 		-- got facing
 		workState.pos = gpsPos()
@@ -136,7 +136,7 @@ end
 
 _startupMainCo = function()
 	local code = readFile("/st_startup.lua")
-	if code then exec(code, {}, _ENV) end
+	if code then exec(code) end
 
 	local label = os.getComputerLabel()
 end
@@ -147,7 +147,7 @@ end
 
 _daemonMainCo = function()
 	local code = readFile("/st_daemon.lua")
-	if code then exec(code, {}, _ENV) end
+	if code then exec(code) end
 
 	local label = os.getComputerLabel()
 	if turtle then

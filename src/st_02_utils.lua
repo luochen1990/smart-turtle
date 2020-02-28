@@ -70,8 +70,11 @@ end
 
 math.randomseed(os.time() * 1000) -- set randomseed for math.random()
 
+_ST = _ENV
+
 -- | eval an expr or a peice of code
 eval = function(code, env, readOnlyEnv)
+	if not (env or readOnlyEnv) then env, readOnlyEnv = {}, _ST end
 	if readOnlyEnv then setmetatable(env, {__index = readOnlyEnv}) end
 
 	local func = load("return unpack(table.pack(" .. code .. "));", "=lua", "t", env)
@@ -118,7 +121,7 @@ exec = function(code, env, readOnlyEnv)
 		end
 	end
 	-- got code
-	local ok, res = eval(code, env or {}, readOnlyEnv or _ENV)
+	local ok, res = eval(code, env, readOnlyEnv)
 	if ok then
 		if #res > 0 then
 			printC(colors.green)(showFields(unpack(res)))

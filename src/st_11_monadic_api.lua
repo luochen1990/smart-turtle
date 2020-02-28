@@ -229,10 +229,9 @@ if turtle then
 
 	echo = mkIOfn(function(...)
 		for _, expr in ipairs({...}) do
-			local func, err = load("return "..expr, "echo_expr", "t", _ENV)
-			if not func then error(err) end
-			local r = func()
-			printC(colors.gray)("[echo] "..expr.." ==>", r)
+			local ok, res = eval(expr)
+			if not ok then error(res.msg) end
+			printC(colors.gray)("[echo] "..expr.." ==>", showFields(unpack(res)))
 		end
 		return true
 	end)
