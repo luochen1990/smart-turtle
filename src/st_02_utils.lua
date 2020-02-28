@@ -101,6 +101,18 @@ showFields = function(...) return showList({...}, ", ", "nil") end
 showWords = function(...) return showList({...}, " ", "") end
 showLines = function(...) return showList({...}, "\n", "") end
 
+------------------------------ coroutine utils ---------------------------------
+
+function race(...)
+	local res
+	local cos = {}
+	for i, io in ipairs({...}) do
+		cos[i] = function() res = { io() } end
+	end
+	local id = parallel.waitForAny(unpack(cos))
+	return id, unpack(res)
+end
+
 ---------------------------------- fs utils ------------------------------------
 
 readLines = function(fileHandle)

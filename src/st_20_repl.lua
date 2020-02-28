@@ -3,7 +3,7 @@
 _replState = {
 	running = true,
 	latestCallStack = {},
-	history = readLines("/history") or {}, -- repl input command history
+	history = readLines("/.st_repl_history") or {}, -- repl input command history
 	historyLimit = 100,
 }
 _replStyle = {
@@ -18,10 +18,6 @@ _replStyle = {
 	errorStackColor = colors.gray,
 	runCommandDefaultColor = colors.lightGray,
 }
-
-function abortableRun(io)
-	parallel.waitForAny(function() io() end, function() _waitForKeyCombination(keys.leftCtrl, keys.c) end)
-end
 
 function _replCo()
 	_replMainCo()
@@ -115,64 +111,60 @@ function _replMainCo()
 		end
 	end)()
 
-	local replLoopBody = function()
-		local s = replReadLineWithHotkeys()
-		if s:match("%S") and _replState.history[#_replState.history] ~= s then
-			table.insert( _replState.history, s )
-			if #_replState.history > _replState.historyLimit then
-				table.remove(_replState.history, 1)
-			end
-			writeLines("/history", _replState.history)
-		end
-
-		local nForcePrint = 0
-		local func, e = load( s, "=lua", "t", tEnv )
-		local func2 = load( "return _echo(" .. s .. ");", "=lua", "t", tEnv )
+	local replEval = function(s)
+		local func = load("return _echo(" .. s .. ");", "=lua", "t", tEnv)
 		if not func then
-			if func2 then
-				func = func2
-				e = nil
-				nForcePrint = 1
-			end
-		else
-			if func2 then
-				func = func2
-			end
+			func, compileErr = load(s, "=lua", "t", tEnv)
 		end
 
 		if func then
-			abortableRun(withColor(_replStyle.runCommandDefaultColor)(function()
-				_replState.callStack = _callStack
-				_callStack = {}
-				local res1 = { pcall( func ) }
-				if table.remove(res1, 1) then
-					if #res1 == 1 and type(res1[1]) == "table" and type(res1[1].run) == "function" then
-						-- directly run a single IO monad
-						_replState.latestCallStack = _callStack
-						_callStack = {}
-						local res2 = { pcall( res1[1].run ) }
-						if table.remove(res2, 1) then
-							printC(_replStyle.resultColor)( showFields( unpack(res2) ) )
-						else
-							_printCallStack(10, nil, _replStyle.errorStackColor)
-							printError( res2[1] )
-						end
+			_replState.latestCallStack = _callStack
+			_callStack = {}
+			local res1 = { pcall( func ) }
+			if table.remove(res1, 1) then
+				if #res1 == 1 and type(res1[1]) == "table" and type(res1[1].run) == "function" then
+					-- directly run a single IO monad
+					_replState.latestCallStack = _callStack
+					_callStack = {}
+					local res2 = { pcall( res1[1].run ) }
+					if table.remove(res2, 1) then
+						return true, res2
 					else
-						-- other case just simply print
-						printC(_replStyle.resultColor)( showFields( unpack(res1) ) )
+						return false, res2[1]
 					end
 				else
-					_printCallStack(10, nil, _replStyle.errorStackColor)
-					printError( res1[1] )
+					-- other case just simply print
+					return true, res1
 				end
-			end))
+			else
+				return false, res1[1]
+			end
 		else
-			printError( e )
+			return false, '[compile error] '..compileErr
 		end
 	end
 
 	while _replState.running do
-		replLoopBody()
+		local s = replReadLineWithHotkeys()
+		if s:match("%S") and _replState.history[#_replState.history] ~= s then
+			table.insert(_replState.history, s)
+			if #_replState.history > _replState.historyLimit then
+				table.remove(_replState.history, 1)
+			end
+			writeLines("/.st_repl_history", _replState.history)
+		end
+
+		local co1 = withColor(_replStyle.runCommandDefaultColor)(function() return replEval(s) end)
+		local co2 = delay(_waitForKeyCombination, keys.leftCtrl, keys.c)
+		local raceWinner, ok, res = race(co1, co2)
+		if raceWinner == 1 then
+			if ok then
+				printC(_replStyle.resultColor)(showFields(unpack(res)))
+			else
+				_printCallStack(10, nil, _replStyle.errorStackColor)
+				printError(res)
+			end
+		end
 	end
 end
 
