@@ -93,36 +93,30 @@ function _replMainCo()
 		end)
 	end)
 
-	local replReadLineWithKeyshot = (function()
-		local _gotLine, _cleanLineCo, _cleanScreenCo, _readLineCo, _readLineWithKeyshotCo
+	local replReadLineWithHotkeys = (function()
+		local _gotLine, _cleanLineCo, _cleanScreenCo, _readLineCo
 		_cleanLineCo = function()
 			_waitForKeyCombination(keys.leftCtrl, keys.u)
 			term.clearLine()
 			local c, l = term.getCursorPos()
 			term.setCursorPos(1, l)
-			_readLineWithKeyshotCo()
 		end
 		_cleanScreenCo = function()
 			_waitForKeyCombination(keys.leftCtrl, keys.l)
 			term.clear()
 			term.setCursorPos(1, 1)
-			_readLineWithKeyshotCo()
 		end
 		_readLineCo = function()
 			_gotLine = replReadLine()
 		end
-		_readLineWithKeyshotCo = function()
-			parallel.waitForAny(_readLineCo, _cleanScreenCo, _cleanLineCo)
-		end
-
 		return function()
-			_readLineWithKeyshotCo()
+			repeat parallel.waitForAny(_readLineCo, _cleanScreenCo, _cleanLineCo) until (_gotLine)
 			return _gotLine
 		end
 	end)()
 
 	local replLoopBody = function()
-		local s = replReadLineWithKeyshot()
+		local s = replReadLineWithHotkeys()
 		if s:match("%S") and _replState.history[#_replState.history] ~= s then
 			table.insert( _replState.history, s )
 			if #_replState.history > _replState.historyLimit then
