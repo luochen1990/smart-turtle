@@ -106,6 +106,19 @@ eval = function(code, env, readOnlyEnv)
 	end
 end
 
+-- | execute a piece of code, similar to eval, but print out the result directly
+exec = function(code, env, readOnlyEnv)
+	local ok, res = eval(code, env, readOnlyEnv)
+	if ok then
+		if #res > 0 then
+			printC(colors.green)(showFields(unpack(res)))
+		end
+	else
+		if res.stack then _printCallStack(10, nil, colors.gray, res.stack) end
+		printC(colors.red)(res.msg)
+	end
+end
+
 -------------------------------- string utils ----------------------------------
 
 -- | convert a value to string for printing
