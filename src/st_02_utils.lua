@@ -197,6 +197,21 @@ readFile = function(fileHandle)
 	return res
 end
 
+writeFile = function(fileHandle, s, mode)
+	local isTempHandle = false
+	mode = default('w')(mode)
+	if type(fileHandle) == "string" then -- file path/name used
+		fileHandle = fs.open(fileHandle, mode)
+		isTempHandle = true
+	end
+	fileHandle.write(s)
+	if isTempHandle then
+		fileHandle.close()
+	else
+		fileHandle.flush()
+	end
+end
+
 readLines = function(fileHandle)
 	local isTempHandle = false
 	if type(fileHandle) == "string" then -- file path/name used
