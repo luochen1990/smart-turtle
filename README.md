@@ -10,6 +10,7 @@ Features
 
 * provide functional style monadic api to use
     - absolute coordinate system based api
+    - obstacle avoidance support (`move.to()` and `move.go()`)
     - auto refuel
     - auto tidy backpack slots
     - provide high level combinators to construct complex logic in a very easy way
@@ -18,6 +19,9 @@ Features
     - you can input an IO monad to execute it directly, e.g. `move` instead of `move()`
     - support `Ctrl+C` to abort running process
     - support `Ctrl+P` to print call stack
+    - support `Ctrl+U` to clean current line
+    - support `Ctrl+L` to clean screen
+    - you can customize your own repl style by modifing `_replStyle` variable
 * provide a stack trace mechanism to help debugging
     - you can manually mark functions which you want it to appear in the stack trace
 
