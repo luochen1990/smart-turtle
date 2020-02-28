@@ -139,6 +139,17 @@ _startupMainCo = function()
 	if code then exec(code, {}, _ENV) end
 
 	local label = os.getComputerLabel()
+end
+
+_startupCo = function()
+	parallel.waitForAny(_startupMainCo, _inspectCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.c))
+end
+
+_daemonMainCo = function()
+	local code = readFile("/st_daemon.lua")
+	if code then exec(code, {}, _ENV) end
+
+	local label = os.getComputerLabel()
 	if turtle then
 		if string.sub(label, 1, 6) == "guard-" then
 			local d = string.sub(label, 7, 7)
@@ -155,12 +166,12 @@ _startupMainCo = function()
 	end
 end
 
-_startupCo = function()
-	parallel.waitForAny(_startupMainCo, _inspectCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.c))
+_daemonCo = function()
+	parallel.waitForAll(_daemonMainCo, _inspectCo)
 end
 
 _replCo = function()
-	parallel.waitForAny(_replMainCo, _inspectCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.d))
+	parallel.waitForAny(_replMainCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.d))
 end
 
 _main = function(...)
@@ -178,8 +189,8 @@ _main = function(...)
 		-- run startup script
 		_startupCo()
 
-		-- run repl
-		_replCo()
+		-- run repl & daemon
+		parallel.waitForAny(_replCo, _daemonCo)
 	end
 end
 
