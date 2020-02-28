@@ -30,7 +30,7 @@ function _replMainCo()
 			_replState.running = false
 		end),
 		["help"] = mkIO(function()
-			return _replStyle.tipsText
+			print(_replStyle.tipsText)
 		end),
 	}
 	setmetatable( tEnv, { __index = _ENV } )
@@ -110,24 +110,26 @@ function _replMainCo()
 
 	while _replState.running do
 		local s = replReadLineWithHotkeys()
-		if s:match("%S") and _replState.history[#_replState.history] ~= s then
-			table.insert(_replState.history, s)
-			if #_replState.history > _replState.historyLimit then
-				table.remove(_replState.history, 1)
+		if #s > 0 then
+			if s:match("%S") and _replState.history[#_replState.history] ~= s then
+				table.insert(_replState.history, s)
+				if #_replState.history > _replState.historyLimit then
+					table.remove(_replState.history, 1)
+				end
+				writeLines("/.st_repl_history", _replState.history)
 			end
-			writeLines("/.st_repl_history", _replState.history)
-		end
 
-		local co1 = withColor(_replStyle.runCommandDefaultColor)(function() return eval(s, tEnv) end)
-		local co2 = delay(_waitForKeyCombination, keys.leftCtrl, keys.c)
-		local raceWinner, ok, res = race(co1, co2)
-		if raceWinner == 1 then
-			if ok then
-				printC(_replStyle.resultColor)(showFields(unpack(res)))
-			else
-				_replState.latestCallStack = res.stack
-				if res.stack then _printCallStack(10, nil, _replStyle.errorStackColor, res.stack) end
-				printError(res.msg)
+			local co1 = withColor(_replStyle.runCommandDefaultColor)(function() return eval(s, tEnv) end)
+			local co2 = delay(_waitForKeyCombination, keys.leftCtrl, keys.c)
+			local raceWinner, ok, res = race(co1, co2)
+			if raceWinner == 1 then
+				if ok then
+					printC(_replStyle.resultColor)(showFields(unpack(res)))
+				else
+					_replState.latestCallStack = res.stack
+					if res.stack then _printCallStack(10, nil, _replStyle.errorStackColor, res.stack) end
+					printError(res.msg)
+				end
 			end
 		end
 	end
