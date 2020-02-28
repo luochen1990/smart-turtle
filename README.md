@@ -21,6 +21,7 @@ Features
     - support `Ctrl+P` to print call stack
     - support `Ctrl+U` to clean current line
     - support `Ctrl+L` to clean screen
+    - persistent command history
     - you can customize your own repl style by modifing `_replStyle` variable
 * provide a stack trace mechanism to help debugging
     - you can manually mark functions which you want it to appear in the stack trace
