@@ -104,7 +104,7 @@ if turtle then
 	end
 end
 
-_mainCo = function()
+_startupCo = function()
 	local label = os.getComputerLabel()
 	if turtle then
 		if string.sub(label, 1, 6) == "guard-" then
@@ -122,10 +122,6 @@ _mainCo = function()
 	end
 end
 
---_replCo = function()
---	os.run(_ENV, "/rom/programs/lua.lua")
---end
-
 _initComputer = function()
 	local succ = openWirelessModem()
 	if not succ then
@@ -135,14 +131,10 @@ _initComputer = function()
 	return true
 end
 
-begin = function(...)
+_mainCo = function(...)
 	term.clear(); term.setCursorPos(1,1)
 	_initComputer()
 	if turtle then _initTurtleState() end
-	parallel.waitForAll(_mainCo, _replCo, _printCallStackCo, ...)
+	parallel.waitForAll(_startupCo, _replCo, _printCallStackCo, ...)
 end
-
---------------------------------------------------------------------------------
-
-begin()
 
