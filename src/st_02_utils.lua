@@ -108,7 +108,17 @@ end
 
 -- | execute a piece of code, similar to eval, but print out the result directly
 exec = function(code, env, readOnlyEnv)
-	local ok, res = eval(code, env, readOnlyEnv)
+	if code:sub(1, 7) == "http://" or code:sub(1, 8) == "https://" then
+		local h = http.get(code)
+		if h then
+			code = h.readAll()
+		else
+			printC(colors.red)("[exec] failed to fetch code from:", code)
+			return
+		end
+	end
+	-- got code
+	local ok, res = eval(code, env or {}, readOnlyEnv or _ENV)
 	if ok then
 		if #res > 0 then
 			printC(colors.green)(showFields(unpack(res)))
