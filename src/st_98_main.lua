@@ -134,9 +134,19 @@ _initComputer = function()
 	return true
 end
 
+_exec = function(code, env, readOnlyEnv)
+	local ok, res = eval(code, env, readOnlyEnv)
+	if ok then
+		printC(colors.green)(show(res))
+	else
+		if res.stack then _printCallStack(10, nil, colors.gray, res.stack) end
+		printC(colors.red)(res.msg)
+	end
+end
+
 _startupMainCo = function()
 	local code = readFile("/st_startup.lua")
-	if code then eval(code, {}, _ENV) end
+	if code then _exec(code, {}, _ENV) end
 
 	local label = os.getComputerLabel()
 	if turtle then
@@ -168,9 +178,18 @@ _main = function(...)
 	term.clear(); term.setCursorPos(1,1)
 	_initComputer()
 	if turtle then _initTurtleState() end
-	-- run startup script
-	_startupCo()
-	-- run repl
-	_replCo()
+
+	-- process cli arguments
+	local args = {...}
+	if #args > 0 then
+		printC(colors.gray)('cli arguments: ', show(args))
+		_exec(args[1], {}, _ENV)
+	else
+		-- run startup script
+		_startupCo()
+
+		-- run repl
+		_replCo()
+	end
 end
 
