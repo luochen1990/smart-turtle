@@ -106,6 +106,7 @@ function _replMainCo()
 			_gotLine = replReadLine()
 		end
 		return function()
+			_gotLine = nil
 			repeat parallel.waitForAny(_readLineCo, _cleanScreenCo, _cleanLineCo) until (_gotLine)
 			return _gotLine
 		end
