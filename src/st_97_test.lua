@@ -22,5 +22,9 @@ if turtle then
 		;(visitStation(t) * use("minecraft:chest"))()
 		return transportLine(s, t)()
 	end))
+
+	_test.requestStation = markIO("_test.requestStation")(mkIO(function()
+		return _requestSwarm("swarm.services.requestStation("..literal("minecraft:charcoal", 0, workState.pos, turtle.getFuelLevel())..")")
+	end))
 end
 

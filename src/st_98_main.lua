@@ -163,6 +163,10 @@ _daemonMainCo = function()
 		end
 	elseif pocket then
 		followMeCo()
+	else
+		if label == "swarm-server" then
+			swarm._startService()
+		end
 	end
 end
 
