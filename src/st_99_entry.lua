@@ -2,4 +2,4 @@
 
 _main(...)
 
--- vim: set readonly:
+-- vim: set nomodifiable:
