@@ -50,6 +50,15 @@ end
 
 -------------------------------- general utils ---------------------------------
 
+hasDictKey = function(t)
+	if type(t) ~= "table" then return false end
+	local x = false
+	for _, _ in pairs(t) do
+		x = true; break
+	end
+	return x
+end
+
 deepcopy = function(obj)
 	local lookup_table = {}
 	local function _copy(obj)

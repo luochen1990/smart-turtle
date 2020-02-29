@@ -124,7 +124,7 @@ if turtle then
 				local far = area.low + area.high - near
 				if area:volume() <= 0 then return true end
 				if not move.to(near)() then return false end
-				io = saveDir(try(io))
+				io = with({workArea = {}})(savePosd(try(io)))
 				local toward = move.toward(far, function(d, d0) return d ~= -d0 end)
 				local loop = save(currentDir) * toward * turn.to(fmap(negate)(saved)) * rep(io * move)
 				local run = io * toward * rep(io * move) * rep(loop)

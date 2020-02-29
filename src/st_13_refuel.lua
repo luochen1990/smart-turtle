@@ -35,7 +35,7 @@ if turtle then
 		print("Out of fuel, now backing to fuelStation "..tostring(workState.fuelStation.pos))
 		local fuelBeforeLeave = turtle.getFuelLevel()
 		local leavePos, leaveFacing, leaveAiming = workState.pos, workState.facing, workState.aiming
-		with({workArea = nil})(visitStation(workState.fuelStation))()
+		with({workArea = {}})(visitStation(workState.fuelStation))()
 		local singleTripCost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
 		print("Cost "..singleTripCost.." to reach the fuelStation, now refueling ("..nStep..")...")
 		local enoughRefuel = refuelFromBackpack(nStep + singleTripCost * 2)

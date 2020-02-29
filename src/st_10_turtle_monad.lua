@@ -38,12 +38,19 @@ if turtle then
 	}})
 
 	-- | run io with specified workMode fields
+	-- , NOTE: use `{}` as a placeholder for nil
 	with = function(wm_patch)
 		return function(io)
 			return mkIO(function()
 				local _wm = workMode
 				workMode = deepcopy(_wm)
-				for k, v in pairs(wm_patch) do workMode[k] = v end
+				for k, v in pairs(wm_patch) do
+					if type(v) == "table" and #v == 0 and not hasDictKey(v) then -- v == {}
+						workMode[k] = nil
+					else
+						workMode[k] = v
+					end
+				end
 				r = {io()}
 				workMode = _wm
 				return unpack(r)
