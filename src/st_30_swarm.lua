@@ -271,6 +271,7 @@ registerPassiveProvider = mkIO(function()
 	select(slot.findThat(slot.isEmpty))()
 	suck(1)()
 	local det = turtle.getItemDetail()
+	drop(1)()
 	if not det then
 		log.bug("[registerPassiveProvider] cannot get item detail")
 		return false
@@ -337,5 +338,12 @@ requestNearestProviderStation = mkIOfn(function(itemName, itemCount, startPos)
 	rednet.send()
 	rednet.receive()
 	return O and {pos = O + B, dir = B}
+end)
+
+requestStation = mkIOfn(function(itemName, itemCount, startPos, fuelLeft)
+	itemCount = default(0)(itemCount)
+	startPos = default(workState.pos)(startPos)
+	fuelLeft = default(turtle.getFuelLevel())(fuelLeft)
+	return _requestSwarm("swarm.services.requestStation("..literal(itemName, itemCount, startPos, fuelLeft)..")")
 end)
 

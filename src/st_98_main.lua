@@ -139,6 +139,10 @@ _startupMainCo = function()
 	if code then exec(code) end
 
 	local label = os.getComputerLabel()
+	if turtle then
+		if label == "register" then
+		end
+	end
 end
 
 _startupCo = function()
