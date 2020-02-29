@@ -231,7 +231,7 @@ if turtle then
 		for _, expr in ipairs({...}) do
 			local ok, res = eval(expr)
 			if not ok then error(res.msg) end
-			printC(colors.gray)("[echo] "..expr.." ==>", showFields(unpack(res)))
+			printC(colors.gray)("[echo] "..expr.." ==>", show(unpack(res)))
 		end
 		return true
 	end)

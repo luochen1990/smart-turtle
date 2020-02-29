@@ -124,7 +124,7 @@ function _replMainCo()
 			local raceWinner, ok, res = race(co1, co2)
 			if raceWinner == 1 then
 				if ok then
-					printC(_replStyle.resultColor)(showFields(unpack(res)))
+					printC(_replStyle.resultColor)(show(unpack(res)))
 				else
 					_replState.latestCallStack = res.stack
 					if res.stack then _printCallStack(10, nil, _replStyle.errorStackColor, res.stack) end

@@ -124,7 +124,7 @@ exec = function(code, env, readOnlyEnv)
 	local ok, res = eval(code, env, readOnlyEnv)
 	if ok then
 		if #res > 0 then
-			printC(colors.green)(showFields(unpack(res)))
+			printC(colors.green)(show(unpack(res)))
 		end
 	else
 		if res.stack then _printCallStack(10, nil, colors.gray, res.stack) end
@@ -135,36 +135,60 @@ end
 -------------------------------- string utils ----------------------------------
 
 -- | convert a value to string for printing
-function show(value)
-	local ty = type(value)
+function show(...)
+	return _serialiseTable({...}, _show, ",", "", "", "nil")
+end
+
+function _show(val)
+	local ty = type(val)
 	if ty == "table" then
-		local mt = getmetatable(value)
+		local mt = getmetatable(val)
 		if type(mt) == "table" and type(mt.__tostring) == "function" then
-			return tostring(value)
+			return tostring(val)
 		else
-			local ok, serialised = pcall(textutils.serialise, value)
-			if ok then return serialised else return tostring(value) end
+			local ok, s = pcall(textutils.serialise, val)
+			if ok then return s else return tostring(val) end
 		end
+	elseif ty == "string" then
+		return _literalString(val)
 	else
-		return tostring(value)
+		return tostring(val)
 	end
 end
 
--- | convert a list to string for printing
--- , NOTE: `showList({1, nil, 2}, ",")` will print as "1" instead of "1,nil,2"
-function showList(ls, spliter, placeholder)
-	local s = placeholder or ""
-	for i, x in ipairs(ls) do
-		if i == 1 then s = show(x) else s = s..(spliter or "\n")..show(x) end
+-- | convert a table to string via serialElem for each element
+-- , NOTE: `_serialiseTable({1, nil, 2}, show)` will print as "{1}" instead of "{1,nil,2}"
+function _serialiseTable(t, serialElem, spliter, head, tail, placeholder)
+	spliter = default(",")(spliter)
+	head = default("{")(head)
+	tail = default("}")(tail)
+	local s = head
+	for i, v in ipairs(t) do
+		if i > 1 then s = s .. spliter end
+		s = s .. serialElem(v)
 	end
-	return s
+	local sp = #t > 0
+	for k, v in pairs(t) do
+		if type(k) ~= "number" or k > #t then
+			if sp then s = s .. spliter end
+			sp = true
+			s = s .. _literalKey(k) .. "=" .. serialElem(v) --TODO: wrap special key with [] and escape
+		end
+	end
+	if not sp and placeholder then
+		return placeholder
+	end
+	return s .. tail
 end
 
-showFields = function(...) return showList({...}, ", ", "nil") end
-showWords = function(...) return showList({...}, " ", "") end
-showLines = function(...) return showList({...}, "\n", "") end
+showWords = function(...) return _serialiseTable({...}, show, " ", "", "", "") end
+showLines = function(...) return _serialiseTable({...}, show, "\n", "", "", "") end
 
-function literal(val)
+function literal(...)
+	return _serialiseTable({...}, _literal, ",", "", "", "nil")
+end
+
+function _literal(val)
 	local ty = type(val)
 	if ty == "table" then
 		local mt = getmetatable(val)
@@ -175,7 +199,7 @@ function literal(val)
 				return nil
 			end
 		else
-			return _literalTable(val)
+			return _serialiseTable(val, _literal)
 		end
 	elseif ty == "string" then
 		return _literalString(val)
@@ -186,25 +210,16 @@ function literal(val)
 	end
 end
 
-function _literalTable(value)
-	local s = "{"
-	for i, v in ipairs(value) do
-		if i > 1 then s = s .. "," end
-		s = s .. literal(v)
-	end
-	local sp = #value > 0
-	for k, v in pairs(value) do
-		if type(k) ~= "number" or k > #value then
-			if sp then s = s .. "," end
-			sp = true
-			s = s .. k .. "=" .. literal(v) --TODO: wrap special key with [] and escape
-		end
-	end
-	return s .. "}"
-end
-
 function _literalString(val)
 	return '"'..val..'"' --TODO: escape special chars
+end
+
+function _literalKey(k)
+	if type(k) == "string" then
+		return k --TODO: escape special chars
+	else
+		return "[" .. _literal(k) .. "]"
+	end
 end
 
 ------------------------------ coroutine utils ---------------------------------
