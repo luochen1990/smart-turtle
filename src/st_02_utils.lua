@@ -348,3 +348,22 @@ function openWirelessModem()
 	return false
 end
 
+_log_colors = {
+	info = colors.green,
+	bug = colors.red,
+	cry = colors.orange,
+}
+
+function _log(ty)
+	return function(msg)
+		rednet.broadcast(literal(ty, msg), "log")
+		printC(_log_colors[ty])(msg)
+	end
+end
+
+log = {
+	info = _log("info"),
+	bug = _log("bug"),
+	cry = _log("cry"),
+}
+
