@@ -205,9 +205,17 @@ if turtle then
 
 	move = markIO("move")(mkIO(function()
 		-- auto refuel
+		local backPos = ((workState.fuelStation and workState.fuelStation.pos) or workState.beginPos)
+		local reserveFuel = 2 * vec.manhat(workState.pos + workState:aimingDir() - backPos)
 		if not workState.refueling then
-			local backPos = ((workState.fuelStation and workState.fuelStation.pos) or workState.beginPos)
-			refuel(2 * vec.manhat(workState.pos + workState:aimingDir() - backPos))()
+			local ok = refuel(reserveFuel)()
+			if not ok then
+				waitForHelp(reserveFuel)()
+			end
+		else
+			if turtle.getFuelLevel() < 1 then
+				waitForHelp(reserveFuel)()
+			end
 		end
 		--
 		local mov = _aiming.move

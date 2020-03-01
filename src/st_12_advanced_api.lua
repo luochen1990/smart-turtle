@@ -88,13 +88,13 @@ if turtle then
 		end)
 	end)
 
-	-- save pos and dir
+	-- | save pos and dir
 	savePosd = function(io)
 		return saveDir(savePos(io))
 	end
 
-	-- save pos and posture
-	saveState = function(io)
+	-- | save pos and posture
+	savePosp = function(io)
 		return savePosture(savePos(io))
 	end
 
@@ -111,6 +111,13 @@ if turtle then
 		return _save, _saved
 	end)()
 
+	-- recover saved pos and posture
+	recoverPosp = markIOfn("recoverPosp(back)")(mkIOfn(function(back)
+		move.to(back.pos)()
+		turn.to(back.facing)()
+		workState.aiming = back.aiming
+	end))
+
 	-- | this function scans a plane area
 	-- , which is not as useful as the function scan()
 	_scan2d = markIOfn2("_scan2d(area)(io)")(function(area)
@@ -124,7 +131,7 @@ if turtle then
 				local far = area.low + area.high - near
 				if area:volume() <= 0 then return true end
 				if not move.to(near)() then return false end
-				io = with({workArea = {}})(savePosd(try(io)))
+				io = with({workArea = false})(savePosd(try(io)))
 				local toward = move.toward(far, function(d, d0) return d ~= -d0 end)
 				local loop = save(currentDir) * toward * turn.to(fmap(negate)(saved)) * rep(io * move)
 				local run = io * toward * rep(io * move) * rep(loop)

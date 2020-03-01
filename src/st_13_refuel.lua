@@ -6,6 +6,8 @@ if turtle then
 		return turtle.getFuelLevel() >= nStep
 	end))
 
+	isStation = isChest
+
 	refuelFromBackpack = markIOfn("refuelFromBackpack(nStep)")(mkIOfn(function(nStep)
 		nStep = math.max(1 , nStep)
 		local saved_sn = turtle.getSelectedSlot()
@@ -30,29 +32,59 @@ if turtle then
 		return true
 	end))
 
+	waitForHelp = markIOfn("waitForHelp(nStep)")(mkIOfn(function(nStep)
+		log.cry("Help me! I need "..nStep.." fuel at "..show(workState.pos))
+		with({asFuel = false})(retry(refuelFromBackpack(nStep)))()
+	end))
+
+	-- | this is the refuel interruption
 	refuelFromFuelStation = markIOfn("refuelFromFuelStation(nStep)")(mkIOfn(function(nStep)
 		workState.refueling = true
-		print("Out of fuel, now backing to fuelStation "..tostring(workState.fuelStation.pos))
-		local fuelBeforeLeave = turtle.getFuelLevel()
-		local leavePos, leaveFacing, leaveAiming = workState.pos, workState.facing, workState.aiming
-		with({workArea = {}})(visitStation(workState.fuelStation))()
-		local singleTripCost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
-		print("Cost "..singleTripCost.." to reach the fuelStation, now refueling ("..nStep..")...")
-		local enoughRefuel = refuelFromBackpack(nStep + singleTripCost * 2)
-		local greedyRefuel = refuelFromBackpack(turtle.getFuelLimit() - 1000)
-		if not isChest() then -- the fuelStation is not available, waiting for help
-			printC(colors.orange)("[refuelFromFuelStation] the fuel station on "..tostring(workState.fuelStation.pos).." is not available, waiting for help...")
-			retry(enoughRefuel)() --TODO: try to update fuelStation info
-		else
-			rep(retry(suck()) * -enoughRefuel)() -- repeat until enough
-			if os.getComputerLabel() then
-				rep(suck() * -greedyRefuel)() -- try to full the tank
+		workState.back = workState.back or getPosp() --NOTE: in case we are already in another interruption
+
+		local singleTripCost = 0
+		local extra = function() return singleTripCost * (2 + 1) end
+		local gotoFuelStation = function(retriedTimes)
+			local ok, station = requestFuelStation(nStep + extra())()
+			if ok then
+				workState.fuelStation = station
+			else
+				return false
+			end
+			-- got fresh fuelStation here
+			print("Visiting fuel station "..show(workState.fuelStation.pos).."...")
+			local leavePos, fuelBeforeLeave = workState.pos, turtle.getFuelLevel()
+			with({workArea = false})(visitStation(workState.fuelStation))()
+			-- arrived fuelStation here
+			local cost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
+			singleTripCost = singleTripCost + cost
+			if not isStation() then -- the fuelStation is not available
+				print("Cost "..cost.." to reach "..(retriedTimes + 1).."th unavailable fuel station, now trying next...")
+
+				unregisterStation(workState.fuelStation)
+				return gotoFuelStation(retriedTimes + 1)
+			else
+				return true
 			end
 		end
-		print("Finished refueling, now back to work pos "..tostring(leavePos))
-		move.to(leavePos)()
-		turn.to(leaveFacing)()
-		workState.aiming = leaveAiming
+		local succ = gotoFuelStation(0)
+		if not succ then
+			waitForHelp(nStep + extra())()
+			return true
+		end
+		-- arrived checked fuelStation here
+		print("Cost "..singleTripCost.." to reach this fuel station, now refueling ("..nStep.." + "..extra()..")...")
+		local enoughRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(nStep + extra()))
+		local greedyRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(turtle.getFuelLimit() - 1000))
+		rep(retry(suck()) * -enoughRefuel)() -- repeat until enough
+		if os.getComputerLabel() then
+			rep(suck() * -greedyRefuel)() -- try to full the tank
+		end
+		-- refuel done
+		print("Finished refueling, now back to work pos "..show(workState.back.pos))
+
+		recoverPosp(workState.back)()
+		workState.back = nil
 		workState.refueling = false
 		return true
 	end))
@@ -62,14 +94,12 @@ if turtle then
 		if nStep <= turtle.getFuelLevel() then return true end
 		if nStep > turtle.getFuelLimit() then return false end
 		local saved_sn = turtle.getSelectedSlot()
-		local succ = false
-		if refuelFromBackpack(nStep)() then succ = true end
-		-- no fuel in backpack, go to fuelStation
-		if not succ and workState.fuelStation and workState.fuelStation.pos then
-			succ = refuelFromFuelStation(nStep)()
+		local ok = refuelFromBackpack(nStep)()
+		if not ok then -- no fuel in backpack, go to fuelStation
+			ok = refuelFromFuelStation(nStep)()
 		end
 		turtle.select(saved_sn)
-		return succ
+		return ok
 	end))
 
 end

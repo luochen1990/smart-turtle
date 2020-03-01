@@ -67,19 +67,23 @@ if turtle then
 	end)
 
 	_initTurtleState = markFn("_initTurtleState")(function()
-		local succ = _correctCoordinateSystemWithGps()
-		if not succ then
+		local ok1 = _correctCoordinateSystemWithGps()
+		if not ok1 then
 			printC(colors.yellow)("WARN: failed to get gps pos and dir!")
 		end
-		workState.fuelStation = default(workState.fuelStation)(requestFuelStation())
-		if not workState.fuelStation then
-			printC(colors.yellow)("WARN: failed to get fuelStation!")
+		local ok2, fuelStation = requestFuelStation(1)()
+		if ok2 then
+			workState.fuelStation = fuelStation
+		else
+			printC(colors.yellow)("WARN: failed to get fuel station!")
 		end
-		workState.unloadStation = default(workState.fuelStation)(requestUnloadStation())
-		if not workState.unloadStation then
-			printC(colors.yellow)("WARN: failed to get unloadStation!")
+		local ok3, unloadStation = requestUnloadStation(1)()
+		if ok3 then
+			workState.unloadStation = unloadStation
+		else
+			printC(colors.yellow)("WARN: failed to get unload station!")
 		end
-		return not not (succ and workState.fuelStation and workState.unloadStation)
+		return ok1 and ok2 and ok3
 	end)
 
 	_initTurtleStateWithChest = function()
@@ -139,9 +143,8 @@ _startupMainCo = function()
 	if code then exec(code) end
 
 	local label = os.getComputerLabel()
-	if turtle then
-		if label == "register" then
-		end
+	if turtle and label == "register" then
+		registerPassiveProvider()
 	end
 end
 
@@ -154,23 +157,19 @@ _daemonMainCo = function()
 	if code then exec(code) end
 
 	local label = os.getComputerLabel()
-	if turtle then
-		if string.sub(label, 1, 6) == "guard-" then
-			local d = string.sub(label, 7, 7)
-			if const.dir[d] then
-				if d == "D" then
-					followYouCo(D)
-				else
-					followYouCo(const.dir[d])
-				end
+	if turtle and string.sub(label, 1, 6) == "guard-" then
+		local d = string.sub(label, 7, 7)
+		if const.dir[d] then
+			if d == "D" then
+				followYouCo(D)
+			else
+				followYouCo(const.dir[d])
 			end
 		end
-	elseif pocket then
+	elseif pocket and label == "follow-me" then
 		followMeCo()
-	else
-		if label == "swarm-server" then
-			swarm._startService()
-		end
+	elseif label == "swarm-server" then
+		swarm._startService()
 	end
 end
 

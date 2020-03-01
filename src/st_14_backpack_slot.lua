@@ -5,9 +5,18 @@ if turtle then
 	slot = {
 		isEmpty = function(sn) return turtle.getItemCount(sn) == 0 end,
 		isNonEmpty = function(sn) return turtle.getItemCount(sn) > 0 end,
-		isDroppable = function(sn) local det = turtle.getItemDetail(sn); return det and const.cheapItems[det.name] end,
-		isFuel = function(sn) local det = turtle.getItemDetail(sn); return det and const.fuelHeatContent[det.name] end,
-
+		isDroppable = function(sn)
+			local det = turtle.getItemDetail(sn)
+			return det and const.cheapItems[det.name]
+		end,
+		isFuel = function(sn)
+			local det = turtle.getItemDetail(sn)
+			if workMode.asFuel then
+				return det and det.name == workMode.asFuel and const.fuelHeatContent[det.name]
+			else
+				return det and const.fuelHeatContent[det.name]
+			end
+		end,
 		-- find a specific slot sn, return nil when not find
 		findThat = function(cond, beginSlot) -- find something after beginSlot which satisfy cond
 			for sn = default(1)(beginSlot), const.turtle.backpackSlotsNum do

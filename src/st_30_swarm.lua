@@ -48,6 +48,7 @@ end
 
 swarm = {
 	_state = {
+		asFuel = {"minecraft:charcoal"},
 		stationPool = {},
 		workerPool = {},
 		jobPool = {},
@@ -316,34 +317,28 @@ registerRequester = mkIO(function()
 	})
 end)
 
-inspectStation = mkIO(function()
-end)
-
-swarmServiceCo = function()
-	rednet.receive()
-	rednet.send()
-end
-
-requestFuelStation = mkIO(function()
-	return O and {pos = O + B, dir = B}
-end)
-
-requestUnloadStation = mkIO(function()
-	return O and {pos = O + B + U * 2, dir = B}
-end)
-
-requestNearestProviderStation = mkIOfn(function(itemName, itemCount, startPos)
-	itemCount = default(1)(itemCount)
-	startPos = default(workState.pos)(startPos)
-	rednet.send()
-	rednet.receive()
-	return O and {pos = O + B, dir = B}
-end)
-
 requestStation = mkIOfn(function(itemName, itemCount, startPos, fuelLeft)
 	itemCount = default(0)(itemCount)
 	startPos = default(workState.pos)(startPos)
 	fuelLeft = default(turtle.getFuelLevel())(fuelLeft)
 	return _requestSwarm("swarm.services.requestStation("..literal(itemName, itemCount, startPos, fuelLeft)..")")
+end)
+
+requestFuelStation = mkIOfn(function(nStep)
+	for i, name in ipairs(swarm._state.asFuel) do
+		local requestSucc, res = requestStation(name, 0)() --TODO: calc fuel number
+		if not requestSucc then
+			log.warn("[requestFuelStation] request failed: "..res)
+		end
+		local ok, st = unpack(res)
+		if ok then
+			return true, st
+		end
+	end
+	return false, "no fuel station available, swarm._state.asFuel = "..literal(swarm._state.asFuel)
+end)
+
+requestUnloadStation = mkIOfn(function(spaceCount)
+	return O and {pos = O + B + U * 2, dir = B}
 end)
 

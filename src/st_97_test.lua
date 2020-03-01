@@ -4,20 +4,28 @@ _test = {}
 
 if turtle then
 	_test.move = markIO("_test.move")(mkIO(function()
-		return saveState(move.go(leftSide(workState.facing) * 2))()
+		return savePosp(move.go(L * 2))()
+	end))
+
+	_test.move2 = markIO("_test.move")(mkIO(function()
+		return savePosp(move.go(F + L))()
+	end))
+
+	_test.move3 = markIO("_test.move")(mkIO(function()
+		return savePosp(move.go(F + R))()
 	end))
 
 	_test.scan = markIO("_test.scan")(mkIO(function()
-		return saveState(scan(O .. (O + (U + R + F) * 2), D)(turn.U * try(dig) * place))()
+		return savePosp(scan(O .. (O + (U + R + F) * 2), D)(turn.U * try(dig) * place))()
 	end))
 
 	_test.scan2d = markIO("_test.scan2d")(mkIO(function()
-		return saveState(_scan2d(O .. (O + (R + F) * 2))(turn.U * try(dig) * place))()
+		return savePosp(_scan2d(O .. (O + (R + F) * 2))(turn.U * try(dig) * place))()
 	end))
 
 	_test.miner = markIOfn("_test.miner")(mkIOfn(function(n)
 		n = math.max(1, n or 1)
-		return saveState(scan(O .. (O + (R + F) * (n-1)), D)(turn.D * rep(try(dig) * move)))()
+		return savePosp(scan(O .. (O + (R + F) * (n-1)), D)(turn.D * rep(try(dig) * move)))()
 	end))
 
 	_test.transportLine = markIO("_test.transportLine")(mkIO(function()

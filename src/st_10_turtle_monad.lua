@@ -8,6 +8,7 @@ if turtle then
 		detour = true, -- whether to detour when move.to or move.go blocked
 		retrySeconds = 2, -- seconds to retry before fail back when move blocked by other turtles
 		workArea = nil, -- an electric fence
+		asFuel = nil, -- when nil, use every possible thing as fuel
 		backpackWhiteList = {}, -- not used yet
 		backpackBlackList = {}, -- not used yet
 		backpackPinnedSlots = {}, -- not used yet
@@ -19,11 +20,12 @@ if turtle then
 		aiming = 0, -- 0:front, 1:up, -1:down
 		beginPos = vec.zero, -- pos when the program start
 		swarmServerId = nil,
-		fuelStation = nil, -- {pos, dir}
-		unloadStation = nil, -- {pos, dir}
-		isDetouring = false, -- only for inspect
+		fuelStation = nil,
+		unloadStation = nil,
 		isRefueling = false,
 		isUnloading = false,
+		isFetching = false,
+		back = nil, -- save pos, facing and aiming here before interrupt
 	}
 
 	setmetatable(workState, {__index = {
@@ -38,18 +40,14 @@ if turtle then
 	}})
 
 	-- | run io with specified workMode fields
-	-- , NOTE: use `{}` as a placeholder for nil
+	-- , NOTE: use `false` as a placeholder for `nil`
 	with = function(wm_patch)
 		return function(io)
 			return mkIO(function()
 				local _wm = workMode
 				workMode = deepcopy(_wm)
 				for k, v in pairs(wm_patch) do
-					if type(v) == "table" and #v == 0 and not hasDictKey(v) then -- v == {}
-						workMode[k] = nil
-					else
-						workMode[k] = v
-					end
+					workMode[k] = v or nil
 				end
 				r = {io()}
 				workMode = _wm
@@ -57,5 +55,14 @@ if turtle then
 			end)
 		end
 	end
+
+	-- get current pos and posture
+	getPosp = mkIO(function()
+		return {
+			pos = workState.pos,
+			facing = workState.facing,
+			aiming = workState.aiming,
+		}
+	end)
 
 end
