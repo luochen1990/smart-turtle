@@ -60,8 +60,10 @@ if turtle then
 		-- find something to drop
 		local dropSn = slot.findThat(slot.isDroppable)
 		if dropSn then
+			local saved_sn = turtle.getSelectedSlot()
 			turtle.select(dropSn)
 			local drp = (saveDir(turn.lateral * -isChest * drop()) + drop())
+			turtle.select(saved_sn)
 			if drp() then return true end
 		end
 		-- if nothing to drop, back to unloadStation
