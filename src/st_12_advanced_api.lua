@@ -65,7 +65,7 @@ if turtle then
 							break
 						end
 					end
-				until (vec.manhat(destPos - workState.pos) < detourBeginDis)
+				until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
 				-- finish detouring
 				latestDetourPos = detourBeginPos
 				workState.detouring = false
