@@ -64,13 +64,13 @@ if turtle then
 			local count = turtle.getItemCount(sn)
 			local space = turtle.getItemSpace(sn)
 			if count ~= 0 and space ~= 0 then
-				turtle.select(sn)
 				for i = const.turtle.backpackSlotsNum, sn + 1, -1 do
-					if turtle.compareTo(i) then
+					turtle.select(i)
+					if turtle.compareTo(sn) then
 						local got = turtle.getItemCount(i)
-						turtle.select(i)
 						turtle.transferTo(sn)
-						if got >= space then break end
+						space = space - got
+						if space <= 0 then break end
 					end
 				end
 			end
