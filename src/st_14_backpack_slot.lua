@@ -61,15 +61,16 @@ if turtle then
 		fill = function(sn) -- use items in slots after sn to make slot sn as full as possible
 			local saved_sn = turtle.getSelectedSlot()
 			sn = default(saved_sn)(sn)
-			local count = turtle.getItemCount(sn)
+			local det = turtle.getItemDetail(sn)
+			local count = (det and det.count) or 0
 			local space = turtle.getItemSpace(sn)
 			if count ~= 0 and space ~= 0 then
 				for i = const.turtle.backpackSlotsNum, sn + 1, -1 do
-					turtle.select(i)
-					if turtle.compareTo(sn) then
-						local got = turtle.getItemCount(i)
+					local det_i = turtle.getItemDetail(i)
+					if det_i and det_i.name == det.name then
+						turtle.select(i)
 						turtle.transferTo(sn)
-						space = space - got
+						space = space - det_i.count
 						if space <= 0 then break end
 					end
 				end
