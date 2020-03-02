@@ -359,20 +359,22 @@ end
 
 _log_colors = {
 	info = colors.green,
+	warn = colors.yellow,
 	bug = colors.red,
 	cry = colors.orange,
 }
 
 function _log(ty)
 	return function(msg)
-		rednet.broadcast(literal(ty, msg), "log")
+		rednet.broadcast(literal(ty, msg), "log") --NOTE: use "log" as protocol code
 		printC(_log_colors[ty])(msg)
 	end
 end
 
 log = {
-	info = _log("info"),
-	bug = _log("bug"),
-	cry = _log("cry"),
+	info = _log("info"), -- information, like global state updation
+	warn = _log("warn"), -- some weird things happend, like network error, but not need to process it at once
+	bug = _log("bug"), -- bug, some weird things happend or some assertion failed, need to check the code
+	cry = _log("cry"), -- there is some turtle needing help, such as refueling or unloading
 }
 
