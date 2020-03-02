@@ -170,6 +170,15 @@ _daemonMainCo = function()
 		followMeCo()
 	elseif label == "swarm-server" then
 		swarm._startService()
+	elseif turtle and label == "provider" then
+		serveAsProvider()
+	elseif label == "blinker" then
+		local b = false
+		while true do
+			redstone.setOutput("front", b)
+			b = not b
+			sleep(0.5)
+		end
 	end
 end
 
