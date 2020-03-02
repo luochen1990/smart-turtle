@@ -153,41 +153,54 @@ _startupCo = function()
 end
 
 _daemonMainCo = function()
-	local code = readFile("/st_daemon.lua")
-	if code then exec(code) end
+	local daemonScriptCo = function()
+		local code = readFile("/st_daemon.lua")
+		if code then exec(code) end
+	end
 
-	local label = os.getComputerLabel()
-	if turtle and string.sub(label, 1, 6) == "guard-" then
-		local d = string.sub(label, 7, 7)
-		if const.dir[d] then
-			if d == "D" then
-				followYouCo(D)
-			else
-				followYouCo(const.dir[d])
+	local roleCo = function()
+		local label = os.getComputerLabel()
+		if turtle and string.sub(label, 1, 6) == "guard-" then
+			local d = string.sub(label, 7, 7)
+			if const.dir[d] then
+				if d == "D" then
+					followYouCo(D)
+				else
+					followYouCo(const.dir[d])
+				end
+			end
+		elseif pocket and label == "follow-me" then
+			followMeCo()
+		elseif label == "swarm-server" then
+			swarm._startService()
+		elseif turtle and label == "provider" then
+			serveAsProvider()
+		elseif label == "blinker" then
+			local b = false
+			while true do
+				redstone.setOutput("front", b)
+				b = not b
+				sleep(0.5)
 			end
 		end
-	elseif pocket and label == "follow-me" then
-		followMeCo()
-	elseif label == "swarm-server" then
-		swarm._startService()
-	elseif turtle and label == "provider" then
-		serveAsProvider()
-	elseif label == "blinker" then
-		local b = false
-		while true do
-			redstone.setOutput("front", b)
-			b = not b
-			sleep(0.5)
-		end
 	end
+	parallel.waitForAll(daemonScriptCo, roleCo)
 end
 
 _daemonCo = function()
-	parallel.waitForAll(_daemonMainCo, _inspectCo)
+	local exitCo = function()
+		_waitForKeyCombination(keys.leftCtrl, keys.q)
+		print("[ctrl+q] exit daemon process")
+	end
+	parallel.waitForAny(_daemonMainCo, exitCo)
 end
 
 _replCo = function()
-	parallel.waitForAny(_replMainCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.d))
+	local exitCo = function()
+		_waitForKeyCombination(keys.leftCtrl, keys.d)
+		print("[ctrl+d] exit repl")
+	end
+	parallel.waitForAny(_replMainCo, exitCo)
 end
 
 _main = function(...)
@@ -206,7 +219,7 @@ _main = function(...)
 		_startupCo()
 
 		-- run repl & daemon
-		parallel.waitForAny(_replCo, _daemonCo)
+		parallel.waitForAny(_replCo, delay(parallel.waitForAll, _inspectCo, _daemonCo))
 	end
 end
 

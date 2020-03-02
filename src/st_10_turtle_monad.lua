@@ -9,9 +9,11 @@ if turtle then
 		retrySeconds = 2, -- seconds to retry before fail back when move blocked by other turtles
 		workArea = nil, -- an electric fence
 		asFuel = nil, -- when nil, use every possible thing as fuel
-		backpackWhiteList = {}, -- not used yet
-		backpackBlackList = {}, -- not used yet
-		backpackPinnedSlots = {}, -- not used yet
+		keepCheapItems = true, -- when false, auto drop cheap items
+		allowInterruption = true, -- whether allow turtle interrupt current task to refuel or unload or fetch
+		--backpackWhiteList = {}, -- not used yet
+		--backpackBlackList = {}, -- not used yet
+		--backpackPinnedSlots = {}, -- not used yet
 	}
 
 	workState = {

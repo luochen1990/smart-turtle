@@ -26,10 +26,12 @@ mkStationInfo = function(opts)
 		reservation = opts.reservation,
 		restockPriority = opts.restockPriority,
 		itemType = opts.itemType,
-		itemCount = 0,
-		hasQueueSpace = true,
-		isVisiting = false,
-		currentQueueLength = 0,
+		stationHosterId = opts.stationHosterId,
+		-- states
+		itemCount = opts.itemCount or 0,
+		isVisiting = default(false)(opts.isVisiting),
+		currentQueueLength = default(0)(opts.currentQueueLength),
+		maxQueueLength = default(5)(opts.maxQueueLength),
 		--latestCheckTime = now() - 100,
 	}
 	assert(s.pos and ((s.limitation and s.deliverPriority) or (s.reservation and s.restockPriority)), "[mkStationInfo(opts)] lacks required field")
@@ -159,6 +161,24 @@ swarm.services.registerStation = function(opts)
 	return true
 end
 
+swarm.services.updateStation = function(opts)
+	if not opts.itemType or not opts.pos then
+		return false, "station pos and itemType is required"
+	end
+	local pool = swarm._state.stationPool[opts.itemType]
+	if not pool then
+		return false, "station not exist (no such type)"
+	end
+	local station = pool[opts.pos]
+	if not station then
+		return false, "station not exist (no such pos)"
+	end
+	for k, v in pairs(station) do
+		station[k] = v
+	end
+	return true
+end
+
 swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft)
 	local pool = swarm._state.stationPool[itemType]
 	if not pool then
@@ -188,7 +208,7 @@ swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft
 	local nearer = function(pos1, pos2) return vec.manhat(pos1 - startPos) < vec.manhat(pos2 - startPos) end
 	local nearEnough = function(st) return vec.manhat(st.pos - startPos) * 2 <= fuelLeft end
 	local itemEnough = function(st) if itemCount >= 0 then return st.itemCount >= itemCount else return st.itemCount < itemCount end end
-	local queueNotFull = function(st) return st.hasQueueSpace end
+	local queueNotFull = function(st) return st.currentQueueLength < st.maxQueueLength end
 	-- number conditions
 	local dist = function(st) return vec.manhat(st.pos - startPos) end
 	local queEmpty = function(st) if st.currentQueueLength == 0 and st.isVisiting == false then return 0 else return 1 end end
@@ -231,43 +251,158 @@ _request = function(swarmServerId, msg, requestProtocol, responseProtocol, timeo
 	end
 end
 
-_requestSwarm = function(cmd, timeout, retryTimes)
-	timeout = default(1)(timeout)
-	retryTimes = default(0)(retryTimes)
+_requestSwarm = function(cmd, totalTimeout)
+	totalTimeout = default(2)(totalTimeout)
 
-	if not workState.swarmServerId then
-		local serverId = rednet.lookup("swarm", "server")
-		if serverId then
-			workState.swarmServerId = serverId
-		else
-			return false, "swarm server not found"
-		end
-	end
+	local _naiveRequestSwarm = function(timeout)
+		return mkIO(function()
+			if not workState.swarmServerId then
+				local serverId = rednet.lookup("swarm", "server")
+				if not serverId then
+					return false, "swarm server not found"
+				end
+				workState.swarmServerId = serverId
+			end
+			-- got workState.swarmServerId
 
-	local ok, resp = _request(workState.swarmServerId, cmd, "swarm-service", "swarm-response", timeout)
-	if ok then
-		local ok2, res = eval(resp)
-		if ok2 then
+			local reqSucc, resp = _request(workState.swarmServerId, cmd, "swarm-service", "swarm-response", timeout)
+			if not reqSucc then -- timeout or network error
+				workState.swarmServerId = nil
+				return false, resp
+			end
+			-- got resp
+
+			local ok, res = eval(resp)
+			if not ok then
+				log.bug("[_requestSwarm] faild to parse response: ", literal({cmd = cmd, response = res}))
+				return false, "faild to parse response"
+			end
+			-- got res
+
 			return unpack(res)
-		else
-			log.bug("[_requestSwarm] faild to parse response: ", literal({cmd = cmd, response = res}))
-			return false, "faild to parse response"
-		end
-	else -- timeout
-		workState.swarmServerId = nil
-		if retryTimes >= 1 then
-			return _requestSwarm(cmd, timeout, retryTimes - 1)
-		else -- if retryTimes == 0 then
-			return false, resp
-		end
+		end)
 	end
+
+	return retryWithTimeout(totalTimeout)(_naiveRequestSwarm)()
 end
 
 -- | interactive register complex station
 registerStation = mkIOfn(function()
 end)
 
+unregisterStation = function(st)
+end
+
 registerPassiveProvider = mkIO(function()
+	reserveOneSlot()
+	select(slot.isEmpty)()
+	suck(1)()
+	local det = turtle.getItemDetail()
+	drop(1)()
+	if not det then
+		log.bug("[registerPassiveProvider] cannot get item detail")
+		return false
+	end
+	local stationDef = {
+		pos = gpsPos(),
+		dir = workState:aimingDir(),
+		itemType = det.name,
+		limitation = 0,
+		deliverPriority = 0, --passive provider
+	}
+	return _requestSwarm("swarm.services.registerStation("..literal(stationDef)..")")
+end)
+
+--serveAsFuelStation = mkIO(function()
+--end)
+
+serveAsProvider = mkIO(function()
+	local getAndHold
+	if isContainer() then -- suck items from chest
+		getAndHold = function(n) return suckHold(n) end
+	else -- dig or attack --TODO: check tool
+		getAndHold = function(n) return (isContainer * suckHold(n) + -isContainer * (digHold + try(attack) * suckHold(n))) end
+	end
+
+	local stationDef = {
+		pos = gpsPos() - workState:aimingDir(),
+		dir = workState:aimingDir(),
+		itemType = nil,
+		limitation = 0,
+		deliverPriority = 0, --passive provider
+		stationHosterId = os.getComputerID()
+	}
+
+	local registerCo = function()
+		printC(colors.green)("[serveAsProvider] detecting item type")
+		--local det = retry(try(suck(1)) * details())()
+		local det = retry((getAndHold(1) + select(slot.isNonEmpty)) * details())()
+		printC(colors.green)("[serveAsProvider] start serving as provider of "..det.name)
+		stationDef.itemType = det.name
+		local ok, res = _requestSwarm("swarm.services.registerStation("..literal(stationDef)..")")
+		if not ok then
+			log.cry("[serveAsProvider] failed to register station (network error): "..literal(res))
+			return
+		end
+		if not table.remove(res, 1) then
+			log.cry("[serveAsProvider] failed to register station (logic error): "..literal(res))
+			return
+		end
+	end
+
+	local produceCo = function()
+		with({allowInterruption = false})(function()
+			while true do
+				-- retry to get items
+				local det = retry(getAndHold() * details())()
+				if det.name == stationDef.itemType then -- got target item
+					print("inventory +"..det.count)
+				else -- got unconcerned item
+					saveDir(turn.lateral * drop())()
+				end
+				sleep(0.01)
+			end
+		end)()
+	end
+
+	local inventoryCount = {
+		isDirty = true,
+		lastReport = 0,
+	}
+	local inventoryCheckCo = function()
+		while true do
+			local ev = { os.pullEvent("turtle_inventory") } -- no useful information :(
+			inventoryCount.isDirty = true
+		end
+	end
+	local updateInventoryCo = function()
+		while true do
+			sleep(5)
+			if inventoryCount.isDirty then
+				local cnt = slot.count(stationDef.itemType)
+				if cnt ~= inventoryCount.lastReport then
+					print("current count: "..cnt)
+					local ok, res = _requestSwarm("swarm.services.registerStation("..literal(stationDef)..")")
+					if ok then
+						inventoryCount.isDirty = false
+					else
+						log.warn("[serveAsProvider] failed to report inventory info")
+					end
+				end
+			end
+		end
+	end
+
+	parallel.waitForAll(produceCo, function()
+		registerCo()
+		parallel.waitForAll(inventoryCheckCo, updateInventoryCo)
+	end)
+end)
+
+serveAsRequester = mkIO(function()
+end)
+
+serveAsUnloadStation = mkIO(function()
 	reserveOneSlot()
 	select(slot.findThat(slot.isEmpty))()
 	suck(1)()
@@ -329,10 +464,11 @@ requestFuelStation = mkIOfn(function(nStep)
 		local requestSucc, res = requestStation(name, 0)() --TODO: calc fuel number
 		if not requestSucc then
 			log.warn("[requestFuelStation] request failed: "..res)
-		end
-		local ok, st = unpack(res)
-		if ok then
-			return true, st
+		else
+			local ok, st = unpack(res)
+			if ok then
+				return true, st
+			end
 		end
 	end
 	return false, "no fuel station available, swarm._state.asFuel = "..literal(swarm._state.asFuel)
@@ -341,4 +477,39 @@ end)
 requestUnloadStation = mkIOfn(function(spaceCount)
 	return O and {pos = O + B + U * 2, dir = B}
 end)
+
+-- | a tool to visit station robustly
+-- , will unregister bad stations and try to get next
+-- , will wait for user help when there is no more station available
+-- , will wait for manually move when cannot reach a station
+-- , argument: { reqStation, beforeLeave, beforeRetry, beforeWait, waitForUserHelp }
+function _robustVisitStation(opts)
+	local gotoStation
+	gotoStation = function(triedTimes, singleTripCost)
+		local ok, station = opts.reqStation(triedTimes, singleTripCost)
+		if not ok then
+			return false, triedTimes, singleTripCost
+		end
+		-- got fresh station here
+		opts.beforeLeave(triedTimes, singleTripCost, station)
+		local leavePos, fuelBeforeLeave = workState.pos, turtle.getFuelLevel()
+		with({workArea = false})(visitStation(station))()
+		-- arrived station here
+		local cost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
+		local singleTripCost_ = singleTripCost + cost
+		if not isStation() then -- the station is not available
+			opts.beforeRetry(triedTimes, singleTripCost, station, cost)
+			unregisterStation(station)
+			return gotoStation(triedTimes + 1, singleTripCost_)
+		else
+			return true, triedTimes, singleTripCost_
+		end
+	end
+	local succ, triedTimes, singleTripCost = gotoStation(1, 0)
+	if not succ then
+		opts.beforeWait(triedTimes, singleTripCost, station)
+		race(retry(delay(gotoStation, triedTimes + 1, singleTripCost)), delay(opts.waitForUserHelp, triedTimes, singleTripCost, station))
+		return true
+	end
+end
 
