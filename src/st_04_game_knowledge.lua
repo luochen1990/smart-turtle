@@ -33,12 +33,14 @@ const = {
 		"minecraft:lapis_ore",
 	},
 	turtleBlocks = {
-		["minecraft:turtle_normal"] = true,
-		["minecraft:turtle_advanced"] = true,
+		["computercraft:turtle_normal"] = true,
+		["computercraft:turtle_advanced"] = true,
 	},
 	chestBlocks = {
 		["minecraft:chest"] = true,
 		["minecraft:shulker_box"] = true,
+	},
+	containerBlocks = { -- containers other than turtle or chest
 	},
 	fuelHeatContent = {
 		["minecraft:lava_bucket"] = 1000,
