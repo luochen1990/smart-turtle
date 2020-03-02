@@ -52,30 +52,23 @@ if turtle then
 		end)
 	end)
 
-	reserveOneSlot = mkIO(function() -- tidy backpack to reserve 1 empty slot
-		if slot.findLastThat(slot.isEmpty) then return true end
-		-- tidy backpack
-		slot.tidy()
-		if slot.findLastThat(slot.isEmpty) then return true end
-		-- find something to drop
-		local dropSn = slot.findThat(slot.isDroppable)
-		if dropSn then
-			local saved_sn = turtle.getSelectedSlot()
-			turtle.select(dropSn)
-			local drp = (saveDir(turn.lateral * -isChest * drop()) + drop())
-			turtle.select(saved_sn)
-			if drp() then return true end
+	-- usage demo: save(currentPos)(move.go(F) * move.to(saved))
+	save, saved = (function()
+		local stack = {}
+		local _save = function(ioGetValue)
+			return markIOfn("save(ioGetValue)(io)")(mkIOfn(function(io)
+				table.insert(stack, { ioGetValue() })
+				local r = { io() }
+				table.remove(stack, 1)
+				return unpack(r)
+			end))
 		end
-		-- if nothing to drop, back to unloadStation
-		if workState.unloadStation and workState.unloadStation.pos then
-			workState.unloading = true
-			--TODO: back to unloadStation
-			workState.unloading = false
-			return false
-		else
-			return false
-		end
-	end)
+		local _saved = markIO("saved")(mkIO(function()
+			local v = stack[#stack]
+			return v and unpack(v)
+		end))
+		return _save, _saved
+	end)()
 
 	_wrapAimingSensitiveApi = function(apiName, wrap, rawApis)
 		if rawApis == nil then rawApis = {turtle[apiName..'Up'], turtle[apiName], turtle[apiName..'Down']} end
@@ -102,12 +95,20 @@ if turtle then
 	}
 
 	detect = _aiming.detect
-	compare = _aiming.compare
+	-- compare = _aiming.compare --NOTE: deprecated
 	attack = _aiming.attack
 	drop = _aiming.drop
 
+	details = mkIOfn(turtle.getItemDetail)
+	selected = mkIO(turtle.getSelectedSlot)
+
 	suck = markIOfn("suck(n)")(mkIOfn(function(n)
-		return (reserveOneSlot * _aiming.suck(n))()
+		return ( reserveOneSlot * _aiming.suck(n) )()
+	end))
+
+	-- | suck into an isolate slot and return it's sn
+	suckCarefully = markIOfn("suckCarefully(n)")(mkIOfn(function(n)
+		return ( reserveOneSlot * save(selected)(select(slot.isEmpty) * selected / _aiming.suck(n) / select(saved)) )()
 	end))
 
 	-- | different from turtle.inspect, this only returns res
@@ -138,6 +139,16 @@ if turtle then
 		return ok and const.chestBlocks[res.name] == true
 	end)
 
+	isStation = mkIO(function()
+		local ok, res = _aiming.inspect()
+		return ok and (const.turtleBlocks[res.name] == true or const.chestBlocks[res.name] == true)
+	end)
+
+	isContainer = mkIO(function()
+		local ok, res = _aiming.inspect()
+		return ok and (const.turtleBlocks[res.name] == true or const.chestBlocks[res.name] == true or const.containerBlocks[res.name] == true)
+	end)
+
 	isCheap = mkIO(function()
 		local ok, res = _aiming.inspect()
 		return ok and (const.cheapItems[res.name] or const.cheapItems[const.afterDig[res.name]]) == true
@@ -152,35 +163,14 @@ if turtle then
 		return ok and (const.turtleBlocks[res.name] == true or const.chestBlocks[res.name] == true)
 	end)
 
-	has = markIOfn("has(itemName)")(mkIOfn(function(itemName) return not not slot.find(itemName) end))
+	dig = markIO("dig")(mkIO(function()
+		return ( reserveOneSlot * _aiming.dig )()
+	end))
 
-	select = mkIOfn(function(selector)
-		if type(selector) == "number" then
-			return turtle.select(selector)
-		elseif type(selector) == "string" then
-			local sn = slot.find(selector)
-			return sn ~= nil and turtle.select(sn)
-		elseif type(selector) == "function" then
-			local sn = slot.findThat(selector)
-			return sn ~= nil and turtle.select(sn)
-		else
-			error("[select(selector)] type of selector cannot be "..tostring(selector))
-		end
-	end)
-
-	selectLast = mkIOfn(function(selector)
-		if type(selector) == "string" then
-			local sn = slot.findLast(selector)
-			return sn ~= nil and turtle.select(sn)
-		elseif type(selector) == "function" then
-			local sn = slot.findLastThat(selector)
-			return sn ~= nil and turtle.select(sn)
-		else
-			error("[selectLast(selector)] type of selector cannot be "..tostring(selector))
-		end
-	end)
-
-	dig = markIO("dig")( reserveOneSlot * _aiming.dig )
+	-- | dig into an isolate slot and return it's sn
+	digCarefully = markIO("digCarefully")(mkIO(function()
+		return ( reserveOneSlot * save(selected)(select(slot.isEmpty) * selected / _aiming.dig / select(saved)) )()
+	end))
 
 	-- | keep current slot not empty after place
 	place = markIO("place")(mkIO(function()
@@ -209,7 +199,7 @@ if turtle then
 		-- auto refuel
 		local backPos = ((workState.fuelStation and workState.fuelStation.pos) or workState.beginPos)
 		local reserveFuel = 2 * vec.manhat(workState.pos + workState:aimingDir() - backPos)
-		if not workState.refueling then
+		if not workState.isRefueling then
 			local ok = refuel(reserveFuel)()
 			if not ok then
 				waitForHelp(reserveFuel)()
@@ -236,14 +226,5 @@ if turtle then
 		if r then workState.pos = workState.pos + workState:aimingDir() end
 		return r
 	end))
-
-	echo = mkIOfn(function(...)
-		for _, expr in ipairs({...}) do
-			local ok, res = eval(expr)
-			if not ok then error(res.msg) end
-			printC(colors.gray)("[echo] "..expr.." ==>", show(unpack(res)))
-		end
-		return true
-	end)
 
 end

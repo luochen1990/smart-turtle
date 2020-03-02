@@ -1,13 +1,14 @@
 ----------------------------------- IO Monad -----------------------------------
 
 -- | mkIO : (a... -> b, a...) -> IO b
-mkIO, mkIOfn = (function()
+mkIO, mkIOfn, isIO = (function()
 	local _ioMetatable = {}
-	local _mkIO = function(f, ...)
+	local _mkIO
+	_mkIO = function(f, ...)
 		local args = {...}
 		local io = {
 			run = function() return f(unpack(args)) end,
-			['then'] = function(io1, f2) return _mkIO(function() return f2(io1.run()).run() end) end, --  `>>=` in haskell
+			pipe = function(io1, f2) return _mkIO(function() return f2(io1.run()).run() end) end, -- similar to `bind` or `>>=` in haskell
 		}
 		setmetatable(io, _ioMetatable)
 		return io
@@ -22,7 +23,10 @@ mkIO, mkIOfn = (function()
 	_ioMetatable.__mul = function(io1, io2) return _mkIO(function() return io1.run() and io2.run() end) end -- if io1 succ then io2
 	_ioMetatable.__div = function(io1, io2) return _mkIO(function() r = io1.run(); io2.run(); return r end) end -- `<*` in haskell
 	_ioMetatable.__unm = function(io) return _mkIO(function() return not io.run() end) end -- use `-io` as `fmap not io` in haskell
-	return _mkIO, _mkIOfn
+	local _isIO = function(v)
+		return type(v) == "table" and getmetatable(v) == _ioMetatable
+	end
+	return _mkIO, _mkIOfn, _isIO
 end)()
 
 -- | pure : a -> IO a
@@ -96,4 +100,13 @@ end
 rep = markIOfn("rep(io)")(function(io)
 	return mkIO(function() local c = 0; while io() do c = c + 1 end; return c end)
 end)
+
+echo = markIOfn("echo(...)")(mkIOfn(function(...)
+	for _, expr in ipairs({...}) do
+		local ok, res = eval(expr)
+		if not ok then error(res.msg) end
+		printC(colors.gray)("[echo] "..expr.." ==>", show(unpack(res)))
+	end
+	return true
+end))
 
