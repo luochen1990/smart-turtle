@@ -26,7 +26,7 @@ if turtle then
 		elseif d == rightSide(workState.facing) then return turn.right()
 		else return true end
 	end))
-	turn.lateral = markIO("turn.lateral")(mkIO(function() return turn.to(workState:lateralDir()) end))
+	turn.lateral = markIO("turn.lateral")(mkIO(function() return turn.to(workState:lateralDir())() end))
 	for k, v in pairs(const.dir) do turn[k] = turn.to(v) end
 
 	currentPos = mkIO(function() return workState.pos end)
