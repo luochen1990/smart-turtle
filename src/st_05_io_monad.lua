@@ -42,35 +42,64 @@ try = function(io)
 	return markIO("try(io)")(mkIO(function() io(); return true end))
 end
 
--- | retry : Int -> IO Bool -> IO Bool
--- , or retry : IO Bool -> IO Bool
--- , retry an io which might fail for several seconds before finally fail
-retry = function(arg)
-	local _retry = function(io)
-		return mkIO(function()
-			local r = io()
-			if r then return r end
-			local maxInterval = 0.1 -- begin at 0.1 second
-			local waitedSeconds = 0.0
-			while (not retrySeconds) or (waitedSeconds < retrySeconds) do -- state: {waitedSeconds, maxInterval}
-				local t = math.random() * maxInterval
-				if retrySeconds then t = math.min(retrySeconds - waitedSeconds, t) end
-				sleep(t)
-				r = io()
-				if r then return r end
-				waitedSeconds = waitedSeconds + t
-				maxInterval = math.min(300, maxInterval * 1.01) -- wait for 5 minutes at most
+-- | the internal implementation of retryWithTimeout and retry
+_retryWithTimeout = function(iof, totalTimeout, opts)
+	local sleepIntervalInit = default(0.1)(opts and opts.sleepIntervalInit)
+	local sleepIntervalIncreaseRatio = default(1.01)(opts and opts.sleepIntervalIncreaseRatio)
+	local sleepIntervalMax = default(300)(opts and opts.sleepIntervalMax)
+	local singleTimeoutInit = default(0.1)(opts and opts.singleTimeoutInit)
+	local singleTimeoutIncreaseRatio = default(1.01)(opts and opts.singleTimeoutIncreaseRatio)
+	local singleTimeoutMax = default(300)(opts and opts.singleTimeoutMax)
+
+	return mkIO(function()
+		local singleTimeout = singleTimeoutInit
+		local r = { iof(singleTimeout)() } -- first try
+		if r[1] then return unpack(r) end -- direct success
+		local sleepInterval = sleepIntervalInit
+		--local waitedSeconds = 0.0
+		local startTime = os.clock()
+		while true do
+			local sleepSeconds
+			if totalTimeout == nil then -- not inf (i.e. nil)
+				sleepSeconds = sleepInterval * math.random()
+			else -- totalTimeout ~= nil
+				local timeLeft = (startTime + totalTimeout - os.clock())
+				if timeLeft <= 0 then break end -- exit while loop
+				sleepSeconds = math.min(timeLeft, sleepInterval * math.random())
 			end
-			return r
-		end)
-	end
+			sleep(sleepSeconds)
+			r = { iof(singleTimeout)() }
+			if r[1] then return unpack(r) end
+			sleepInterval = math.min(sleepIntervalMax, sleepInterval * sleepIntervalIncreaseRatio)
+			singleTimeout = math.min(singleTimeoutMax, singleTimeout * singleTimeoutIncreaseRatio)
+		end
+		return unpack(r) -- return result of last failed try
+	end)
+end
+
+-- | retry an action which can specify timeout
+-- ,  Usage 1: Seconds -> (Seconds -> IO (Maybe a)) -> IO (Maybe a), e.g. io = retryWithTimeout(totalTimeout)(iof)
+-- ,  Usage 2: (Seconds -> IO (Maybe a)) -> IO a
+retryWithTimeout = function(arg, opts)
 	if type(arg) == "number" then
-		retrySeconds = arg
-		return markIOfn("retry(retrySeconds)(io)")(_retry)
+		return markIOfn("retryWithTimeout(totalTimeout, opts)(iof)")(function(iof)
+			return _retryWithTimeout(iof, arg, opts)
+		end)
+	else -- the `retryWithTimeout(iof)` usage
+		return markIO("retryWithTimeout(iof)")(_retryWithTimeout(arg, nil, opts))
+	end
+end
+
+-- | retry an io which might fail
+-- , Usage 1: Seconds -> IO (Maybe a) -> IO (Maybe a)
+-- , Usage 2: IO (Maybe a) -> IO a
+retry = function(arg, opts)
+	if type(arg) == "number" then
+		return markIOfn("retry(totalTimeout, opts)(io)")(function(io)
+			return _retryWithTimeout(function(t) return io end, arg, opts)
+		end)
 	else -- the `retry(io)` usage
-		retrySeconds = nil
-		local io = arg
-		return markIO("retry(io)")(_retry(io))
+		return markIO("retry(io)")(_retryWithTimeout(function(t) return arg end, nil, opts))
 	end
 end
 
