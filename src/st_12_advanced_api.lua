@@ -98,19 +98,6 @@ if turtle then
 		return savePosture(savePos(io))
 	end
 
-	-- usage demo: save(currentPos) * move.to(vec(0,1,0)) * move.to(saved)
-	save, saved = (function()
-		local saved_value = nil
-		local _save = markIOfn("save(ioGetValue)")(mkIOfn(function(ioGetValue)
-			saved_value = {ioGetValue()}
-			return true
-		end))
-		local _saved = markIO("saved")(mkIO(function()
-			return unpack(saved_value)
-		end))
-		return _save, _saved
-	end)()
-
 	-- recover saved pos and posture
 	recoverPosp = markIOfn("recoverPosp(back)")(mkIOfn(function(back)
 		move.to(back.pos)()
@@ -133,7 +120,7 @@ if turtle then
 				if not move.to(near)() then return false end
 				io = with({workArea = false})(savePosd(try(io)))
 				local toward = move.toward(far, function(d, d0) return d ~= -d0 end)
-				local loop = save(currentDir) * toward * turn.to(fmap(negate)(saved)) * rep(io * move)
+				local loop = save(currentDir)(toward * turn.to(fmap(negate)(saved))) * rep(io * move)
 				local run = io * toward * rep(io * move) * rep(loop)
 				run()
 				return true
