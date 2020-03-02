@@ -33,15 +33,25 @@ setmetatable(vec, {
 	__call = function(_, ...) return vector.new(...) end,
 })
 
-gpsLocate = function(timeoutSeconds)
-	local x, y, z = gps.locate(timeoutSeconds)
-	if x then return vec(x, y, z) else return timeoutSeconds == nil and gpsLocate() end
+-- | naive gps locate, without retry
+_gpsLocate = function(timeout)
+	local x, y, z = gps.locate(timeout)
+	return x and vec(x, y, z)
 end
 
-gpsPos = function(timeoutSeconds)
-	local x, y, z = gps.locate(timeoutSeconds)
-	if x then return vec(math.floor(x), math.floor(y), math.floor(z))
-	else return timeoutSeconds == nil and gpsPos() end
+-- | return a vector, which coord value might not be integer (pocket)
+gpsLocate = function(totalTimeout)
+	if not totalTimeout then
+		return retryWithTimeout(function(t) return mkIO(_gpsLocate, t) end)()
+	else
+		return retryWithTimeout(totalTimeout)(function(t) return mkIO(_gpsLocate, t) end)()
+	end
+end
+
+-- | a simple wrapper of gpsLocate
+gpsPos = function(...)
+	local v = gpsLocate(...)
+	return v and vec.floor(v)
 end
 
 -- left side of a horizontal direction
