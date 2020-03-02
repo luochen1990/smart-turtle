@@ -106,9 +106,13 @@ if turtle then
 		return ( reserveOneSlot * _aiming.suck(n) )()
 	end))
 
-	-- | suck into an isolate slot and return it's sn
-	suckCarefully = markIOfn("suckCarefully(n)")(mkIOfn(function(n)
-		return ( reserveOneSlot * save(selected)(select(slot.isEmpty) * selected / _aiming.suck(n) / select(saved)) )()
+	-- | suck into an isolate slot and return true for success
+	-- , this will change selected slot
+	-- , fail reasons:
+	-- , * when reserveOneSlot fails
+	-- , * nothing to suck
+	suckHold = markIOfn("suckHold(n)")(mkIOfn(function(n)
+		return ( reserveOneSlot * select(slot.isEmpty) * _aiming.suck(n) )()
 	end))
 
 	-- | different from turtle.inspect, this only returns res
@@ -167,9 +171,13 @@ if turtle then
 		return ( reserveOneSlot * _aiming.dig )()
 	end))
 
-	-- | dig into an isolate slot and return it's sn
-	digCarefully = markIO("digCarefully")(mkIO(function()
-		return ( reserveOneSlot * save(selected)(select(slot.isEmpty) * selected / _aiming.dig / select(saved)) )()
+	-- | dig into an isolate slot and return true for success
+	-- , this will change selected slot
+	-- , fail reasons:
+	-- , * when reserveOneSlot fails
+	-- , * nothing to dig
+	digHold = markIO("digHold")(mkIO(function()
+		return ( reserveOneSlot * select(slot.isEmpty) * _aiming.dig )()
 	end))
 
 	-- | keep current slot not empty after place
