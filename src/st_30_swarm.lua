@@ -103,47 +103,51 @@ end
 
 --------------------------------- swarm service --------------------------------
 
-swarm._startService = function()
-	local eventQueue = {}
-	local listenCo = function()
-		rednet.host("swarm", "server")
-		while true do
-			printC(colors.gray)("[swarm] listening")
-			local senderId, msg, _ = rednet.receive("swarm-service")
-			printC(colors.gray)("[swarm] received from " .. senderId .. ": " .. msg)
-			table.insert(eventQueue, {senderId, msg})
-		end
-	end
-	local execCo = function()
-		local sleepInterval = 1
-		while true do
-			if #eventQueue == 0 then
-				sleepInterval = math.min(0.5, sleepInterval * 1.1)
-				--printC(colors.gray)("[swarm] waiting "..sleepInterval)
-				sleep(sleepInterval)
-			else -- if #eventQueue > 0 then
-				--printC(colors.gray)("[swarm] executing "..#eventQueue)
-				sleepInterval = 0.02
-				local requesterId, msg = unpack(table.remove(eventQueue, 1))
-				printC(colors.gray)("[swarm] exec cmd from " .. requesterId .. "")
-				if msg == "exit" then
-					break
-				end
-				local ok, res = eval(msg)
-				local resp
-				if ok then
-					resp = literal(true, res)
-					printC(colors.green)("[swarm] response to " .. requesterId .. ": " .. resp)
-				else
-					resp = literal(false, res.msg)
-					printC(colors.yellow)("[swarm] response to " .. requesterId .. ": " .. resp)
-				end
-				rednet.send(requesterId, resp, "swarm-response")
-			end
-		end
-	end
-	parallel.waitForAny(listenCo, execCo)
-end
+swarm._startService = _buildServer("swarm", "swarm-service", function(msg)
+	return safeEval(msg) --TODO: set proper env
+end)
+
+--swarm._startService = function()
+--	local eventQueue = {}
+--	local listenCo = function()
+--		rednet.host("swarm", "server")
+--		while true do
+--			printC(colors.gray)("[swarm] listening")
+--			local senderId, msg, _ = rednet.receive("swarm-service")
+--			printC(colors.gray)("[swarm] received from " .. senderId .. ": " .. msg)
+--			table.insert(eventQueue, {senderId, msg})
+--		end
+--	end
+--	local execCo = function()
+--		local sleepInterval = 1
+--		while true do
+--			if #eventQueue == 0 then
+--				sleepInterval = math.min(0.5, sleepInterval * 1.1)
+--				--printC(colors.gray)("[swarm] waiting "..sleepInterval)
+--				sleep(sleepInterval)
+--			else -- if #eventQueue > 0 then
+--				--printC(colors.gray)("[swarm] executing "..#eventQueue)
+--				sleepInterval = 0.02
+--				local requesterId, msg = unpack(table.remove(eventQueue, 1))
+--				printC(colors.gray)("[swarm] exec cmd from " .. requesterId .. "")
+--				if msg == "exit" then
+--					break
+--				end
+--				local ok, res = eval(msg)
+--				local resp
+--				if ok then
+--					resp = literal(true, res)
+--					printC(colors.green)("[swarm] response to " .. requesterId .. ": " .. resp)
+--				else
+--					resp = literal(false, res.msg)
+--					printC(colors.yellow)("[swarm] response to " .. requesterId .. ": " .. resp)
+--				end
+--				rednet.send(requesterId, resp, "swarm-response")
+--			end
+--		end
+--	end
+--	parallel.waitForAny(listenCo, execCo)
+--end
 
 swarm.services = {}
 
@@ -241,50 +245,124 @@ end
 
 --------------------------------- swarm client ---------------------------------
 
-_request = function(swarmServerId, msg, requestProtocol, responseProtocol, timeout)
-	rednet.send(swarmServerId, msg, requestProtocol)
-	local responserId, resp = rednet.receive(responseProtocol, timeout)
-	if responserId then --NOTE: whether need to check responserId == swarmServerId ??
-		return true, resp
-	else
-		return false, "request timeout"
-	end
-end
+---- | build a service, returns an IO to start the service
+---- , serviceName is for service lookup
+---- , listenProtocol is for request receiving
+---- , handler is a function like `function(unwrappedMsg) return ok, res end`
+--_buildService = function(serviceName, listenProtocol, handler, logger)
+--	handler = default(safeEval)(handler)
+--	logger = default({
+--		--verb = function(msg) printC(colors.gray)("["..serviceName.."] "..msg) end
+--		verb = function(msg) end
+--		info = function(msg) printC(colors.gray)("["..serviceName.."] "..msg) end
+--		succ = function(msg) printC(colors.green)("["..serviceName.."] "..msg) end
+--		fail = function(msg) printC(colors.yellow)("["..serviceName.."] "..msg) end
+--		warn = function(msg) printC(colors.orange)("["..serviceName.."] "..msg) end
+--	})(logger)
+--	local eventQueue = {}
+--	local listenCo = function()
+--		rednet.host(serviceName, "server")
+--		while true do
+--			logger.info("listening on "..literal(listenProtocol))
+--			local senderId, rawMsg, _ = rednet.receive(listenProtocol)
+--			logger.info("received from " .. senderId .. ": " .. rawMsg)
+--			table.insert(eventQueue, {senderId, msg})
+--		end
+--	end
+--	local handleCo = function()
+--		local sleepInterval = 1
+--		while true do
+--			if #eventQueue == 0 then
+--				sleepInterval = math.min(0.5, sleepInterval * 1.1)
+--				logger.verb("waiting "..sleepInterval)
+--				sleep(sleepInterval)
+--			else -- if #eventQueue > 0 then
+--				logger.verb("handling "..#eventQueue)
+--				sleepInterval = 0.02
+--				local requesterId, msg = unpack(table.remove(eventQueue, 1))
+--				logger.info("exec cmd from " .. requesterId .. "")
+--
+--				local resp
+--
+--				local ok1, res1 = safeEval(rawMsg)
+--				if not ok1 then
+--					resp = literal(false, res.msg)
+--					logger.fail("response to " .. requesterId .. ": " .. resp)
+--				else
+--					local responseProtocol, msg = unpack(res1)
+--
+--					local ok2, res = handler(msg)
+--					if not ok2 then
+--						resp = literal(false, res.msg)
+--						logger.fail("response to " .. requesterId .. ": " .. resp)
+--					else
+--						resp = literal(true, res)
+--						logger.succ("response to " .. requesterId .. ": " .. resp)
+--					end
+--				end
+--				rednet.send(requesterId, resp, responseProtocol)
+--			end
+--		end
+--	end
+--	parallel.waitForAny(listenCo, handleCo)
+--end
 
-_requestSwarm = function(cmd, totalTimeout)
-	totalTimeout = default(2)(totalTimeout)
+swarm.client = _buildClient("swarm", "swarm-service")
 
-	local _naiveRequestSwarm = function(timeout)
-		return mkIO(function()
-			if not workState.swarmServerId then
-				local serverId = rednet.lookup("swarm", "server")
-				if not serverId then
-					return false, "swarm server not found"
-				end
-				workState.swarmServerId = serverId
-			end
-			-- got workState.swarmServerId
+--_request = (function()
+--	local _request_counter = 0
+--
+--	return function(swarmServerId, msg, requestProtocol, timeout)
+--		local responseProtocol = requestProtocol .. "_R" .. (_request_counter)
+--		_request_counter = (_request_counter + 1) % 1000
+--		rednet.send(swarmServerId, literal(responseProtocol, msg), requestProtocol)
+--		while true do
+--			local responserId, resp = rednet.receive(responseProtocol, timeout) --TODO: reduce timeout in next loop?
+--			if responserId == swarmServerId then
+--				return true, resp
+--			elseif not responserId then
+--				return false, "request timeout"
+--			else
+--				log.warn("[_request] weird, send to "..swarmServerId.." but got response from "..responserId..", are we under attack?")
+--			end
+--		end
+--	end
+--end)()
 
-			local reqSucc, resp = _request(workState.swarmServerId, cmd, "swarm-service", "swarm-response", timeout)
-			if not reqSucc then -- timeout or network error
-				workState.swarmServerId = nil
-				return false, resp
-			end
-			-- got resp
-
-			local ok, res = eval(resp)
-			if not ok then
-				log.bug("[_requestSwarm] faild to parse response: ", literal({cmd = cmd, response = res}))
-				return false, "faild to parse response"
-			end
-			-- got res
-
-			return unpack(res)
-		end)
-	end
-
-	return retryWithTimeout(totalTimeout)(_naiveRequestSwarm)()
-end
+--_requestSwarm = function(cmd, totalTimeout)
+--	totalTimeout = default(2)(totalTimeout)
+--
+--	local _naiveRequestSwarm = function(timeout)
+--		return mkIO(function()
+--			if not workState.swarmServerId then
+--				local serverId = rednet.lookup("swarm", "server")
+--				if not serverId then
+--					return false, "swarm server not found"
+--				end
+--				workState.swarmServerId = serverId
+--			end
+--			-- got workState.swarmServerId
+--
+--			local reqSucc, resp = _request(workState.swarmServerId, cmd, "swarm-service", timeout)
+--			if not reqSucc then -- timeout or network error
+--				workState.swarmServerId = nil
+--				return false, resp
+--			end
+--			-- got resp
+--
+--			local ok, res = eval(resp)
+--			if not ok then
+--				log.bug("[_requestSwarm] faild to parse response: ", literal({cmd = cmd, response = res}))
+--				return false, "faild to parse response"
+--			end
+--			-- got res
+--
+--			return unpack(res)
+--		end)
+--	end
+--
+--	return retryWithTimeout(totalTimeout)(_naiveRequestSwarm)()
+--end
 
 -- | interactive register complex station
 registerStation = mkIOfn(function()
@@ -310,7 +388,7 @@ registerPassiveProvider = mkIO(function()
 		limitation = 0,
 		deliverPriority = 0, --passive provider
 	}
-	return _requestSwarm("swarm.services.registerStation("..literal(stationDef)..")")
+	return swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
 end)
 
 --serveAsFuelStation = mkIO(function()
@@ -334,12 +412,11 @@ serveAsProvider = mkIO(function()
 	}
 
 	local registerCo = function()
-		printC(colors.green)("[serveAsProvider] detecting item type")
-		--local det = retry(try(suck(1)) * details())()
-		local det = retry((getAndHold(1) + select(slot.isNonEmpty)) * details())()
-		printC(colors.green)("[serveAsProvider] start serving as provider of "..det.name)
+		printC(colors.gray)("[serveAsProvider] detecting item")
+		local det = retry((select(slot.isNonEmpty) + getAndHold(1)) * details())()
+		printC(colors.green)("[serveAsProvider] providing "..det.name)
 		stationDef.itemType = det.name
-		local ok, res = _requestSwarm("swarm.services.registerStation("..literal(stationDef)..")")
+		local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
 		if not ok then
 			log.cry("[serveAsProvider] failed to register station (network error): "..literal(res))
 			return
@@ -348,6 +425,7 @@ serveAsProvider = mkIO(function()
 			log.cry("[serveAsProvider] failed to register station (logic error): "..literal(res))
 			return
 		end
+		printC(colors.green)("[serveAsProvider] station registered")
 	end
 
 	local produceCo = function()
@@ -382,21 +460,19 @@ serveAsProvider = mkIO(function()
 				local cnt = slot.count(stationDef.itemType)
 				if cnt ~= inventoryCount.lastReport then
 					print("current count: "..cnt)
-					local ok, res = _requestSwarm("swarm.services.registerStation("..literal(stationDef)..")")
+					local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
 					if ok then
 						inventoryCount.isDirty = false
 					else
-						log.warn("[serveAsProvider] failed to report inventory info")
+						log.warn("[serveAsProvider] failed to report inventory info: "..literal(res))
 					end
 				end
 			end
 		end
 	end
 
-	parallel.waitForAll(produceCo, function()
-		registerCo()
-		parallel.waitForAll(inventoryCheckCo, updateInventoryCo)
-	end)
+	registerCo()
+	para_(produceCo, inventoryCheckCo, updateInventoryCo)()
 end)
 
 serveAsRequester = mkIO(function()
@@ -419,7 +495,7 @@ serveAsUnloadStation = mkIO(function()
 		limitation = 0,
 		deliverPriority = 0, --passive provider
 	}
-	return _requestSwarm("swarm.services.registerStation("..literal(stationDef)..")")
+	return swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
 end)
 
 registerActiveProvider = mkIO(function()
@@ -456,7 +532,7 @@ requestStation = mkIOfn(function(itemName, itemCount, startPos, fuelLeft)
 	itemCount = default(0)(itemCount)
 	startPos = default(workState.pos)(startPos)
 	fuelLeft = default(turtle.getFuelLevel())(fuelLeft)
-	return _requestSwarm("swarm.services.requestStation("..literal(itemName, itemCount, startPos, fuelLeft)..")")
+	return swarm.client.request("swarm.services.requestStation("..literal(itemName, itemCount, startPos, fuelLeft)..")")()
 end)
 
 requestFuelStation = mkIOfn(function(nStep)
@@ -508,7 +584,7 @@ function _robustVisitStation(opts)
 	local succ, triedTimes, singleTripCost = gotoStation(1, 0)
 	if not succ then
 		opts.beforeWait(triedTimes, singleTripCost, station)
-		race(retry(delay(gotoStation, triedTimes + 1, singleTripCost)), delay(opts.waitForUserHelp, triedTimes, singleTripCost, station))
+		race_(retry(delay(gotoStation, triedTimes + 1, singleTripCost)), delay(opts.waitForUserHelp, triedTimes, singleTripCost, station))()
 		return true
 	end
 end

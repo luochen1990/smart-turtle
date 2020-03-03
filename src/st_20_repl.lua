@@ -120,9 +120,9 @@ function _replMainCo()
 			end
 
 			local co1 = withColor(_replStyle.runCommandDefaultColor)(function() return eval(s, tEnv) end)
-			local co2 = delay(_waitForKeyCombination, keys.leftCtrl, keys.c)
-			local raceWinner, ok, res = race(co1, co2)
-			if raceWinner == 1 then
+			local co2 = mkIO(_waitForKeyCombination, keys.leftCtrl, keys.c)
+			local winner, ok, res = race(co1, co2)()
+			if winner == 1 then
 				if ok then
 					printC(_replStyle.resultColor)(show(unpack(res)))
 				else

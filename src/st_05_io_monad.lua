@@ -16,8 +16,7 @@ mkIO, mkIOfn, isIO = (function()
 	local _mkIOfn = function(f)
 		return function(...) return _mkIO(f, ...) end
 	end
-	_ioMetatable.__len = function(io) return _mkIO(function() local r; repeat r = io.run() until(r); return r end) end -- use `#io` as `rep(io)`, only works on lua5.2+
-	_ioMetatable.__call = function(io, ...) return io.run(...) end
+	_ioMetatable.__call = function(io) return io.run() end
 	_ioMetatable.__pow = function(io, n) return replicate(n)(io) end -- replicate a few times
 	_ioMetatable.__add = function(io1, io2) return _mkIO(function() return io1.run() or io2.run() end) end -- if io1 fail then io2
 	_ioMetatable.__mul = function(io1, io2) return _mkIO(function() return io1.run() and io2.run() end) end -- if io1 succ then io2
@@ -53,12 +52,14 @@ _retryWithTimeout = function(iof, totalTimeout, opts)
 
 	return mkIO(function()
 		local singleTimeout = singleTimeoutInit
+		--printC(colors.red)("singleTimeout =", singleTimeout)
 		local r = { iof(singleTimeout)() } -- first try
 		if r[1] then return unpack(r) end -- direct success
 		local sleepInterval = sleepIntervalInit
 		--local waitedSeconds = 0.0
 		local startTime = os.clock()
 		while true do
+			singleTimeout = math.min(singleTimeoutMax, singleTimeout * singleTimeoutIncreaseRatio)
 			local sleepSeconds
 			if totalTimeout == nil then -- not inf (i.e. nil)
 				sleepSeconds = sleepInterval * math.random()
@@ -68,10 +69,11 @@ _retryWithTimeout = function(iof, totalTimeout, opts)
 				sleepSeconds = math.min(timeLeft, sleepInterval * math.random())
 			end
 			sleep(sleepSeconds)
+			--printC(colors.red)("singleTimeout =", singleTimeout)
 			r = { iof(singleTimeout)() }
 			if r[1] then return unpack(r) end
 			sleepInterval = math.min(sleepIntervalMax, sleepInterval * sleepIntervalIncreaseRatio)
-			singleTimeout = math.min(singleTimeoutMax, singleTimeout * singleTimeoutIncreaseRatio)
+			--singleTimeout = math.min(singleTimeoutMax, singleTimeout * singleTimeoutIncreaseRatio)
 		end
 		return unpack(r) -- return result of last failed try
 	end)
@@ -138,4 +140,45 @@ echo = markIOfn("echo(...)")(mkIOfn(function(...)
 	end
 	return true
 end))
+
+-------------------------------- parallel utils --------------------------------
+
+-- | race two or more io
+race = mkIOfn(function(...)
+	local res
+	local cos = {}
+	for i, io in ipairs({...}) do
+		cos[i] = function() res = { io() } end
+	end
+	local id = parallel.waitForAny(unpack(cos))
+	return id, unpack(res)
+end)
+
+-- | similar to race, but ignore the result
+race_ = mkIOfn(function(...)
+	local cos = {}
+	for i, io in ipairs({...}) do
+		if isIO(io) then
+			cos[i] = io.run
+		else -- is function
+			cos[i] = io
+		end
+	end
+	local id = parallel.waitForAny(unpack(cos))
+	return id
+end)
+
+-- | a wrapper of parallel.waitForAll
+para_ = mkIOfn(function(...)
+	local cos = {}
+	for i, io in ipairs({...}) do
+		if isIO(io) then
+			cos[i] = io.run
+		else -- is function
+			cos[i] = io
+		end
+	end
+	parallel.waitForAll(unpack(cos))
+	return true
+end)
 

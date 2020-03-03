@@ -73,7 +73,7 @@ if turtle then
 		end
 		local succ, triedTimes = gotoFuelStation(1)
 		if not succ then
-			race(retry(delay(gotoFuelStation, triedTimes + 1)), cryForHelpRefueling(nStep + extra()))
+			race_(retry(delay(gotoFuelStation, triedTimes + 1)), cryForHelpRefueling(nStep + extra()))()
 			return true
 		end
 		-- arrived checked fuelStation here

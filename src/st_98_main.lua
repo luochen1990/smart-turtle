@@ -47,7 +47,7 @@ if turtle then
 				printC(colors.gray)("p0 = "..tostring(p0))
 				printC(colors.gray)("p1 = "..tostring(p1))
 				printC(colors.gray)("p0 - p1 = "..tostring(d))
-				printC(colors.orange)("[_correctCoordinateSystemWithGps] weird gps positoin, please check your gps server")
+				log.bug("[_correctCoordinateSystemWithGps] weird gps positoin, please check your gps server")
 				return nil
 			end
 			return d
@@ -66,160 +66,166 @@ if turtle then
 		return _correctCoordinateSystem(p0, d)
 	end)
 
-	_initTurtleState = markFn("_initTurtleState")(function()
+	_initTurtleCo = markFn("_initTurtleCo")(function()
 		local ok1 = _correctCoordinateSystemWithGps()
 		if not ok1 then
 			printC(colors.yellow)("WARN: failed to get gps pos and dir!")
 		end
-		local ok2, fuelStation = requestFuelStation(1)()
+		os.queueEvent("turtle-posd-ready")
+		local ok2, fuelStation = retry(5)(requestFuelStation(0))()
 		if ok2 then
 			workState.fuelStation = fuelStation
 		else
 			printC(colors.yellow)("WARN: failed to get fuel station!")
 		end
-		local ok3, unloadStation = requestUnloadStation(1)()
+		local ok3, unloadStation = retry(5)(requestUnloadStation(0))()
 		if ok3 then
 			workState.unloadStation = unloadStation
 		else
 			printC(colors.yellow)("WARN: failed to get unload station!")
 		end
+		os.queueEvent("turtle-ready")
 		return ok1 and ok2 and ok3
 	end)
 
-	_initTurtleStateWithChest = function()
-		if not (rep(attack) * rep(dig) * use("minecraft:chest"))() then error("[_initTurtleState] please give me a chest") end
-		local ok, res = turtle.inspect()
-		if not ok then error("[_initTurtleState] failed to get facing direction (inspect failed)") end
-		workState.facing = -const.dir[res.state.facing:sub(1,1):upper()]
-		F, B, L, R = workState.facing, -workState.facing, leftSide(workState.facing), rightSide(workState.facing)
-		for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ST[d]) end
-		turtle.dig()
-		-- got facing
-		workState.pos = gpsPos()
-		if workState.pos == nil then error("[_initTurtleState] failed to get gps location!") end
-		workState.beginPos = workState.pos
-		O = workState.beginPos
-		-- got pos
-		ok = saveDir(turn.left * try(use("minecraft:chest")) * isChest)()
-		if not ok then error("[_initTurtleState] failed to set fuelStation") end
-		workState.fuelStation = {pos = workState.pos, dir = L}
-		-- got fuelStation
-		if DEBUG and math.random() < 0.1 then _test.move() end
-	end
-end
-
-_printCallStackCo = function()
-	while true do
-		_waitForKeyCombination(keys.leftCtrl, keys.p)
-		_printCallStack(table.pack(term.getSize())[2] - 2, nil, colors.blue)
-	end
-end
-
-_inspectSystemStateCo = function()
-	while true do
-		_waitForKeyCombination(keys.leftCtrl, keys.i)
-		if turtle then
-			printC(colors.green)('turtle workMode =', show(workMode))
-			printC(colors.green)('turtle workState =', show(workState))
-		end
-	end
-end
+end -- if turtle
 
 _inspectCo = function()
-	parallel.waitForAny(_printCallStackCo, _inspectSystemStateCo)
+	local _printCallStackCo = function()
+		while true do
+			_waitForKeyCombination(keys.leftCtrl, keys.p)
+			_printCallStack(table.pack(term.getSize())[2] - 2, nil, colors.blue)
+		end
+	end
+
+	local _inspectSystemStateCo = function()
+		while true do
+			_waitForKeyCombination(keys.leftCtrl, keys.i)
+			if turtle then
+				printC(colors.green)('turtle workMode =', show(workMode))
+				printC(colors.green)('turtle workState =', show(workState))
+			end
+		end
+	end
+	race_(_printCallStackCo, _inspectSystemStateCo)()
 end
 
-_initComputer = function()
+_initComputerCo = function()
 	local succ = openWirelessModem()
 	if not succ then
 		printC(colors.yellow)("WARN: wireless modem not found!")
 		return false
 	end
+	os.queueEvent("computer-modem-ready")
+	os.queueEvent("computer-ready")
 	return true
 end
 
-_startupMainCo = function()
-	local code = readFile("/st_startup.lua")
-	if code then exec(code) end
+-- | init system state
+-- , including computer general state and turtle specific state
+_initSystemCo = function()
+	_initComputerCo()
+	if turtle then
+		_initTurtleCo()
+	end
+	os.queueEvent("system-ready")
+end
 
+-- | detect device role via label and device type
+-- , and run related script
+_roleDaemonCo = function()
 	local label = os.getComputerLabel()
-	if turtle and label == "register" then
+
+	if label == "swarm-server" then
+		_role = "swarm-server"
+		swarm._startService()
+	elseif turtle and label == "provider" then
+		_role = "provider"
+		os.pullEvent("turtle-posd-ready")
+		serveAsProvider()
+	elseif turtle and label == "register" then
+		_role = "register"
+		os.pullEvent("turtle-posd-ready")
 		registerPassiveProvider()
-	end
-end
-
-_startupCo = function()
-	parallel.waitForAny(_startupMainCo, _inspectCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.c))
-end
-
-_daemonMainCo = function()
-	local daemonScriptCo = function()
-		local code = readFile("/st_daemon.lua")
-		if code then exec(code) end
-	end
-
-	local roleCo = function()
-		local label = os.getComputerLabel()
-		if turtle and string.sub(label, 1, 6) == "guard-" then
-			local d = string.sub(label, 7, 7)
-			if const.dir[d] then
-				if d == "D" then
-					followYouCo(D)
-				else
-					followYouCo(const.dir[d])
-				end
-			end
-		elseif pocket and label == "follow-me" then
-			followMeCo()
-		elseif label == "swarm-server" then
-			swarm._startService()
-		elseif turtle and label == "provider" then
-			serveAsProvider()
-		elseif label == "blinker" then
-			local b = false
-			while true do
-				redstone.setOutput("front", b)
-				b = not b
-				sleep(0.5)
+	elseif label == "blinker" then
+		_role = "blinker"
+		os.pullEvent("turtle-posd-ready")
+		local b = false
+		while true do
+			redstone.setOutput("front", b)
+			b = not b
+			sleep(0.5)
+		end
+	elseif turtle and string.sub(label, 1, 6) == "guard-" then
+		_role = "guard"
+		os.pullEvent("system-ready")
+		local d = string.sub(label, 7, 7)
+		if const.dir[d] then
+			if d == "D" then
+				followYouCo(D)
+			else
+				followYouCo(const.dir[d])
 			end
 		end
+	elseif pocket and label == "follow-me" then
+		_role = "follow-me"
+		os.pullEvent("system-ready")
+		followMeCo()
+	else
+		if turtle then
+			_role = "worker"
+		else
+			_role = "pc"
+		end
 	end
-	parallel.waitForAll(daemonScriptCo, roleCo)
 end
 
-_daemonCo = function()
-	local exitCo = function()
-		_waitForKeyCombination(keys.leftCtrl, keys.q)
-		print("[ctrl+q] exit daemon process")
-	end
-	parallel.waitForAny(_daemonMainCo, exitCo)
+_startupScriptCo = function()
+	-- startup logic by script st_startup.lua
+	local code = readFile("/st_startup.lua")
+	if code then exec(code) end
 end
 
-_replCo = function()
-	local exitCo = function()
-		_waitForKeyCombination(keys.leftCtrl, keys.d)
-		print("[ctrl+d] exit repl")
-	end
-	parallel.waitForAny(_replMainCo, exitCo)
+_daemonScriptCo = function()
+	local code = readFile("/st_daemon.lua")
+	if code then exec(code) end
 end
 
 _main = function(...)
-	-- init system state
-	term.clear(); term.setCursorPos(1,1)
-	_initComputer()
-	if turtle then _initTurtleState() end
+	term.clear(); term.setCursorPos(1, 1)
 
-	-- process cli arguments
 	local args = {...}
 	if #args > 0 then
 		printC(colors.gray)('cli arguments: ', show(args))
-		exec(args[1], {}, _ENV)
-	else
-		-- run startup script
-		_startupCo()
 
-		-- run repl & daemon
-		parallel.waitForAny(_replCo, delay(parallel.waitForAll, _inspectCo, _daemonCo))
+		-- init system state
+		_initSystemCo()
+
+		-- exec command from cli args
+		race_(_inspectCo, function() exec(args[1], {}, _ENV) end)()
+	else
+		local _startupCo = race_(_startupScriptCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.c))
+
+		local _daemonCo = function()
+			local _exitCo = function()
+				_waitForKeyCombination(keys.leftCtrl, keys.q)
+				print("[ctrl+q] exit daemon process")
+			end
+			race_(_exitCo, para_(_daemonScriptCo, _roleDaemonCo))()
+		end
+
+		local _replCo = function()
+			os.pullEvent("system-ready")
+			local _exitCo = function()
+				_waitForKeyCombination(keys.leftCtrl, keys.d)
+				print("[ctrl+d] exit repl")
+			end
+			race_(_exitCo, _replMainCo)()
+		end
+
+		-- run startup scripts & init system state
+		race_(_inspectCo, para_(_startupCo, _daemonCo, _replCo, _initSystemCo))()
+
 	end
 end
 

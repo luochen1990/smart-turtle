@@ -77,7 +77,7 @@ deepcopy = function(obj)
 	return _copy(obj)
 end
 
-math.randomseed(os.time() * 1000) -- set randomseed for math.random()
+math.randomseed(os.time() + os.clock()) -- set randomseed for math.random()
 
 _ST = _ENV
 
@@ -116,6 +116,15 @@ eval = function(code, env, readOnlyEnv)
 	else
 		return false, {msg = '[compile error] '..compileErr, stack = nil}
 	end
+end
+
+_ST_SAFE = _ST --TODO: hide unsafe variables
+
+-- | safeEval is supposed to change nothing
+-- , use _ST_SAFE as readOnlyEnv by default
+safeEval = function(code, readOnlyEnv)
+	if not readOnlyEnv then readOnlyEnv = _ST_SAFE end
+	return eval(code, {}, readOnlyEnv)
 end
 
 -- | execute a piece of code, similar to eval, but print out the result directly
@@ -220,7 +229,7 @@ function _literal(val)
 end
 
 function _literalString(val)
-	return '"'..val..'"' --TODO: escape special chars
+	return textutils.serialise(val)
 end
 
 function _literalKey(k)
@@ -229,18 +238,6 @@ function _literalKey(k)
 	else
 		return "[" .. _literal(k) .. "]"
 	end
-end
-
------------------------------- coroutine utils ---------------------------------
-
-function race(...)
-	local res
-	local cos = {}
-	for i, io in ipairs({...}) do
-		cos[i] = function() res = { io() } end
-	end
-	local id = parallel.waitForAny(unpack(cos))
-	return id, unpack(res)
 end
 
 ------------------------------ ui event utils ----------------------------------
