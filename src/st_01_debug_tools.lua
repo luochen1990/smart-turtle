@@ -7,14 +7,25 @@ if DEBUG then assert = __assert else assert = function() end end
 
 _callStack = {}
 
+-- | markCallSite : CallSiteName -> (() -> a) -> a
+markCallSite = function(callSiteDesc)
+	if not DEBUG then return function(x) return x end end
+	return function(lazyProc)
+		table.insert(_callStack, "*"..callSiteDesc)
+		local r = { lazyProc() }
+		table.remove(_callStack, #_callStack)
+		return unpack(r)
+	end
+end
+
 -- | markFn : FunctionName -> (a -> b) -> (a -> b)
 markFn = function(name)
 	if not DEBUG then return function(x) return x end end
 	return function(func)
 		return function(...)
-			_callStack[#_callStack+1] = name
-			local r = {func(...)}
-			_callStack[#_callStack] = nil
+			table.insert(_callStack, name)
+			local r = { func(...) }
+			table.remove(_callStack, #_callStack)
 			return unpack(r)
 		end
 	end
@@ -24,9 +35,9 @@ end
 markIO = function(name)
 	if not DEBUG then return function(x) return x end end
 	return mkIOfn(function(io)
-		_callStack[#_callStack+1] = name
-		local r = {io()}
-		_callStack[#_callStack] = nil
+		table.insert(_callStack, name)
+		local r = { io() }
+		table.remove(_callStack, #_callStack)
 		return unpack(r)
 	end)
 end
@@ -78,21 +89,58 @@ writeC = function(fg, bg)
 	end)
 end
 
-_printCallStack = function(count, beginDepth, color, stack)
+_callStackDepth = function(stack)
 	stack = default(_callStack)(stack)
-	count = math.max(0, count or 10)
-	beginDepth = math.max(1, beginDepth or 1 + #stack - count)
-	color = color or colors.gray
-	withColor(color)(function()
-		for dep = beginDepth, beginDepth + count - 1 do
-			local record = stack[dep]
-			if record then
-				print("[stack #"..dep.."]", record)
-			else
+	local dep = 0
+	for i, record in ipairs(stack) do
+		if record.sub(1, 1)	~= "*" then -- a new call
+			dep = dep + 1
+		end
+	end
+	return dep
+end
+
+-- | convert a call stack into a list of string
+_showCallStack = function(count, beginDepth, stack)
+	stack = default(_callStack)(stack)
+	count = math.max(0, default(#stack)(count))
+	beginDepth = math.max(1, default(1 + #stack - count)(beginDepth))
+	local dep, res = 0, {}
+	for i, record in ipairs(stack) do
+		if string.sub(record, 1, 1)	~= "*" then -- a new call
+			dep = dep + 1
+			if dep >= beginDepth + count then
 				break
 			end
+			if dep >= beginDepth then
+				table.insert(res, "[" .. dep .. "] " .. record)
+			end
+		else -- a call site desc
+			if dep >= beginDepth and #res > 0 then
+				res[#res] = res[#res] .. " " .. record
+			end
 		end
-		printC(colors.grey)("[total call stack depth]", #stack)
+	end
+	return res
+end
+
+_printCallStack = function(count, beginDepth, color, stack)
+	stack = default(_callStack)(stack)
+	count = math.max(0, default(#stack)(count))
+	beginDepth = math.max(1, default(1 + #stack - count)(beginDepth))
+	color = color or colors.gray
+	local ls = _showCallStack(count, beginDepth, stack)
+	local s = table.concat(ls, "\n")
+	withColor(color)(function()
+		local dep = _callStackDepth(stack)
+		local maxLines = table.pack(term.getSize())[2] - 2
+		local more = #ls - maxLines
+		if more > 0 then
+			maxLines, more = maxLines - 1, more + 1
+			printC(colors.gray)("[printing call stack] " .. (more) .. "more lines left...")
+		end
+		textutils.pagedPrint(s, maxLines)
+		printC(colors.gray)("[total call stack depth]", dep)
 	end)()
 end
 

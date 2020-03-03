@@ -111,7 +111,7 @@ end
 _printCallStackCo = function()
 	while true do
 		_waitForKeyCombination(keys.leftCtrl, keys.p)
-		_printCallStack(10, nil, colors.blue)
+		_printCallStack(table.pack(term.getSize())[2] - 2, nil, colors.blue)
 	end
 end
 

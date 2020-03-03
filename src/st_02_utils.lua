@@ -136,7 +136,7 @@ exec = function(code, env, readOnlyEnv)
 			printC(colors.green)(show(unpack(res)))
 		end
 	else
-		if res.stack then _printCallStack(10, nil, colors.gray, res.stack) end
+		if res.stack then _printCallStack(nil, nil, colors.gray, res.stack) end
 		printC(colors.red)(res.msg)
 	end
 end

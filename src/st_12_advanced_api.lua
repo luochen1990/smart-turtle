@@ -23,52 +23,59 @@ if turtle then
 			local latestDetourPos
 			while true do
 				-- attempt to approach destPos
-				rep(move.toward(destPos))()
+				markCallSite("approaching")(function()
+					rep(move.toward(destPos))()
+				end)
 				local v = destPos - workState.pos
 				local md = vec.manhat(v)
 				if md <= 1 then return md == 0 end
 				if not workMode.detour then return false end
 				if workState.pos == latestDetourPos then return false end
 				-- begin detouring
-				workState.detouring = true
-				local detourBeginPos = workState.pos
-				local targetDir
-				for _, d in ipairs(const.directions) do
-					if v:dot(const.dir[d]) > 0 then targetDir = const.dir[d]; break end
-				end
-				-- targetDir decided
-				local detourDir
-				for _, d in ipairs(const.directions) do
-					if d ~= 'D' and targetDir:dot(const.dir[d]) == 0 then --NOTE: prefer not to go down
-						local ok = (turn.to(const.dir[d]) * move)()
-						if ok then detourDir = const.dir[d]; break end
+				markCallSite("detouring")(function()
+					workState.detouring = true
+					local detourBeginPos = workState.pos
+					local detourCost = 0 -- record detouring cost
+					local targetDir
+					for _, d in ipairs(const.directions) do
+						if v:dot(const.dir[d]) > 0 then targetDir = const.dir[d]; break end
 					end
-				end
-				if not detourDir then
-					detourDir = lateralSide(targetDir)
-					-- turn.to(detourDir) --TODO: not sure whether need this line
-				end
-				-- init detourDir decided
-				local rot = dirRotationBetween(targetDir, detourDir)
-				local detourDirs = {targetDir, detourDir, rot(detourDir), rot(rot(detourDir))}
-				-- detourDirs (i.e. detour plane) decided
-				printC(colors.gray)("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
-				-- begin detouring loop
-				local detourRotateCount = 1
-				local detourBeginDis = vec.manhat(destPos - detourBeginPos)
-				repeat
-					for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
-						candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
-						local ok = (turn.to(candidateDir) * move)()
-						if ok then
-							detourRotateCount = detourRotateCount + i
-							break
+					-- targetDir decided
+					local detourDir
+					for _, d in ipairs(const.directions) do
+						if d ~= 'D' and targetDir:dot(const.dir[d]) == 0 then --NOTE: prefer not to go down
+							local ok = (turn.to(const.dir[d]) * move)()
+							if ok then detourDir = const.dir[d]; detourCost = detourCost + 1; break end
 						end
 					end
-				until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
-				-- finish detouring
-				latestDetourPos = detourBeginPos
-				workState.detouring = false
+					if not detourDir then
+						detourDir = lateralSide(targetDir)
+						-- turn.to(detourDir) --TODO: not sure whether need this line
+					end
+					-- init detourDir decided
+					local rot = dirRotationBetween(targetDir, detourDir)
+					local detourDirs = {targetDir, detourDir, rot(detourDir), rot(rot(detourDir))}
+					-- detourDirs (i.e. detour plane) decided
+					printC(colors.gray)("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
+					-- begin detouring loop
+					local detourRotateCount = 1
+					local detourBeginDis = vec.manhat(destPos - detourBeginPos)
+					repeat
+						for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
+							candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
+							local ok = (turn.to(candidateDir) * move)()
+							if ok then
+								detourRotateCount = detourRotateCount + i
+								detourCost = detourCost + 1
+								break
+							end
+						end
+					until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
+					printC(colors.gray)("cost "..detourCost.." from "..show(detourBeginPos).." to "..show(workState.pos))
+					-- finish detouring
+					latestDetourPos = detourBeginPos
+					workState.detouring = false
+				end)
 			end
 		end)
 	end)

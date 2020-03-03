@@ -127,7 +127,7 @@ function _replMainCo()
 					printC(_replStyle.resultColor)(show(unpack(res)))
 				else
 					_replState.latestCallStack = res.stack
-					if res.stack then _printCallStack(10, nil, _replStyle.errorStackColor, res.stack) end
+					if res.stack then _printCallStack(nil, nil, _replStyle.errorStackColor, res.stack) end
 					printError(res.msg)
 				end
 			end
