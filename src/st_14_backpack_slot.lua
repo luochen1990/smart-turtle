@@ -23,6 +23,16 @@ if turtle then
 				return det and det.name == name
 			end
 		end,
+		isTool = function(toolType)
+			return function(sn)
+				local det = turtle.getItemDetail(sn)
+				if toolType then
+					return det and const.toolItems[det.name] == toolType
+				else
+					return det and const.toolItems[det.name] ~= nil
+				end
+			end
+		end,
 
 		-- | find a specific slot sn, return nil when not find
 		_findThat = function(cond, beginSlot) -- find something after beginSlot which satisfy cond

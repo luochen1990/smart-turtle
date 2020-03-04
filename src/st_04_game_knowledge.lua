@@ -32,6 +32,10 @@ const = {
 		"minecraft:redstone_ore",
 		"minecraft:lapis_ore",
 	},
+	toolItems = {
+		["computercraft:wireless_modem"] = "modem",
+		["computercraft:wireless_modem_advanced"] = "modem",
+	},
 	turtleBlocks = {
 		["computercraft:turtle_normal"] = true,
 		["computercraft:turtle_advanced"] = true,

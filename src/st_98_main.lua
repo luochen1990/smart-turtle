@@ -113,12 +113,25 @@ end
 
 _initComputerCo = function()
 	local succ = openWirelessModem()
+	if not succ and turtle then
+		local equip = mkIO(function()
+			local ok = turtle.equipLeft()
+			return ok
+		end)
+		local ok -- equip modem success
+		local sn = slot.find(slot.isTool("modem"))
+		if sn then
+			ok = ( select(sn) * equip )()
+		end
+		if ok then
+			succ = openWirelessModem()
+		end
+	end
 	if not succ then
 		printC(colors.yellow)("WARN: wireless modem not found!")
 		return false
-	else
-		os.queueEvent("computer-modem-ready")
 	end
+	os.queueEvent("computer-modem-ready")
 	os.queueEvent("computer-ready")
 	return true
 end
