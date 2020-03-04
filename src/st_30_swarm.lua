@@ -477,7 +477,7 @@ serveAsProvider = mkIO(function()
 			if inventoryCount.isDirty then
 				local cnt = slot.count(stationDef.itemType)
 				if cnt ~= inventoryCount.lastReport then
-					print("current count: "..cnt)
+					print(os.time().." current count: "..cnt)
 					info.itemCount = cnt
 					local ok, res = swarm.client.request("swarm.services.updateStation("..literal(info)..")")()
 					if ok then
@@ -494,18 +494,78 @@ serveAsProvider = mkIO(function()
 	para_(produceCo, inventoryCheckCo, updateInventoryCo)()
 end)
 
-serveAsRequester = mkIO(function()
-end)
-
 serveAsUnloader = mkIO(function()
 	local stationDef = {
 		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
-		itemType = det.name,
+		itemType = "*anything", -- NOTE: this is a special constant value
 		limitation = 0,
 		deliverPriority = 0, --passive provider
+		stationHosterId = os.getComputerID()
 	}
-	return swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
+
+	local registerCo = function()
+		printC(colors.gray)("[provider] registering unload station")
+		local _reg = function()
+			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
+			if not ok then
+				log.cry("[provider] failed to register station (network error): "..literal(res))
+				return false
+			end
+			if not table.remove(res, 1) then
+				log.cry("[provider] failed to register station (logic error): "..literal(res))
+				return false
+			end
+			printC(colors.green)("[provider] station registered")
+			return true
+		end
+		retry(_reg)()
+	end
+
+	local keepDroppingCo = function()
+		with({allowInterruption = false})(rep(retry(isChest * drop())))()
+	end
+
+	local inventoryCount = {
+		isDirty = true,
+		lastReport = 0,
+	}
+	local inventoryCheckCo = function()
+		while true do
+			local ev = { os.pullEvent("turtle_inventory") } -- no useful information :(
+			inventoryCount.isDirty = true
+		end
+	end
+	local updateInventoryCo = function()
+		local info = {
+			pos = stationDef.pos,
+			dir = stationDef.dir,
+			itemType = stationDef.itemType,
+		}
+		while true do
+			sleep(5)
+			if inventoryCount.isDirty then
+				slot.tidy()
+				local cnt = slot.count(slot.isEmpty)
+				if cnt ~= inventoryCount.lastReport then
+					print(os.time().." current count: "..cnt)
+					info.itemCount = cnt
+					local ok, res = swarm.client.request("swarm.services.updateStation("..literal(info)..")")()
+					if ok then
+						inventoryCount.isDirty = false
+					else
+						log.warn("[provider] failed to report inventory info: "..literal(res))
+					end
+				end
+			end
+		end
+	end
+
+	registerCo()
+	para_(keepDroppingCo, inventoryCheckCo, updateInventoryCo)()
+end)
+
+serveAsRequester = mkIO(function()
 end)
 
 --registerActiveProvider = mkIO(function()
