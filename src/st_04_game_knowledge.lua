@@ -38,6 +38,7 @@ const = {
 	},
 	chestBlocks = {
 		["minecraft:chest"] = true,
+		["minecraft:trapped_chest"] = true,
 		["minecraft:shulker_box"] = true,
 	},
 	containerBlocks = { -- containers other than turtle or chest
