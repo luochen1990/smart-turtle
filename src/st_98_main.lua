@@ -154,6 +154,10 @@ _roleDaemonCo = function()
 	if label == "swarm-server" then
 		_role = "swarm-server"
 		swarm._startService()
+	elseif label == "log-printer" then
+		_role = "log-printer"
+		os.pullEvent("system-ready")
+		_logPrintCo()
 	elseif turtle and label == "provider" then
 		_role = "provider"
 		os.pullEvent("turtle-posd-ready")

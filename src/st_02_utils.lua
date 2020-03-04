@@ -416,6 +416,17 @@ function _log(ty)
 	end
 end
 
+function _logPrintCo()
+	while true do
+		local senderId, rawMsg = rednet.receive("log")
+		local ok, res = safeEval(rawMsg)
+		if ok then
+			local ty, msg = unpack(res)
+			printM(_log_colors[ty])("" .. os.time() .. " [" .. senderId .. "]: " .. msg)
+		end
+	end
+end
+
 log = {
 	info = _log("info"), -- information, like global state updation
 	warn = _log("warn"), -- some weird things happend, like network error, but not need to process it at once
