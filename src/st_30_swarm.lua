@@ -161,7 +161,7 @@ swarm.services.registerStation = function(opts)
 		return false, "station itemType is required"
 	end
 	swarm._state.stationPool[itemTy] = default({})(swarm._state.stationPool[itemTy])
-	swarm._state.stationPool[itemTy][station.pos] = station
+	swarm._state.stationPool[itemTy][show(station.pos)] = station
 	return true, "station registered"
 end
 
@@ -173,7 +173,7 @@ swarm.services.updateStation = function(opts)
 	if not pool then
 		return false, "station not exist (no such type)"
 	end
-	local station = pool[opts.pos]
+	local station = pool[show(opts.pos)]
 	if not station then
 		return false, "station not exist (no such pos)"
 	end
