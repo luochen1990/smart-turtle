@@ -24,7 +24,7 @@ vec = {
 		return function(x) return getmetatable(x) == mt end
 	end)(),
 	floor = function(v)
-		return vec(math.floor(v.x), math.floor(v.y), math.floor(v.z))
+		return v and v.x and vec(math.floor(v.x), math.floor(v.y), math.floor(v.z))
 	end,
 	-- | manhattan distance between pos `v` and vec.zero
 	manhat = function(v) return math.abs(v.x) + math.abs(v.y) + math.abs(v.z) end,
@@ -36,6 +36,10 @@ setmetatable(vec, {
 -- | naive gps locate, without retry
 _gpsLocate = function(timeout)
 	local x, y, z = gps.locate(timeout)
+	--local x, y, z = unpack({nil, nil, nil}) --gps.locate(timeout)
+	if not (x and y and z) then
+		log.warn("gps.locate(" .. (timeout or "nil") .. ") failed:", show(x), show(y), show(z))
+	end
 	return x and vec(x, y, z)
 end
 

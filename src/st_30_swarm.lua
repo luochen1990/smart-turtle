@@ -162,7 +162,7 @@ swarm.services.registerStation = function(opts)
 	end
 	swarm._state.stationPool[itemTy] = default({})(swarm._state.stationPool[itemTy])
 	swarm._state.stationPool[itemTy][station.pos] = station
-	return true
+	return true, "station registered"
 end
 
 swarm.services.updateStation = function(opts)
@@ -180,13 +180,22 @@ swarm.services.updateStation = function(opts)
 	for k, v in pairs(station) do
 		station[k] = v
 	end
-	return true
+	return true, "station updated"
 end
 
 swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft)
 	local pool = swarm._state.stationPool[itemType]
 	if not pool then
 		return false, "no such station registered, please register one"
+	end
+	if type(itemCount) ~= "number" then
+		return false, "bad request, please provide itemCount as number"
+	end
+	if not vec.isVec(startPos) then
+		return false, "bad request, please provide startPos as vec"
+	end
+	if type(fuelLeft) ~= "number" then
+		return false, "bad request, please provide fuelLeft as number"
 	end
 	-- [[
 	-- There is three dimention to compare station choices:
@@ -382,7 +391,7 @@ registerPassiveProvider = mkIO(function()
 		return false
 	end
 	local stationDef = {
-		pos = gpsPos(),
+		pos = workState.pos,
 		dir = workState:aimingDir(),
 		itemType = det.name,
 		limitation = 0,
@@ -403,7 +412,7 @@ serveAsProvider = mkIO(function()
 	end
 
 	local stationDef = {
-		pos = gpsPos() - workState:aimingDir(),
+		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
 		itemType = nil,
 		limitation = 0,
@@ -412,20 +421,24 @@ serveAsProvider = mkIO(function()
 	}
 
 	local registerCo = function()
-		printC(colors.gray)("[serveAsProvider] detecting item")
+		printC(colors.gray)("[provider] detecting item")
 		local det = retry((select(slot.isNonEmpty) + getAndHold(1)) * details())()
-		printC(colors.green)("[serveAsProvider] providing "..det.name)
+		printC(colors.green)("[provider] got "..det.name)
 		stationDef.itemType = det.name
-		local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
-		if not ok then
-			log.cry("[serveAsProvider] failed to register station (network error): "..literal(res))
-			return
+		local _reg = function()
+			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
+			if not ok then
+				log.cry("[provider] failed to register station (network error): "..literal(res))
+				return false
+			end
+			if not table.remove(res, 1) then
+				log.cry("[provider] failed to register station (logic error): "..literal(res))
+				return false
+			end
+			printC(colors.green)("[provider] station registered")
+			return true
 		end
-		if not table.remove(res, 1) then
-			log.cry("[serveAsProvider] failed to register station (logic error): "..literal(res))
-			return
-		end
-		printC(colors.green)("[serveAsProvider] station registered")
+		retry(_reg)()
 	end
 
 	local produceCo = function()
@@ -454,17 +467,23 @@ serveAsProvider = mkIO(function()
 		end
 	end
 	local updateInventoryCo = function()
+		local info = {
+			pos = stationDef.pos,
+			dir = stationDef.dir,
+			itemType = stationDef.itemType,
+		}
 		while true do
 			sleep(5)
 			if inventoryCount.isDirty then
 				local cnt = slot.count(stationDef.itemType)
 				if cnt ~= inventoryCount.lastReport then
 					print("current count: "..cnt)
-					local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
+					info.itemCount = cnt
+					local ok, res = swarm.client.request("swarm.services.updateStation("..literal(info)..")")()
 					if ok then
 						inventoryCount.isDirty = false
 					else
-						log.warn("[serveAsProvider] failed to report inventory info: "..literal(res))
+						log.warn("[provider] failed to report inventory info: "..literal(res))
 					end
 				end
 			end
@@ -478,18 +497,9 @@ end)
 serveAsRequester = mkIO(function()
 end)
 
-serveAsUnloadStation = mkIO(function()
-	reserveOneSlot()
-	select(slot.findThat(slot.isEmpty))()
-	suck(1)()
-	local det = turtle.getItemDetail()
-	drop(1)()
-	if not det then
-		log.bug("[registerPassiveProvider] cannot get item detail")
-		return false
-	end
+serveAsUnloader = mkIO(function()
 	local stationDef = {
-		pos = gpsPos(),
+		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
 		itemType = det.name,
 		limitation = 0,
@@ -498,35 +508,35 @@ serveAsUnloadStation = mkIO(function()
 	return swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
 end)
 
-registerActiveProvider = mkIO(function()
-	local stationDef = {
-		pos = gpsPos(),
-		limitation = 0,
-		deliverPriority = 98, --passive provider
-	}
-	rednet.send({
-	})
-end)
+--registerActiveProvider = mkIO(function()
+--	local stationDef = {
+--		pos = gpsPos(),
+--		limitation = 0,
+--		deliverPriority = 98, --passive provider
+--	}
+--	rednet.send({
+--	})
+--end)
+--
+--registerBuffer = mkIO(function()
+--	local stationDef = {
+--		pos = gpsPos(),
+--		reservation = 15,
+--		restockPriority = 89,
+--	}
+--	rednet.send({
+--	})
+--end)
 
-registerBuffer = mkIO(function()
-	local stationDef = {
-		pos = gpsPos(),
-		reservation = 15,
-		restockPriority = 89,
-	}
-	rednet.send({
-	})
-end)
-
-registerRequester = mkIO(function()
-	local stationDef = {
-		pos = gpsPos(),
-		reservation = 15,
-		restockPriority = 99,
-	}
-	rednet.send({
-	})
-end)
+--registerRequester = mkIO(function()
+--	local stationDef = {
+--		pos = gpsPos(),
+--		reservation = 15,
+--		restockPriority = 99,
+--	}
+--	rednet.send({
+--	})
+--end)
 
 requestStation = mkIOfn(function(itemName, itemCount, startPos, fuelLeft)
 	itemCount = default(0)(itemCount)

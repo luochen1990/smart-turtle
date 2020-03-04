@@ -3,10 +3,10 @@
 _consoleLoggerBuilder = function(serviceName, protocol)
 	return {
 		verb = function(msg) end,
-		info = function(msg) printC(colors.gray)("["..serviceName.."] "..msg) end,
-		succ = function(msg) printC(colors.green)("["..serviceName.."] "..msg) end,
-		fail = function(msg) printC(colors.yellow)("["..serviceName.."] "..msg) end,
-		warn = function(msg) printC(colors.orange)("["..serviceName.."] "..msg) end,
+		info = function(msg) printC(colors.gray  )(os.time().." ["..serviceName.."] "..msg) end,
+		succ = function(msg) printC(colors.green )(os.time().." ["..serviceName.."] "..msg) end,
+		fail = function(msg) printC(colors.yellow)(os.time().." ["..serviceName.."] "..msg) end,
+		warn = function(msg) printC(colors.orange)(os.time().." ["..serviceName.."] "..msg) end,
 	}
 end
 
@@ -14,6 +14,7 @@ end
 -- , serviceName is for service lookup
 -- , listenProtocol is for request receiving
 -- , handler is a function like `function(unwrappedMsg) return requestValid, logicResultTable end`
+-- , the response contains an extra boolean, means whether the request reaches the handler
 _buildServer = function(serviceName, listenProtocol, handler, logger)
 	handler = default(safeEval)(handler)
 	logger = default(_consoleLoggerBuilder(serviceName, listenProtocol))(logger)
@@ -22,6 +23,7 @@ _buildServer = function(serviceName, listenProtocol, handler, logger)
 		local eventQueue = {}
 		local listenCo = function()
 			rednet.host(serviceName, "server")
+			logger.info("start serving as "..literal(serviceName))
 			while true do
 				logger.verb("listening on "..literal(listenProtocol))
 				local senderId, rawMsg, _ = rednet.receive(listenProtocol)
@@ -40,30 +42,38 @@ _buildServer = function(serviceName, listenProtocol, handler, logger)
 					logger.verb("handling "..#eventQueue)
 					sleepInterval = 0.02
 					local requesterId, rawMsg = unpack(table.remove(eventQueue, 1))
-					logger.info("exec cmd from " .. requesterId .. ": "..rawMsg)
+					logger.info("from " .. requesterId .. ": "..rawMsg)
 
-					local resp, responseProtocol
+					local resp, responseProtocol, reqId
 
 					local ok1, parsed = safeEval(rawMsg)
 					if not ok1 then
-						resp = literal(false, "invalid request format")
-						logger.warn("invalid request format (E1): "..literal({rawMsg = rawMsg, parsed = parsed}))
+						resp = literal(false, "invalid request format (E1)")
+						logger.warn("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
+						--log.warn("protocol error (E1): "..literal({rawMsg = rawMsg, parseErr = parsed}))
 					else
 						local proto, msg = unpack(parsed)
 						local ok2 = ( type(proto) == "string" )
 						ok2 = ok2 and ( string.sub(proto, 1, #listenProtocol) == listenProtocol )
 						if not ok2 then
-							resp = literal(false, "invalid request format")
-							logger.warn("invalid request format (E2): proto = "..literal(proto))
+							resp = literal(false, "invalid request format (E2)")
+							logger.warn("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
+							--log.warn("protocol error (E2): proto = "..literal(proto))
 						else
 							responseProtocol = proto
+							reqId = string.sub(proto, #listenProtocol + 2)
 							local ok3, res = handler(msg)
 							if not ok3 then
-								resp = literal(false, "bad request: "..literal(res))
-								logger.fail("response to " .. requesterId .. ": (E3)" .. resp)
+								resp = literal(false, "bad request (E3): "..literal(res))
+								logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
 							else
 								resp = literal(true, res)
-								logger.succ("response to " .. requesterId .. ": " .. resp)
+								local ok, r = unpack(res)
+								if ok then
+									logger.succ("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
+								else
+									logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
+								end
 							end
 						end
 					end
@@ -83,10 +93,10 @@ _buildClient = function(serviceName, requestProtocol, knownServer)
 
 	-- | returns IO
 	local _request = mkIOfn(function(msg, totalTimeout)
-		totalTimeout = default(2)(totalTimeout)
+		totalTimeout = default(5)(totalTimeout)
 
 		-- generate responseProtocol
-		local responseProtocol = requestProtocol .. "_R" .. (_counter)
+		local responseProtocol = requestProtocol .. "_r" .. (_counter)
 		_counter = (_counter + 1) % 10000
 
 		local _req = mkIOfn(function(timeout)
@@ -109,7 +119,7 @@ _buildClient = function(serviceName, requestProtocol, knownServer)
 					end
 				elseif not responserId then
 					_knownServer = nil
-					return false, "request timeout: "..literal({proto = responseProtocol, singleTimeout = timeout, totalTimeout = totalTimeout})
+					return false, "request timeout: "..literal({proto = responseProtocol, singleTimeout = timeout, totalTimeout = totalTimeout, t = os.time()})
 				else
 					log.warn("[request] weird, send to "..serverId.." but got response from "..responserId..", are we under attack?")
 				end
@@ -119,7 +129,7 @@ _buildClient = function(serviceName, requestProtocol, knownServer)
 		if not ok then
 			return false, res
 		else
-			return unpack(res)
+			return unpack(res) --NOTE: fold the failure flag
 		end
 	end)
 

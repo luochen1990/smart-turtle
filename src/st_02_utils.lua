@@ -77,7 +77,7 @@ deepcopy = function(obj)
 	return _copy(obj)
 end
 
-math.randomseed(os.time() + os.clock()) -- set randomseed for math.random()
+math.randomseed(os.time() * 1000) -- set randomseed for math.random()
 
 _ST = _ENV
 
@@ -176,6 +176,7 @@ end
 
 -- | convert a table to string via serialElem for each element
 -- , NOTE: `_serialiseTable({1, nil, 2}, show)` will print as "{1}" instead of "{1,nil,2}"
+-- , NOTE: this function might fail and returns nil when `serialElem` returns nil
 function _serialiseTable(t, serialElem, spliter, head, tail, placeholder)
 	spliter = default(",")(spliter)
 	head = default("{")(head)
@@ -183,14 +184,25 @@ function _serialiseTable(t, serialElem, spliter, head, tail, placeholder)
 	local s = head
 	for i, v in ipairs(t) do
 		if i > 1 then s = s .. spliter end
-		s = s .. serialElem(v)
+		--print("(1) v =", tostring(v))
+		local sv = serialElem(v)
+		if not sv then
+			return nil
+		end
+		s = s .. sv
 	end
 	local sp = #t > 0
 	for k, v in pairs(t) do
 		if type(k) ~= "number" or k > #t then
 			if sp then s = s .. spliter end
 			sp = true
-			s = s .. _literalKey(k) .. "=" .. serialElem(v) --TODO: wrap special key with [] and escape
+			local sk = _literalKey(k)
+			--print("(2) v =", literal(v))
+			local sv = serialElem(v)
+			if not (sk and sv) then
+				return nil
+			end
+			s = s .. sk .. "=" .. sv --TODO: wrap special key with [] and escape
 		end
 	end
 	if not sp and placeholder then
@@ -206,6 +218,7 @@ function literal(...)
 	return _serialiseTable({...}, _literal, ",", "", "", "nil")
 end
 
+-- | fail and return nil when got a function
 function _literal(val)
 	local ty = type(val)
 	if ty == "table" then

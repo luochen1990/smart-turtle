@@ -15,6 +15,7 @@ if turtle then
 		workState.facing = facing
 		F, B, L, R = facing, -facing, leftSide(facing), rightSide(facing)
 		for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ST[d]) end
+		workState.gpsCorrected = true
 		return true
 	end)
 
@@ -36,7 +37,7 @@ if turtle then
 			if not succ then
 				return nil
 			end
-			local p1 = gpsPos(5)
+			local p1 = gpsPos(10)
 			if not p1 then
 				repeat turtle.dig(); turtle.attack() until ( goBack() )
 				return nil
@@ -44,8 +45,7 @@ if turtle then
 			repeat turtle.dig(); turtle.attack() until ( goBack() )
 			local d = calcDir(p1)
 			if vec.manhat(d) ~= 1 then
-				printC(colors.gray)("p0 = "..tostring(p0))
-				printC(colors.gray)("p1 = "..tostring(p1))
+				printC(colors.gray)("p0 = "..tostring(p0)..", p1 = "..tostring(p1))
 				printC(colors.gray)("p0 - p1 = "..tostring(d))
 				log.bug("[_correctCoordinateSystemWithGps] weird gps positoin, please check your gps server")
 				return nil
@@ -70,9 +70,10 @@ if turtle then
 		local ok1 = _correctCoordinateSystemWithGps()
 		if not ok1 then
 			printC(colors.yellow)("WARN: failed to get gps pos and dir!")
+		else
+			os.queueEvent("turtle-posd-ready")
 		end
-		os.queueEvent("turtle-posd-ready")
-		local ok2, fuelStation = retry(5)(requestFuelStation(0))()
+		local ok2, fuelStation = retry(10)(requestFuelStation(0))()
 		if ok2 then
 			workState.fuelStation = fuelStation
 		else
@@ -115,8 +116,9 @@ _initComputerCo = function()
 	if not succ then
 		printC(colors.yellow)("WARN: wireless modem not found!")
 		return false
+	else
+		os.queueEvent("computer-modem-ready")
 	end
-	os.queueEvent("computer-modem-ready")
 	os.queueEvent("computer-ready")
 	return true
 end
@@ -143,13 +145,17 @@ _roleDaemonCo = function()
 		_role = "provider"
 		os.pullEvent("turtle-posd-ready")
 		serveAsProvider()
-	elseif turtle and label == "register" then
-		_role = "register"
+	elseif turtle and label == "unloader" then
+		_role = "unloader"
 		os.pullEvent("turtle-posd-ready")
-		registerPassiveProvider()
+		serveAsUnloader()
+	--elseif turtle and label == "register" then
+	--	_role = "register"
+	--	os.pullEvent("turtle-posd-ready")
+	--	registerPassiveProvider()
 	elseif label == "blinker" then
 		_role = "blinker"
-		os.pullEvent("turtle-posd-ready")
+		os.pullEvent("system-ready")
 		local b = false
 		while true do
 			redstone.setOutput("front", b)
