@@ -181,7 +181,7 @@ if turtle then
 			refuel(fuelReservation)()
 			;(visitStation(sourceStation) * rep(suck()) * visitStation(destStation) * rep(select(slot.isNonEmpty) * drop()))()
 			cnt = cnt + 1
-			if not slot.findThat(slot.isNonEmpty) then
+			if not slot._findThat(slot.isNonEmpty) then
 				printC(colors.gray)("[transportLine] finished "..cnt.." trips, now have a rest for 20 seconds...")
 				sleep(20)
 			else

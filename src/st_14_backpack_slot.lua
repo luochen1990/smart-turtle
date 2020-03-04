@@ -23,42 +23,76 @@ if turtle then
 				return det and det.name == name
 			end
 		end,
+
 		-- | find a specific slot sn, return nil when not find
-		findThat = function(cond, beginSlot) -- find something after beginSlot which satisfy cond
+		_findThat = function(cond, beginSlot) -- find something after beginSlot which satisfy cond
 			for sn = default(1)(beginSlot), const.turtle.backpackSlotsNum do
 				if cond(sn) then return sn end
 			end
 		end,
-		findLastThat = function(cond, beginSlot)
+
+		-- | find from back to front
+		_findLastThat = function(cond, beginSlot)
 			for sn = const.turtle.backpackSlotsNum, default(1)(beginSlot), -1 do
 				if cond(sn) then return sn end
 			end
 		end,
-		find = function(name, beginSlot)
-			return slot.findThat(slot.isNamed(name), beginSlot)
-		end,
-		findLast = function(name, beginSlot)
-			return slot.findLastThat(slot.isNamed(name), beginSlot)
+
+		-- | a polymorphic wrapper of _findThat
+		find = function(slotFilter, beginSlot)
+			if type(slotFilter) == "string" then
+				local name = slotFilter
+				return slot._findThat(slot.isNamed(name), beginSlot)
+			elseif type(slotFilter) == "function" then
+				return slot._findThat(slotFilter)
+			else
+				error("[slot.find(slotFilter)] slotFilter should be string or function")
+			end
 		end,
 
-		-- count item number in the backpack
-		countVia = function(countSingleSlot)
+		-- | a polymorphic wrapper of _findLastThat
+		findLast = function(slotFilter, beginSlot)
+			if type(slotFilter) == "string" then
+				local name = slotFilter
+				return slot._findLastThat(slot.isNamed(name), beginSlot)
+			elseif type(slotFilter) == "function" then
+				return slot._findLastThat(slotFilter)
+			else
+				error("[slot.findLast(slotFilter)] slotFilter should be string or function")
+			end
+		end,
+
+		-- | count item number in the backpack
+		-- , countSingleSlot(sn) = c  where c is either number or boolean
+		_countVia = function(countSingleSlot)
 			local cnt = 0
 			for sn = 1, const.turtle.backpackSlotsNum do
 				local n = countSingleSlot(sn)
+				if type(n) == "boolean" then
+					if n == true then n = 1 else n = 0 end
+				end
 				if n then cnt = cnt + n end
 			end
 			return cnt
 		end,
-		count = function(name)
-			return slot.countVia(function(sn)
-				local det = turtle.getItemDetail(sn)
-				if det and det.name == name then return det.count else return 0 end
-			end)
+
+		-- | a polymorphic wrapper of _countVia
+		count = function(slotCounter)
+			if type(slotCounter) == "string" then
+				local name = slotCounter
+				return slot._countVia(function(sn)
+					local det = turtle.getItemDetail(sn)
+					if det and det.name == name then return det.count else return 0 end
+				end)
+			elseif type(slotCounter) == "function" then
+				return slot._countVia(slotCounter)
+			else
+				error("[slot.count(slotCounter)] slotCounter should be string or function")
+			end
 		end,
 
-		-- tidy slot
-		fill = function(sn) -- use items in slots after sn to make slot sn as full as possible
+		-- | fill a slot using items from slots behind this slot
+		fill = function(sn)
 			local saved_sn = turtle.getSelectedSlot()
 			sn = default(saved_sn)(sn)
 			local det = turtle.getItemDetail(sn)
@@ -78,6 +112,8 @@ if turtle then
 			turtle.select(saved_sn)
 			return count ~= 0
 		end,
+
+		-- | tidy backpack slots
 		tidy = function()
 			for sn = 1, const.turtle.backpackSlotsNum do slot.fill(sn) end
 		end,
@@ -90,7 +126,7 @@ if turtle then
 			local sn = slot.find(selector)
 			return sn ~= nil and turtle.select(sn)
 		elseif type(selector) == "function" then
-			local sn = slot.findThat(selector)
+			local sn = slot._findThat(selector)
 			return sn ~= nil and turtle.select(sn)
 		elseif type(selector) == "table" and type(selector.run) == "function" then
 			return select(selector())()
@@ -104,7 +140,7 @@ if turtle then
 			local sn = slot.findLast(selector)
 			return sn ~= nil and turtle.select(sn)
 		elseif type(selector) == "function" then
-			local sn = slot.findLastThat(selector)
+			local sn = slot._findLastThat(selector)
 			return sn ~= nil and turtle.select(sn)
 		else
 			error("[selectLast(selector)] type of selector cannot be "..tostring(selector))
@@ -113,7 +149,7 @@ if turtle then
 
 	-- | find some cheap item slot to drop
 	dropCheapItemSlot = function()
-		local dropSn = slot.findThat(slot.isCheap)
+		local dropSn = slot._findThat(slot.isCheap)
 		if dropSn then
 			local saved_sn = turtle.getSelectedSlot()
 			turtle.select(dropSn)
@@ -123,7 +159,7 @@ if turtle then
 		end
 	end
 
-	backpackEmpty = -mkIO(slot.findThat, slot.isNonEmpty)
+	backpackEmpty = -mkIO(slot._findThat, slot.isNonEmpty)
 
 	cryForHelpUnloading = function()
 		log.cry("Help me! I need to unload backpack at "..show(workState.pos))
@@ -167,11 +203,11 @@ if turtle then
 	-- | tidy backpack to reserve 1 empty slot
 	-- , when success, return the sn of the reserved empty slot
 	reserveOneSlot = mkIO(function() -- tidy backpack to reserve 1 empty slot
-		local sn = slot.findLastThat(slot.isEmpty)
+		local sn = slot._findLastThat(slot.isEmpty)
 		if sn then return sn end
 		-- tidy backpack
 		slot.tidy()
-		sn = slot.findLastThat(slot.isEmpty)
+		sn = slot._findLastThat(slot.isEmpty)
 		if sn then return sn end
 		if not workState.isUnloading then -- avoid recursion
 			if not workMode.keepCheapItems then
@@ -180,7 +216,7 @@ if turtle then
 			end
 			if workMode.allowInterruption then
 				local ok = unloadBackpack()
-				if ok then return slot.findLastThat(slot.isEmpty) end
+				if ok then return slot._findLastThat(slot.isEmpty) end
 			end
 		else
 			return dropCheapItemSlot()

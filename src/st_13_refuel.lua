@@ -12,7 +12,7 @@ if turtle then
 		nStep = math.max(1 , nStep)
 		local saved_sn = turtle.getSelectedSlot()
 		while turtle.getFuelLevel() < nStep do
-			local fuelSn = slot.findThat(slot.isFuel)
+			local fuelSn = slot._findThat(slot.isFuel)
 			if fuelSn then
 				turtle.select(fuelSn)
 				local det = turtle.getItemDetail(fuelSn)
