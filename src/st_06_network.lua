@@ -3,10 +3,10 @@
 _consoleLoggerBuilder = function(serviceName, protocol)
 	return {
 		verb = function(msg) end,
-		info = function(msg) printC(colors.gray  )(os.time().." ["..serviceName.."] "..msg) end,
-		succ = function(msg) printC(colors.green )(os.time().." ["..serviceName.."] "..msg) end,
-		fail = function(msg) printC(colors.yellow)(os.time().." ["..serviceName.."] "..msg) end,
-		warn = function(msg) printC(colors.orange)(os.time().." ["..serviceName.."] "..msg) end,
+		info = function(msg) printM(colors.gray  )(os.time().." ["..serviceName.."] "..msg) end,
+		succ = function(msg) printM(colors.green )(os.time().." ["..serviceName.."] "..msg) end,
+		fail = function(msg) printM(colors.yellow)(os.time().." ["..serviceName.."] "..msg) end,
+		warn = function(msg) printM(colors.orange)(os.time().." ["..serviceName.."] "..msg) end,
 	}
 end
 

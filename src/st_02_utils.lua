@@ -352,6 +352,41 @@ writeLines = function(fileHandle, ls, mode)
 	end
 end
 
+------------------------------- peripheral utils -------------------------------
+
+function findPeripheral(deviceType, sides)
+	sides = default( peripheral.getNames() )(sides)
+	for _, side in ipairs(sides) do
+		if peripheral.getType(side) == deviceType then
+			return peripheral.wrap(side)
+		end
+	end
+end
+
+_monitor = findPeripheral("monitor")
+
+function printM(fg, bg)
+	if _monitor then
+		return markFn("printM(fg, bg)(...)")(function(...)
+			local old_term = term.redirect(_monitor)
+			printC(fg, bg)(...)
+			term.redirect(old_term)
+		end)
+	else
+		return printC(fg, bg)
+	end
+end
+
+function writeM(fg, bg)
+	if _monitor then
+		return markFn("writeM(fg, bg)(...)")(function(...)
+			return withColor(fg, bg)(delay(_monitor.write, ...))()
+		end)
+	else
+		return writeC(fg, bg)
+	end
+end
+
 --------------------------------- rednet utils ---------------------------------
 
 function openWirelessModem()

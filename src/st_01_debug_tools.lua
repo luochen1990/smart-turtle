@@ -64,27 +64,28 @@ markIOfn2 = function(name)
 	end
 end
 
-withColor = function(fg, bg)
+withColor = function(fg, bg, _term)
+	local t = default(term)(_term)
 	return (mkIOfn(function(io)
-		local saved_fg = term.getTextColor()
-		local saved_bg = term.getBackgroundColor()
-		term.setTextColor(default(saved_fg)(fg))
-		term.setBackgroundColor(default(saved_bg)(bg))
+		local saved_fg = t.getTextColor()
+		local saved_bg = t.getBackgroundColor()
+		t.setTextColor(default(saved_fg)(fg))
+		t.setBackgroundColor(default(saved_bg)(bg))
 		local r = {io()}
-		term.setTextColor(saved_fg)
-		term.setBackgroundColor(saved_bg)
+		t.setTextColor(saved_fg)
+		t.setBackgroundColor(saved_bg)
 		return unpack(r)
 	end))
 end
 
 printC = function(fg, bg)
-	return markFn("printC(fg, bg)(io)")(function(...)
+	return markFn("printC(fg, bg)(...)")(function(...)
 		return withColor(fg, bg)(delay(print, ...))()
 	end)
 end
 
 writeC = function(fg, bg)
-	return markFn("writeC(fg, bg)(io)")(function(...)
+	return markFn("writeC(fg, bg)(...)")(function(...)
 		return withColor(fg, bg)(delay(write, ...))()
 	end)
 end
