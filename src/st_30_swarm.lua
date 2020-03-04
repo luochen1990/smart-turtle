@@ -26,6 +26,7 @@ mkStationInfo = function(opts)
 		reservation = opts.reservation,
 		restockPriority = opts.restockPriority,
 		itemType = opts.itemType,
+		itemStackLimit = opts.itemStackLimit,
 		stationHosterId = opts.stationHosterId,
 		-- states
 		itemCount = opts.itemCount or 0,
@@ -415,6 +416,7 @@ serveAsProvider = mkIO(function()
 		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
 		itemType = nil,
+		itemStackLimit = nil,
 		limitation = 0,
 		deliverPriority = 0, --passive provider
 		stationHosterId = os.getComputerID()
@@ -423,8 +425,9 @@ serveAsProvider = mkIO(function()
 	local registerCo = function()
 		printC(colors.gray)("[provider] detecting item")
 		local det = retry((select(slot.isNonEmpty) + getAndHold(1)) * details())()
-		printC(colors.green)("[provider] got "..det.name)
 		stationDef.itemType = det.name
+		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
+		printC(colors.green)("[provider] got "..det.name)
 		local _reg = function()
 			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
 			if not ok then
@@ -523,7 +526,7 @@ serveAsUnloader = mkIO(function()
 	end
 
 	local keepDroppingCo = function()
-		with({allowInterruption = false})(rep(retry(isChest * drop())))()
+		with({allowInterruption = false})(rep(retry(isChest * select(slot.isNonEmpty) * drop())))()
 	end
 
 	local inventoryCount = {
@@ -546,7 +549,7 @@ serveAsUnloader = mkIO(function()
 			sleep(5)
 			if inventoryCount.isDirty then
 				slot.tidy()
-				local cnt = slot.count(slot.isEmpty)
+				local cnt = slot.count(slot.isNonEmpty)
 				if cnt ~= inventoryCount.lastReport then
 					print(os.time().." current count: "..cnt)
 					info.itemCount = cnt
@@ -620,8 +623,14 @@ requestFuelStation = mkIOfn(function(nStep)
 	return false, "no fuel station available, swarm._state.asFuel = "..literal(swarm._state.asFuel)
 end)
 
-requestUnloadStation = mkIOfn(function(spaceCount)
-	return O and {pos = O + B + U * 2, dir = B}
+requestUnloadStation = mkIOfn(function(emptySlotRequired)
+	local requestSucc, res = requestStation("*anything", 0)() --TODO: calc slot number
+	if not requestSucc then
+		log.warn("[requestUnloadStation] request failed: "..res)
+		return false, res
+	else
+		return unpack(res)
+	end
 end)
 
 -- | a tool to visit station robustly
