@@ -106,14 +106,14 @@ end
 --------------------------------- swarm service --------------------------------
 
 swarm._startService = (function()
-	local runServer = _buildServer("swarm", "swarm-service", function(msg)
+	local serviceCo = _buildServer("swarm", "swarm-service", function(msg)
 		return safeEval(msg) --TODO: set proper env
 	end)
 
 	local daemonCo = function()
 	end
 
-	return para_(runServer, daemonCo)
+	return para_(serviceCo, daemonCo)
 end)()
 
 --swarm._startService = function()
@@ -624,6 +624,14 @@ serveAsStorage = mkIO(function()
 
 	registerCo()
 	para_(keepDroppingCo, _updateInventoryCo(stationDef))()
+end)
+
+serveAsCarrier = mkIO(function()
+	local serviceCo = _buildServer("swarm-carrier", "swarm-carrier-service", function(msg)
+		return safeEval(msg) --TODO: set proper env
+	end)
+
+	serviceCo()
 end)
 
 --registerActiveProvider = mkIO(function()
