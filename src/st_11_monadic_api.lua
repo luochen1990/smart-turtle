@@ -115,6 +115,47 @@ if turtle then
 		return ( reserveOneSlot * select(slot.isEmpty) * _aiming.suck(n) )()
 	end))
 
+	suckExact = markIOfn("suckExact(n, itemName)")(mkIOfn(function(n, itemName)
+		local old_sn = selected()
+		local got = 0
+		while got < n do
+			local ok = suckHold(n - got)()
+			if ok then
+				local det = details()
+				if not itemName or det.name == itemName then
+					got = got + det.count
+				else
+					saveDir( turn.lateral * drop )()
+				end
+			else
+				break
+			end
+		end
+		selected(old_sn)
+		return got == n
+	end))
+
+	dropExact = markIOfn("dropExact(n, itemName)")(mkIOfn(function(n, itemName)
+		local old_sn = turtle.getSelectedSlot()
+		local dropped = 0
+		while dropped < n do
+			if select(itemName) then
+				local got = math.min(n - dropped, turtle.getItemCount())
+				local ok = drop(got)()
+				if ok then
+					local left = turtle.getItemCount()
+					dropped = dropped + (got - left)
+				else -- chest is full
+					break
+				end
+			else -- nothing to drop
+				break
+			end
+		end
+		turtle.select(old_sn)
+		return dropped == n
+	end))
+
 	-- | different from turtle.inspect, this only returns res
 	inspect = markIO("inspect")(mkIO(function()
 		ok, res = _aiming.inspect()
