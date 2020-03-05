@@ -33,8 +33,10 @@ if turtle then
 	end))
 
 	cryForHelpRefueling = markIOfn("cryForHelpRefueling(nStep)")(mkIOfn(function(nStep)
+		workState.cryingFor = "refueling"
 		log.cry("Help me! I need "..nStep.." fuel at "..show(workState.pos))
 		with({asFuel = false})(retry(refuelFromBackpack(nStep)))()
+		workState.cryingFor = nil
 	end))
 
 	-- | the refuel interruption
@@ -58,7 +60,7 @@ if turtle then
 			-- got fresh fuelStation here
 			print("Visiting fuel station "..show(workState.fuelStation.pos).."...")
 			local leavePos, fuelBeforeLeave = workState.pos, turtle.getFuelLevel()
-			with({workArea = false})(visitStation(workState.fuelStation))()
+			with({workArea = false})(cryingVisitStation(workState.fuelStation))()
 			-- arrived fuelStation here
 			local cost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
 			singleTripCost = singleTripCost + cost

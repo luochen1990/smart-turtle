@@ -711,7 +711,7 @@ function _robustVisitStation(opts)
 		-- got fresh station here
 		opts.beforeLeave(triedTimes, singleTripCost, station)
 		local leavePos, fuelBeforeLeave = workState.pos, turtle.getFuelLevel()
-		with({workArea = false})(visitStation(station))()
+		with({workArea = false})(cryingVisitStation(station))()
 		-- arrived station here
 		local cost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
 		local singleTripCost_ = singleTripCost + cost

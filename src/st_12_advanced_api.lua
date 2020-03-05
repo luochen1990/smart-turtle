@@ -2,6 +2,15 @@
 
 if turtle then
 
+	cryForHelpMoving = markIOfn("cryForHelpMoving(beginPos, destPos)")(mkIOfn(function(beginPos, destPos)
+		workState.cryingFor = "moving"
+		log.cry("Cannot move from "..show(beginPos).." to "..show(destPos)..", please help")
+		printC(colors.green)("Press Ctrl+G to continue...")
+		_waitForKeyCombination(keys.leftCtrl, keys.g)
+		workState.cryingFor = nil
+		move.to(destPos)
+	end))
+
 	-- | attempt to approach destPos by one step
 	move.toward = markIOfn("move.toward(destPos, cond)")(function(destPos, cond)
 		return mkIO(function()
@@ -162,30 +171,33 @@ if turtle then
 	end)
 
 	visitStation = markIOfn("visitStation(station)")(mkIOfn(function(station)
-		assert(station.pos and station.dir, "[_visitStation] station.pos and station.dir is required!")
-		local succ = (move.to(station.pos) * turn.to(station.dir))()
-		if not succ then
-			print("Failed to visit station "..tostring(station.pos)..", please help!")
-			--TODO: tell the swarm server
-			while true do sleep(1000000) end --waiting for help
-		end
-		return true
+		assert(station.pos and station.dir, "[visitStation] station.pos and station.dir is required!")
+		return (move.to(station.pos) * turn.to(station.dir))()
 	end))
 
-	transportLine = markIOfn("transportLine(sourceStation, destStation, fuelStation)")(mkIOfn(function(sourceStation, destStation, fuelStation)
-		if fuelStation then workState.fuelStation = fuelStation end
-		if not workState.fuelStation then error("[transportLine] fuelStation must be provided") end
-		local fuelReservation = 2 * vec.manhat(destStation.pos - sourceStation.pos) + vec.manhat(destStation.pos - workState.fuelStation.pos) + vec.manhat(sourceStation.pos - workState.fuelStation.pos)
+	cryingVisitStation = markIOfn("cryingVisitStation(station)")(function(station)
+		assert(station.pos and station.dir, "[cryingVisitStation] station.pos and station.dir is required!")
+		local leavePos = workState.pos
+		return visitStation(station) + cryForHelpMoving(leavePos, station.pos) * turn.to(station.dir)
+	end)
+
+	carry = markIOfn("carry(from, to, count, name)")(mkIOfn(function(from, to, count, name)
+		return (visitStation(from) * suckExact(count, name) * visitStation(to) * dropExact(count, name))()
+	end))
+
+	transportLine = markIOfn("transportLine(from, to)")(mkIOfn(function(from, to)
+		if not workState.fuelStation then error("[transportLine] please set a fuel provider") end
+		local fuelReservation = 2 * vec.manhat(to.pos - from.pos) + vec.manhat(to.pos - workState.fuelStation.pos) + vec.manhat(from.pos - workState.fuelStation.pos)
 		local cnt = 0
 		while true do
 			refuel(fuelReservation)()
-			;(visitStation(sourceStation) * rep(suck()) * visitStation(destStation) * rep(select(slot.isNonEmpty) * drop()))()
+			;(cryingVisitStation(from) * rep(suck()) * cryingVisitStation(to) * rep(select(slot.isNonEmpty) * drop()))()
 			cnt = cnt + 1
 			if not slot._findThat(slot.isNonEmpty) then
 				printC(colors.gray)("[transportLine] finished "..cnt.." trips, now have a rest for 20 seconds...")
 				sleep(20)
 			else
-				printC(colors.gray)("[transportLine] the destStation chest is full, waiting for space...")
+				printC(colors.gray)("[transportLine] the dest chest is full, waiting for space...")
 				;(retry(select(slot.isNonEmpty) * drop()) * rep(select(slot.isNonEmpty) * drop()))()
 			end
 		end

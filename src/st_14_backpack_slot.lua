@@ -172,8 +172,10 @@ if turtle then
 	backpackEmpty = -mkIO(slot._findThat, slot.isNonEmpty)
 
 	cryForHelpUnloading = function()
+		workState.cryingFor = "unloading"
 		log.cry("Help me! I need to unload backpack at "..show(workState.pos))
 		retry(backpackEmpty)
+		workState.cryingFor = nil
 	end
 
 	-- | the unload interrput: back to unload station and clear the backpack
