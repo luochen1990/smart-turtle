@@ -21,9 +21,9 @@ mkStationInfo = function(opts)
 	local s = {
 		pos = opts.pos,
 		dir = opts.dir,
-		limitation = opts.limitation,
+		deliverBar = opts.deliverBar,
 		deliverPriority = opts.deliverPriority,
-		reservation = opts.reservation,
+		restockBar = opts.restockBar,
 		restockPriority = opts.restockPriority,
 		itemType = opts.itemType,
 		itemStackLimit = opts.itemStackLimit,
@@ -35,7 +35,8 @@ mkStationInfo = function(opts)
 		maxQueueLength = default(5)(opts.maxQueueLength),
 		--latestCheckTime = now() - 100,
 	}
-	assert(s.pos and ((s.limitation and s.deliverPriority) or (s.reservation and s.restockPriority)), "[mkStationInfo(opts)] lacks required field")
+	assert(s.pos and ((s.deliverBar and s.deliverPriority) or (s.restockBar and s.restockPriority)), "[mkStationInfo(opts)] lacks required field")
+	assert(not (s.deliverBar and s.restockBar) or (s.deliverBar >= s.restockBar), "[mkStationInfo(opts)] expect s.deliverBar >= s.restockBar")
 	return s
 end
 
@@ -395,7 +396,7 @@ registerPassiveProvider = mkIO(function()
 		pos = workState.pos,
 		dir = workState:aimingDir(),
 		itemType = det.name,
-		limitation = 0,
+		deliverBar = 0,
 		deliverPriority = 0, --passive provider
 	}
 	return swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
@@ -455,7 +456,7 @@ serveAsProvider = mkIO(function()
 		dir = workState:aimingDir(),
 		itemType = nil,
 		itemStackLimit = nil,
-		limitation = 0,
+		deliverBar = 0,
 		deliverPriority = 0, --passive provider
 		stationHosterId = os.getComputerID()
 	}
@@ -506,7 +507,7 @@ serveAsUnloader = mkIO(function()
 		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
 		itemType = "*anything", -- NOTE: this is a special constant value
-		limitation = 0,
+		deliverBar = 0,
 		deliverPriority = 0, --passive provider
 		stationHosterId = os.getComputerID()
 	}
@@ -541,7 +542,48 @@ serveAsRequester = mkIO(function()
 		dir = workState:aimingDir(),
 		itemType = nil,
 		itemStackLimit = nil,
-		reservation = 1,
+		restockBar = 1,
+		restockPriority = 1,
+		stationHosterId = os.getComputerID()
+	}
+
+	local registerCo = function()
+		printC(colors.gray)("[requester] detecting item")
+		local det = retry((select(slot.isNonEmpty) + suckHold(1)) * details())()
+		stationDef.itemType = det.name
+		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
+		printC(colors.green)("[requester] got "..det.name)
+		local _reg = function()
+			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
+			if not ok then
+				log.cry("[requester] failed to register station (network error): "..literal(res))
+				return false
+			end
+			if not table.remove(res, 1) then
+				log.cry("[requester] failed to register station (logic error): "..literal(res))
+				return false
+			end
+			log.info("[requester] requester of " .. stationDef.itemType .. " registered at " .. show(stationDef.pos))
+			return true
+		end
+		retry(_reg)()
+	end
+
+	local keepDroppingCo = rep(retry(isChest * select(slot.isNonEmpty) * drop()))
+
+	registerCo()
+	para_(keepDroppingCo, _updateInventoryCo(stationDef))()
+end)
+
+serveAsStorage = mkIO(function()
+	local stationDef = {
+		pos = workState.pos - workState:aimingDir(),
+		dir = workState:aimingDir(),
+		itemType = nil,
+		itemStackLimit = nil,
+		deliverBar = const.turtle.backpackSlotsNum * 0.75,
+		deliverPriority = 1,
+		restockBar = const.turtle.backpackSlotsNum * 0.25,
 		restockPriority = 1,
 		stationHosterId = os.getComputerID()
 	}
@@ -577,7 +619,7 @@ end)
 --registerActiveProvider = mkIO(function()
 --	local stationDef = {
 --		pos = gpsPos(),
---		limitation = 0,
+--		deliverBar = 0,
 --		deliverPriority = 98, --passive provider
 --	}
 --	rednet.send({
@@ -587,7 +629,7 @@ end)
 --registerBuffer = mkIO(function()
 --	local stationDef = {
 --		pos = gpsPos(),
---		reservation = 15,
+--		restockBar = 15,
 --		restockPriority = 89,
 --	}
 --	rednet.send({
@@ -597,7 +639,7 @@ end)
 --registerRequester = mkIO(function()
 --	local stationDef = {
 --		pos = gpsPos(),
---		reservation = 15,
+--		restockBar = 15,
 --		restockPriority = 99,
 --	}
 --	rednet.send({
