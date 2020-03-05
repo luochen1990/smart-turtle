@@ -105,9 +105,16 @@ end
 
 --------------------------------- swarm service --------------------------------
 
-swarm._startService = _buildServer("swarm", "swarm-service", function(msg)
-	return safeEval(msg) --TODO: set proper env
-end)
+swarm._startService = (function()
+	local runServer = _buildServer("swarm", "swarm-service", function(msg)
+		return safeEval(msg) --TODO: set proper env
+	end)
+
+	local daemonCo = function()
+	end
+
+	return para_(runServer, daemonCo)
+end)()
 
 --swarm._startService = function()
 --	local eventQueue = {}
@@ -542,8 +549,8 @@ serveAsRequester = mkIO(function()
 		dir = workState:aimingDir(),
 		itemType = nil,
 		itemStackLimit = nil,
-		restockBar = 1,
-		restockPriority = 1,
+		restockBar = const.turtle.backpackSlotsNum,
+		restockPriority = 100,
 		stationHosterId = os.getComputerID()
 	}
 
@@ -552,6 +559,7 @@ serveAsRequester = mkIO(function()
 		local det = retry((select(slot.isNonEmpty) + suckHold(1)) * details())()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
+		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 1.0
 		printC(colors.green)("[requester] got "..det.name)
 		local _reg = function()
 			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
@@ -581,30 +589,32 @@ serveAsStorage = mkIO(function()
 		dir = workState:aimingDir(),
 		itemType = nil,
 		itemStackLimit = nil,
-		deliverBar = const.turtle.backpackSlotsNum * 0.75,
-		deliverPriority = 1,
 		restockBar = const.turtle.backpackSlotsNum * 0.25,
-		restockPriority = 1,
+		restockPriority = 1, --NOTE: lower than requester
+		deliverBar = const.turtle.backpackSlotsNum * 0.75,
+		deliverPriority = 1, --NOTE: higher than provider
 		stationHosterId = os.getComputerID()
 	}
 
 	local registerCo = function()
-		printC(colors.gray)("[requester] detecting item")
+		printC(colors.gray)("[storage] detecting item")
 		local det = retry((select(slot.isNonEmpty) + suckHold(1)) * details())()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
-		printC(colors.green)("[requester] got "..det.name)
+		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.25
+		stationDef.deliverBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.75
+		printC(colors.green)("[storage] got "..det.name)
 		local _reg = function()
 			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
 			if not ok then
-				log.cry("[requester] failed to register station (network error): "..literal(res))
+				log.cry("[storage] failed to register station (network error): "..literal(res))
 				return false
 			end
 			if not table.remove(res, 1) then
-				log.cry("[requester] failed to register station (logic error): "..literal(res))
+				log.cry("[storage] failed to register station (logic error): "..literal(res))
 				return false
 			end
-			log.info("[requester] requester of " .. stationDef.itemType .. " registered at " .. show(stationDef.pos))
+			log.info("[storage] storage of " .. stationDef.itemType .. " registered at " .. show(stationDef.pos))
 			return true
 		end
 		retry(_reg)()

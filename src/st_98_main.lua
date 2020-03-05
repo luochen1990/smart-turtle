@@ -170,6 +170,10 @@ _roleDaemonCo = function()
 		_role = "requester"
 		os.pullEvent("turtle-posd-ready")
 		serveAsRequester()
+	elseif turtle and label == "storage" then
+		_role = "storage"
+		os.pullEvent("turtle-posd-ready")
+		serveAsStorage()
 	--elseif turtle and label == "register" then
 	--	_role = "register"
 	--	os.pullEvent("turtle-posd-ready")
