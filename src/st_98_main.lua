@@ -47,7 +47,7 @@ if turtle then
 			if vec.manhat(d) ~= 1 then
 				printC(colors.gray)("p0 = "..tostring(p0)..", p1 = "..tostring(p1))
 				printC(colors.gray)("p0 - p1 = "..tostring(d))
-				log.bug("[_correctCoordinateSystemWithGps] weird gps positoin, please check your gps server")
+				log.bug("[_correctCoordinateSystemWithGps] weird gps positoin, please check your gps server (p0 = " .. show(p0) .. " p1 = " .. show(p1) .. " d = " .. show(d))
 				return nil
 			end
 			return d
@@ -108,7 +108,7 @@ _inspectCo = function()
 			end
 		end
 	end
-	race_(_printCallStackCo, _inspectSystemStateCo)()
+	para_(_printCallStackCo, _inspectSystemStateCo)()
 end
 
 _initComputerCo = function()
@@ -166,6 +166,10 @@ _roleDaemonCo = function()
 		_role = "unloader"
 		os.pullEvent("turtle-posd-ready")
 		serveAsUnloader()
+	elseif turtle and label == "requester" then
+		_role = "requester"
+		os.pullEvent("turtle-posd-ready")
+		serveAsRequester()
 	--elseif turtle and label == "register" then
 	--	_role = "register"
 	--	os.pullEvent("turtle-posd-ready")
