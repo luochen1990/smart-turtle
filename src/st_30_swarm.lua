@@ -54,7 +54,7 @@ end
 
 swarm = {
 	_state = {
-		asFuel = {"minecraft:charcoal", "minecraft:blue_carpet", "minecraft:light_gray_carpet"},
+		asFuel = {"minecraft:charcoal", "minecraft:white_carpet", "minecraft:blue_carpet", "minecraft:light_gray_carpet"},
 		stationPool = {},
 		workerPool = {},
 		jobPool = {},
