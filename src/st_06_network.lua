@@ -1,6 +1,8 @@
 -------------------------------- network utils ---------------------------------
 
-_consoleLoggerBuilder = function(protocol, hostname)
+rpc = {}
+
+rpc._consoleLoggerBuilder = function(protocol, hostname)
 	return {
 		verb = function(msg) end,
 		info = function(msg) printM(colors.gray  )(os.time().." ["..protocol.."] "..msg) end,
@@ -11,82 +13,106 @@ _consoleLoggerBuilder = function(protocol, hostname)
 end
 
 -- | build a server, returns an IO to start the server
--- , listenProtocol is used for both request receiving and service discovery
--- , handler is a function like `function(unwrappedMsg) return requestValid, logicResultTable end`
--- , the response contains an extra boolean, means whether the request reaches the handler
-_buildServer = function(listenProtocol, handler, logger)
+-- , `listenProtocol` is used for both request receiving and service discovery
+-- , `servingMode` is one of "queuing", "blocking", "aborting"
+-- , `handler` is a function like `function(unwrappedMsg) return requestValid, logicResultTable end`
+-- , about the response message:
+-- , * the response message is serialised like `literal(ok, res)`
+-- , * first is an extra boolean, means whether the request reaches the handler
+-- , * second is packed values returned by the handler
+rpc.buildServer = function(listenProtocol, servingMode, handler, logger)
+	assert(type(listenProtocol) == "string", "[rpc.buildServer] listenProtocol must be string")
+	assert(servingMode == "queuing" or servingMode == "blocking" or servingMode == "aborting", "[rpc.buildServer] servingMode must be queuing/blocking/aborting")
+
 	local hostname = os.getComputerID()..":"..math.random(0,9999)
 	handler = default(safeEval)(handler)
-	logger = default(_consoleLoggerBuilder(listenProtocol, hostname))(logger)
+	logger = default(rpc._consoleLoggerBuilder(listenProtocol, hostname))(logger)
 
-	return mkIO(function()
-		local eventQueue = {}
-		local listenCo = function()
-			rednet.host(listenProtocol, hostname)
-			logger.info("start serving as "..literal(listenProtocol, hostname))
-			while true do
-				logger.verb("listening on "..literal(listenProtocol))
-				local senderId, rawMsg, _ = rednet.receive(listenProtocol)
-				logger.verb("received from " .. senderId .. ": " .. rawMsg)
-				table.insert(eventQueue, {senderId, rawMsg})
-			end
-		end
-		local handleCo = function()
-			local sleepInterval = 1
-			while true do
-				if #eventQueue == 0 then
-					sleepInterval = math.min(0.5, sleepInterval * 1.1)
-					logger.verb("waiting "..sleepInterval)
-					sleep(sleepInterval)
-				else -- if #eventQueue > 0 then
-					logger.verb("handling "..#eventQueue)
-					sleepInterval = 0.02
-					local requesterId, rawMsg = unpack(table.remove(eventQueue, 1))
-					logger.info("from " .. requesterId .. ": "..rawMsg)
+	local processEvent = function(requesterId, rawMsg)
+		logger.info("from " .. requesterId .. ": "..rawMsg)
 
-					local resp, responseProtocol, reqId
+		local resp, responseProtocol, reqId
 
-					local ok1, parsed = safeEval(rawMsg)
-					if not ok1 then
-						resp = literal(false, "invalid request format (E1)")
-						logger.warn("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
-						--log.warn("protocol error (E1): "..literal({rawMsg = rawMsg, parseErr = parsed}))
+		local ok1, parsed = safeEval(rawMsg)
+		if not ok1 then
+			resp = literal(false, "invalid request format (E1)")
+			logger.warn("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
+			--log.warn("protocol error (E1): "..literal({rawMsg = rawMsg, parseErr = parsed}))
+		else
+			local proto, msg = unpack(parsed)
+			local ok2 = ( type(proto) == "string" )
+			ok2 = ok2 and ( string.sub(proto, 1, #listenProtocol) == listenProtocol )
+			if not ok2 then
+				resp = literal(false, "invalid request format (E2)")
+				logger.warn("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
+				--log.warn("protocol error (E2): proto = "..literal(proto))
+			else
+				responseProtocol = proto
+				reqId = string.sub(proto, #listenProtocol + 2)
+				local ok3, res = handler(msg)
+				if not ok3 then
+					resp = literal(false, "bad request (E3): "..literal(res))
+					logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
+				else
+					resp = literal(true, res)
+					local ok, r = unpack(res)
+					if ok then
+						logger.succ("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
 					else
-						local proto, msg = unpack(parsed)
-						local ok2 = ( type(proto) == "string" )
-						ok2 = ok2 and ( string.sub(proto, 1, #listenProtocol) == listenProtocol )
-						if not ok2 then
-							resp = literal(false, "invalid request format (E2)")
-							logger.warn("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
-							--log.warn("protocol error (E2): proto = "..literal(proto))
-						else
-							responseProtocol = proto
-							reqId = string.sub(proto, #listenProtocol + 2)
-							local ok3, res = handler(msg)
-							if not ok3 then
-								resp = literal(false, "bad request (E3): "..literal(res))
-								logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
-							else
-								resp = literal(true, res)
-								local ok, r = unpack(res)
-								if ok then
-									logger.succ("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
-								else
-									logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
-								end
-							end
-						end
+						logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
 					end
-					rednet.send(requesterId, resp, responseProtocol)
 				end
 			end
 		end
-		parallel.waitForAny(listenCo, handleCo)
-		return true
-	end)
+		return requesterId, resp, responseProtocol
+	end
+
+	if servingMode == "queuing" then
+		return mkIO(function()
+			local eventQueue = {}
+			local listenCo = function()
+				rednet.host(listenProtocol, hostname)
+				logger.info("start serving as "..literal(listenProtocol, hostname))
+				while true do
+					logger.verb("listening on "..literal(listenProtocol))
+					local senderId, rawMsg, _ = rednet.receive(listenProtocol)
+					logger.verb("received from " .. senderId .. ": " .. rawMsg)
+					table.insert(eventQueue, {senderId, rawMsg})
+				end
+			end
+			local handleCo = function()
+				local sleepInterval = 1
+				while true do
+					if #eventQueue == 0 then
+						sleepInterval = math.min(0.5, sleepInterval * 1.1)
+						logger.verb("waiting "..sleepInterval)
+						sleep(sleepInterval)
+					else -- if #eventQueue > 0 then
+						logger.verb("handling "..#eventQueue)
+						sleepInterval = 0.02
+						local requesterId, resp, responseProtocol = processEvent(unpack(table.remove(eventQueue, 1)))
+						rednet.send(requesterId, resp, responseProtocol)
+					end
+				end
+			end
+			parallel.waitForAny(listenCo, handleCo)
+			return true
+		end)
+	elseif servingMode == "blocking" then
+		return mkIO(function()
+			rednet.host(listenProtocol, hostname)
+			while true do
+				local requesterId, rawMsg = rednet.receive(listenProtocol)
+				local _, resp, responseProtocol = processEvent(requesterId, rawMsg)
+				rednet.send(requesterId, resp, responseProtocol)
+			end
+		end)
+	elseif servingMode == "aborting" then
+		error("[rpc.buildServer] aborting mode not implemented yet")
+	end
 end
 
-_buildClient = function(requestProtocol, knownServer)
+rpc.buildClient = function(requestProtocol, knownServer)
 	local _counter = math.random(0, 9999)
 	local _knownServer = knownServer
 	local _findServer = function() return rednet.lookup(requestProtocol) end

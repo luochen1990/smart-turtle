@@ -8,7 +8,7 @@ mkTaskInfo = function(opts) -- not used yet
 		estCost = opts.estCost,
 		requiredTools = opts.requiredTools,
 		command = opts.command,
-		state = "queueing",
+		state = "queuing",
 		createdTime = now(),
 		beginTime = nil,
 		workerId = nil,
@@ -108,7 +108,7 @@ swarm = {
 --------------------------------- swarm service --------------------------------
 
 swarm._startService = (function()
-	local serviceCo = _buildServer("swarm", function(msg)
+	local serviceCo = rpc.buildServer("swarm", "queuing", function(msg)
 		return safeEval(msg) --TODO: set proper env
 	end)
 
@@ -155,7 +155,7 @@ swarm._startService = (function()
 	end
 
 	local daemonCo = function()
-		local carrierClient = _buildClient("swarm-carrier")
+		local carrierClient = rpc.buildClient("swarm-carrier")
 		sleep(5)
 		printC(colors.gray)("begin finding carrier task...")
 		while true do
@@ -337,7 +337,7 @@ end
 ---- , serviceName is for service lookup
 ---- , listenProtocol is for request receiving
 ---- , handler is a function like `function(unwrappedMsg) return ok, res end`
---_buildService = function(serviceName, listenProtocol, handler, logger)
+--rpc.buildService = function(serviceName, listenProtocol, handler, logger)
 --	handler = default(safeEval)(handler)
 --	logger = default({
 --		--verb = function(msg) printC(colors.gray)("["..serviceName.."] "..msg) end
@@ -395,7 +395,7 @@ end
 --	parallel.waitForAny(listenCo, handleCo)
 --end
 
-swarm.client = _buildClient("swarm")
+swarm.client = rpc.buildClient("swarm")
 
 --_request = (function()
 --	local _request_counter = 0
@@ -704,7 +704,7 @@ serveAsStorage = mkIO(function()
 end)
 
 serveAsCarrier = mkIO(function()
-	local serviceCo = _buildServer("swarm-carrier", function(msg)
+	local serviceCo = rpc.buildServer("swarm-carrier", "blocking", function(msg)
 		workState.isRunningSwarmTask = true
 		local res = { safeEval(msg) } --TODO: set proper env
 		workState.isRunningSwarmTask = false
