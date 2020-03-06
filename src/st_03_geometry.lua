@@ -16,9 +16,11 @@ _hackVector()
 vec = {
 	zero = vector.new(0,0,0),
 	one = vector.new(1,1,1),
-	unitX = vector.new(1,0,0),
-	unitY = vector.new(0,1,0),
-	unitZ = vector.new(0,0,1),
+	axis = {
+		X = vector.new(1,0,0),
+		Y = vector.new(0,1,0),
+		Z = vector.new(0,0,1),
+	},
 	isVec = (function()
 		local mt = getmetatable(vector.new(0,0,0))
 		return function(x) return getmetatable(x) == mt end
@@ -28,6 +30,20 @@ vec = {
 	end,
 	-- | manhattan distance between pos `v` and vec.zero
 	manhat = function(v) return math.abs(v.x) + math.abs(v.y) + math.abs(v.z) end,
+	rank = function(v)
+		local r = 0
+		if v.x ~= 0 then r = r + 1 end
+		if v.y ~= 0 then r = r + 1 end
+		if v.z ~= 0 then r = r + 1 end
+		return r
+	end,
+	_shortestNonZeroAxis = function(v)
+		local candidates = {vec.axis.X, vec.axis.Y, vec.axis.Z}
+		local cmp1 = function(ax) if v:dot(ax) == 0 then return 1 else return 0 end end
+		local cmp2 = function(ax) return math.abs(v:dot(ax)) end
+		table.sort(candidates, comparator(cmp1, cmp2))
+		return candidates[1]
+	end,
 }
 setmetatable(vec, {
 	__call = function(_, ...) return vector.new(...) end,
@@ -107,6 +123,15 @@ mkArea = (function()
 				a.low, a.low + E * E:dot(a.diag), a.low + S * S:dot(a.diag), a.low + U * U:dot(a.diag),
 				a.high + D * D:dot(a.diag), a.high + N * N:dot(a.diag), a.high + W * W:dot(a.diag), a.high,
 			} end,
+			-- find a vertex nearest to a specific pos
+			-- NOTE: far = a.low + a.high - near
+			vertexNear = function(a, pos)
+				local near = a.low
+				for _, p in ipairs(a:vertexes()) do
+					if (p - pos):length() < (near - pos):length() then near = p end
+				end
+				return near
+			end,
 		}
 		setmetatable(a, _area_mt)
 		return a

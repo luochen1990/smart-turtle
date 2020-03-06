@@ -129,53 +129,48 @@ if turtle then
 		workState.aiming = back.aiming
 	end))
 
-	-- | this function scans a plane area
-	-- , which is not as useful as the function scan()
-	_scan2d = markIOfn2("_scan2d(area)(io)")(function(area)
-		assert(area and area.diag.x * area.diag.y * area.diag.z == 0, "[_scan2d(area)] area should be 2d, but got "..tostring(area))
-		return function(io)
-			return with({workArea = area})(mkIO(function()
-				local near = area.low
-				for _, p in ipairs(area:vertexes()) do
-					if (p - workState.pos):length() < (near - workState.pos):length() then near = p end
-				end
-				local far = area.low + area.high - near
-				if area:volume() <= 0 then return true end
-				if not move.to(near)() then return false end
-				io = with({workArea = false})(savePosd(try(io)))
-				local toward = move.toward(far, function(d, d0) return d ~= -d0 end)
-				local loop = save(currentDir)(toward * fmap(negate)(saved):pipe(turn.to)) * rep(io * move)
-				local run = io * toward * rep(io * move) * rep(loop)
-				run()
-				return true
-			end))
-		end
-	end)
-
-	-- | a very useful function, scan over an 3d area (including trivial cases)
+	-- | a very useful function, scan over a 3d area (including trivial cases)
 	-- , it scans layer by layer toward the mainDir
 	-- , when you want to dig an area, you might want to choose your mainDir same as your dig direction
 	-- , and when placing, choose your mainDir opposite to your place direction
-	scan = markIOfn2("scan(area, mainDir)(io)")(function(area, mainDir)
-		mainDir = default(workState:aimingDir())(mainDir)
-		return function(io)
-			return (mkIO(function()
-				local projLen = (area.diag + vec.one):dot(mainDir)
-				local low0, high0
-				if projLen == 0 then
-					return true
-				elseif projLen > 0 then
-					low0, high0 = area.low, (area.high - mainDir * (projLen - 1))
-				else --[[ if projLen < 0 then ]]
-					low0, high0 = (area.low + mainDir * (projLen + 1)), area.high
+	scan = markIOfn2("scan(area,mainDir)(io)")(function(area,mainDir)
+		assert(area:volume() > 0, "[scan] area:volume() should > 0")
+		local rank = vec.rank(area.diag)
+
+		return mkIOfn(function(io)
+			local near = area:vertexNear(workState.pos)
+			local far = area.low + area.high - near
+			local diag = far - near
+			local projLen
+			if mainDir then
+				projLen = diag:dot(mainDir)
+				if projLen < 0 then
+					near, far, diag, projLen  =  far, near, -diag, -projLen
 				end
-				for i = 0, math.abs(projLen) - 1 do
-					local a = (low0 + mainDir * i) .. (high0 + mainDir * i)
-					_scan2d(a)(io)()
+			else
+				mainDir = vec._shortestNonZeroAxis(diag)
+				projLen = diag:dot(mainDir)
+				if projLen < 0 then
+					mainDir, projLen  =  -mainDir, -projLen
+				end
+			end
+
+			if rank <= 1 then
+				if area:volume() <= 0 then return true end
+				local near = area:vertexNear(workState.pos)
+				local far = area.low + area.high - near
+				if not move.to(near)() then return false end
+				local io1 = with({workArea = false})(savePosd(try(io)))
+				with({workArea = area})(io1 * move.toward(far) * rep(io1 * move))()
+				return true
+			else
+				local p, q = near, (far - mainDir * projLen)
+				for i = 0, math.abs(projLen) do
+					scan( (p + mainDir * i) .. (q + mainDir * i) )(io)()
 				end
 				return true
-			end))
-		end
+			end
+		end)
 	end)
 
 	visitStation = markIOfn("visitStation(station)")(mkIOfn(function(station)

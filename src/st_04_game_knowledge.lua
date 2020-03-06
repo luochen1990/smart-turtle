@@ -58,9 +58,9 @@ const = {
 }
 
 const.dir = {
-	['E'] = vec.unitX, ['W'] = -vec.unitX,
-	['U'] = vec.unitY, ['D'] = -vec.unitY,
-	['S'] = vec.unitZ, ['N'] = -vec.unitZ,
+	['E'] = vec.axis.X, ['W'] = -vec.axis.X,
+	['U'] = vec.axis.Y, ['D'] = -vec.axis.Y,
+	['S'] = vec.axis.Z, ['N'] = -vec.axis.Z,
 }
 const.directions = {"U", "E", "S", "W", "N", "D"}
 const.rotate = { left = const.dir.D, right = const.dir.U, }

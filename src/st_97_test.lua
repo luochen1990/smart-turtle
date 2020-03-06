@@ -20,7 +20,19 @@ if turtle then
 	end))
 
 	_test.scan2d = markIO("_test.scan2d")(mkIO(function()
-		return savePosp(_scan2d(O .. (O + (R + F) * 2))(turn.U * try(dig) * place))()
+		return savePosp(scan(O .. (O + (R + F) * 2))(turn.U * try(dig) * place))()
+	end))
+
+	_test.scan2dU = markIO("_test.scan2dU")(mkIO(function()
+		return savePosp(scan(O .. (O + (R + U) * 2), D)(turn.U * try(dig) * place))()
+	end))
+
+	_test.scan1d = markIO("_test.scan1d")(mkIO(function()
+		return savePosp(scan(O .. (O + F * 2))(turn.U * try(dig) * place))()
+	end))
+
+	_test.scan0d = markIO("_test.scan0d")(mkIO(function()
+		return savePosp(scan(O .. O)(turn.U * try(dig) * place))()
 	end))
 
 	_test.miner = markIOfn("_test.miner")(mkIOfn(function(n)
