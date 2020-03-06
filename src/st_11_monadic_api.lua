@@ -47,7 +47,7 @@ if turtle then
 		end)
 	end)
 
-	-- usage demo: save(currentPos)(move.go(F) * move.to(saved))
+	-- usage demo: save(currentPos)(move.go(F) * saved:pipe(move.to))
 	save, saved = (function()
 		local stack = {}
 		local _save = function(ioGetValue)

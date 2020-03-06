@@ -138,8 +138,6 @@ if turtle then
 		elseif type(selector) == "function" then
 			local sn = slot._findThat(selector)
 			return sn ~= nil and turtle.select(sn)
-		elseif type(selector) == "table" and type(selector.run) == "function" then
-			return select(selector())()
 		else
 			error("[select(selector)] type of selector cannot be "..tostring(selector))
 		end

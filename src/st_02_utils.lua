@@ -112,8 +112,7 @@ eval = function(code, env, readOnlyEnv)
 		local old_stack = deepcopy(_callStack)
 		local res1 = { pcall( func ) }
 		if table.remove(res1, 1) then
-			if #res1 == 1 and type(res1[1]) == "table" and type(res1[1].run) == "function" then
-				-- directly run a single IO monad
+			if #res1 == 1 and isIO(res1[1]) then -- a single IO monad
 				local res2 = { pcall( res1[1].run ) }
 				if table.remove(res2, 1) then
 					return true, res2
