@@ -30,6 +30,8 @@ mkStationInfo = function(opts)
 		stationHosterId = opts.stationHosterId,
 		-- states
 		itemCount = opts.itemCount or 0,
+		delivering = 0,
+		restocking = 0,
 		isVisiting = default(false)(opts.isVisiting),
 		currentQueueLength = default(0)(opts.currentQueueLength),
 		maxQueueLength = default(5)(opts.maxQueueLength),
@@ -52,7 +54,7 @@ end
 
 swarm = {
 	_state = {
-		asFuel = {"minecraft:charcoal"},
+		asFuel = {"minecraft:charcoal", "minecraft:blue_carpet", "minecraft:light_gray_carpet"},
 		stationPool = {},
 		workerPool = {},
 		jobPool = {},
@@ -61,56 +63,133 @@ swarm = {
 
 -------------------------------- telnet service --------------------------------
 
-telnetServerCo = function(ignoreDeposit)
-	local eventQueue = {}
-	local listenCo = function()
-		while true do
-			--printC(colors.gray)("[telnet] listening")
-			local senderId, msg, _ = rednet.receive("telnet")
-			--printC(colors.gray)("[telnet] received from " .. senderId .. ": " .. msg)
-			local queueTail = #eventQueue + 1
-			if ignoreDeposit then queueTail = 1 end
-			eventQueue[queueTail] = {senderId, msg}
-		end
-	end
-	local execCo = function()
-		local sleepInterval = 1
-		while true do
-			if #eventQueue == 0 then
-				sleepInterval = math.min(0.5, sleepInterval * 1.1)
-				--printC(colors.gray)("[telnet] waiting "..sleepInterval)
-				sleep(sleepInterval)
-			else -- if #eventQueue > 0 then
-				--printC(colors.gray)("[telnet] executing "..#eventQueue)
-				sleepInterval = 0.02
-				local sender, msg = unpack(table.remove(eventQueue, 1))
-				printC(colors.gray)("[telnet] exec cmd from " .. sender .. ": " .. msg)
-				if msg == "exit" then break end
-				func, err = load("return "..msg, "telnet_cmd", "t", _ENV)
-				if func then
-					ok, res = pcall(func)
-					if ok then
-						printC(colors.green)(res)
-					else
-						printC(colors.yellow)(res)
-					end
-				else
-					printC(colors.orange)(err)
-				end
-			end
-		end
-	end
-	parallel.waitForAny(listenCo, execCo)
-end
+--telnetServerCo = function(ignoreDeposit)
+--	local eventQueue = {}
+--	local listenCo = function()
+--		while true do
+--			--printC(colors.gray)("[telnet] listening")
+--			local senderId, msg, _ = rednet.receive("telnet")
+--			--printC(colors.gray)("[telnet] received from " .. senderId .. ": " .. msg)
+--			local queueTail = #eventQueue + 1
+--			if ignoreDeposit then queueTail = 1 end
+--			eventQueue[queueTail] = {senderId, msg}
+--		end
+--	end
+--	local execCo = function()
+--		local sleepInterval = 1
+--		while true do
+--			if #eventQueue == 0 then
+--				sleepInterval = math.min(0.5, sleepInterval * 1.1)
+--				--printC(colors.gray)("[telnet] waiting "..sleepInterval)
+--				sleep(sleepInterval)
+--			else -- if #eventQueue > 0 then
+--				--printC(colors.gray)("[telnet] executing "..#eventQueue)
+--				sleepInterval = 0.02
+--				local sender, msg = unpack(table.remove(eventQueue, 1))
+--				printC(colors.gray)("[telnet] exec cmd from " .. sender .. ": " .. msg)
+--				if msg == "exit" then break end
+--				func, err = load("return "..msg, "telnet_cmd", "t", _ENV)
+--				if func then
+--					ok, res = pcall(func)
+--					if ok then
+--						printC(colors.green)(res)
+--					else
+--						printC(colors.yellow)(res)
+--					end
+--				else
+--					printC(colors.orange)(err)
+--				end
+--			end
+--		end
+--	end
+--	parallel.waitForAny(listenCo, execCo)
+--end
 
 --------------------------------- swarm service --------------------------------
 
 swarm._startService = (function()
-	local serviceCo = _buildServer("swarm", "swarm-service", function(msg)
+	local serviceCo = _buildServer("swarm", function(msg)
 		return safeEval(msg) --TODO: set proper env
 	end)
 
+	local findCarrierTask = function(itemType, pool)
+		local providers, requesters = {}, {}
+		for _, station in pairs(pool) do
+			local cnt = station.itemCount + station.restocking - station.delivering
+			printC(colors.blue)("station = ", literal(station.itemType, station.itemCount, station.pos, {cnt = cnt, restockBar = station.restockBar, deliverBar = station.deliverBar}))
+			--printC(colors.blue)("cnt = ", cnt)
+			--printC(colors.blue)("restockBar = ", station.restockBar)
+			--printC(colors.blue)("deliverBar = ", station.deliverBar)
+			if station.restockPriority and cnt < station.restockBar then
+				local intent = station.deliverBar - cnt
+				local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.restockPriority}
+				table.insert(requesters, info)
+			end
+			if station.deliverPriority and cnt > station.deliverBar then
+				local intent = cnt - station.restockBar
+				local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.deliverPriority}
+				table.insert(providers, info)
+			end
+		end
+		if #providers == 0 or #requesters == 0 then
+			return false, "got "..(#providers).." providers and "..(#requesters).." requesters, no task found"
+		end
+		local cmp = comparator(field("priority"), field("intent"))
+		table.sort(providers, cmp)
+		table.sort(requesters, cmp)
+
+		local provider = providers[1]
+		local requester = requesters[1]
+		local priority = math.max(requester.priority, provider.priority)
+		if not (priority > 0) then
+			return false, "got provider with priority "..provider.priority.." and requester with priority "..requester.priority..", no task found"
+		end
+		local intent = math.min(provider.intent, requester.intent)
+		local task = {
+			provider = provider,
+			requester = requester,
+			itemCount = intent,
+			itemType = itemType,
+		}
+		return true, task
+	end
+
 	local daemonCo = function()
+		local carrierClient = _buildClient("swarm-carrier")
+		sleep(5)
+		printC(colors.gray)("begin finding carrier task...")
+		while true do
+			for itemType, pool in pairs(swarm._state.stationPool) do
+				printC(colors.gray)("finding task for "..literal(itemType))
+				local ok, task = findCarrierTask(itemType, pool)
+				if ok then
+					printC(colors.green)("found task:", literal(task))
+					local results = carrierClient.broadcast("isIdle(), workState.pos")()
+					printC(colors.green)('results: ', literal(results)) -- r like {id, ok, {isIdle, pos}}
+					local candidates = {}
+					for _, r in ipairs(results) do
+						if r[2] and r[3][1] then
+							table.insert(candidates, {id = r[1], pos = r[3][2]})
+						end
+					end
+					if #candidates > 0 then
+						local cmpDis = function(c) return vec.manhat(c.pos - task.provider.pos) end
+						table.sort(candidates, comparator(cmpDis))
+						local carrierId = candidates[1].id
+						local taskResult = { carrierClient.send("carry("..literal(task.provider, task.requester, task.itemCount, task.itemType)..")()", 1000, carrierId)() }
+						printC(colors.green)("Task done: ", literal(taskResult))
+						sleep(5)
+					else
+						printC(colors.gray)("no carrier available")
+					end
+				else
+					local msg = task
+					printC(colors.yellow)(msg)
+				end
+			end
+			printC(colors.gray)("finished a round...")
+			sleep(5)
+		end
 	end
 
 	return para_(serviceCo, daemonCo)
@@ -186,7 +265,7 @@ swarm.services.updateStation = function(opts)
 	if not station then
 		return false, "station not exist (no such pos)"
 	end
-	for k, v in pairs(station) do
+	for k, v in pairs(opts) do
 		station[k] = v
 	end
 	return true, "station updated"
@@ -236,19 +315,10 @@ swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft
 	local queEmpty = function(st) if st.currentQueueLength == 0 and st.isVisiting == false then return 0 else return 1 end end
 	local que = function(st) if st.isVisiting == false then return st.currentQueueLength else return st.currentQueueLength + 1 end end
 	--
-	local comparator = function(...)
-		local attrs = {...}
-		return function(a, b)
-			for i, attr in ipairs(attrs) do
-				local aa, ab = attr(a), attr(b)
-				if i == #attrs or aa ~= ab then return aa < ab end
-			end
-		end
-	end
 
 	local better = comparator(queEmpty, dist, que)
 	local best
-	for pos, st in pairs(swarm._state.stationPool[itemType]) do
+	for _, st in pairs(swarm._state.stationPool[itemType]) do
 		if nearEnough(st) and itemEnough(st) and queueNotFull(st) then
 			if best == nil or better(st, best) then
 				best = st
@@ -325,7 +395,7 @@ end
 --	parallel.waitForAny(listenCo, handleCo)
 --end
 
-swarm.client = _buildClient("swarm", "swarm-service")
+swarm.client = _buildClient("swarm")
 
 --_request = (function()
 --	local _request_counter = 0
@@ -382,32 +452,34 @@ swarm.client = _buildClient("swarm", "swarm-service")
 --	return retryWithTimeout(totalTimeout)(_naiveRequestSwarm)()
 --end
 
--- | interactive register complex station
-registerStation = mkIOfn(function()
-end)
+---- | interactive register complex station
+--registerStation = mkIOfn(function()
+--end)
 
 unregisterStation = function(st)
+	log.bug("unregisterStation not implemented yet!")
 end
 
-registerPassiveProvider = mkIO(function()
-	reserveOneSlot()
-	select(slot.isEmpty)()
-	suck(1)()
-	local det = turtle.getItemDetail()
-	drop(1)()
-	if not det then
-		log.bug("[registerPassiveProvider] cannot get item detail")
-		return false
-	end
-	local stationDef = {
-		pos = workState.pos,
-		dir = workState:aimingDir(),
-		itemType = det.name,
-		deliverBar = 0,
-		deliverPriority = 0, --passive provider
-	}
-	return swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
-end)
+--registerPassiveProvider = mkIO(function()
+--	reserveOneSlot()
+--	select(slot.isEmpty)()
+--	suck(1)()
+--	local det = turtle.getItemDetail()
+--	drop(1)()
+--	if not det then
+--		log.bug("[registerPassiveProvider] cannot get item detail")
+--		return false
+--	end
+--	local stationDef = {
+--		pos = workState.pos,
+--		dir = workState:aimingDir(),
+--		itemType = det.name,
+--		--restockBar = 0,
+--		deliverBar = 0,
+--		deliverPriority = 0, --passive provider
+--	}
+--	return swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
+--end)
 
 --serveAsFuelStation = mkIO(function()
 --end)
@@ -416,7 +488,7 @@ end)
 _updateInventoryCo = function(stationDef)
 	local inventoryCount = {
 		isDirty = true,
-		lastReport = 0,
+		lastReport = stationDef.itemCount,
 	}
 	local checkCo = function()
 		while true do
@@ -440,6 +512,7 @@ _updateInventoryCo = function(stationDef)
 					local ok, res = swarm.client.request("swarm.services.updateStation("..literal(info)..")")()
 					if ok then
 						inventoryCount.isDirty = false
+						printC(colors.green)("itemCount reported: "..info.itemCount)
 					else
 						log.warn("[provider] failed to report inventory info: "..literal(res))
 					end
@@ -463,8 +536,9 @@ serveAsProvider = mkIO(function()
 		dir = workState:aimingDir(),
 		itemType = nil,
 		itemStackLimit = nil,
+		restockBar = 0,
 		deliverBar = 0,
-		deliverPriority = 0, --passive provider
+		deliverPriority = -9, -- passive provider
 		stationHosterId = os.getComputerID()
 	}
 
@@ -477,11 +551,11 @@ serveAsProvider = mkIO(function()
 		local _reg = function()
 			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
 			if not ok then
-				log.cry("[provider] failed to register station (network error): "..literal(res))
+				log.warn("[provider] failed to register station (network error): "..literal(res)..", retrying...")
 				return false
 			end
 			if not table.remove(res, 1) then
-				log.cry("[provider] failed to register station (logic error): "..literal(res))
+				log.warn("[provider] failed to register station (logic error): "..literal(res)..", retrying...")
 				return false
 			end
 			log.info("[provider] provider of " .. stationDef.itemType .. " registered at " .. show(stationDef.pos))
@@ -514,9 +588,10 @@ serveAsUnloader = mkIO(function()
 		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
 		itemType = "*anything", -- NOTE: this is a special constant value
-		deliverBar = 0,
-		deliverPriority = 0, --passive provider
-		stationHosterId = os.getComputerID()
+		restockBar = 0,
+		deliverBar = 0, -- deliver everything and keep nothing
+		deliverPriority = 10, -- active provider
+		stationHosterId = os.getComputerID(),
 	}
 
 	local registerCo = function()
@@ -549,8 +624,9 @@ serveAsRequester = mkIO(function()
 		dir = workState:aimingDir(),
 		itemType = nil,
 		itemStackLimit = nil,
-		restockBar = const.turtle.backpackSlotsNum,
-		restockPriority = 100,
+		restockBar = const.turtle.backpackSlotsNum * 0.25,
+		restockPriority = 9,
+		deliverBar = const.turtle.backpackSlotsNum,
 		stationHosterId = os.getComputerID()
 	}
 
@@ -559,7 +635,8 @@ serveAsRequester = mkIO(function()
 		local det = retry((select(slot.isNonEmpty) + suckHold(1)) * details())()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
-		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 1.0
+		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.25
+		stationDef.deliverBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 1.0
 		printC(colors.green)("[requester] got "..det.name)
 		local _reg = function()
 			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
@@ -592,7 +669,7 @@ serveAsStorage = mkIO(function()
 		restockBar = const.turtle.backpackSlotsNum * 0.25,
 		restockPriority = 1, --NOTE: lower than requester
 		deliverBar = const.turtle.backpackSlotsNum * 0.75,
-		deliverPriority = 1, --NOTE: higher than provider
+		deliverPriority = 0, --NOTE: higher than provider, but still passive
 		stationHosterId = os.getComputerID()
 	}
 
@@ -627,10 +704,14 @@ serveAsStorage = mkIO(function()
 end)
 
 serveAsCarrier = mkIO(function()
-	local serviceCo = _buildServer("swarm-carrier", "swarm-carrier-service", function(msg)
-		return safeEval(msg) --TODO: set proper env
+	local serviceCo = _buildServer("swarm-carrier", function(msg)
+		workState.isRunningSwarmTask = true
+		local res = { safeEval(msg) } --TODO: set proper env
+		workState.isRunningSwarmTask = false
+		return unpack(res)
 	end)
 
+	workState.isRunningSwarmTask = false
 	serviceCo()
 end)
 
@@ -730,4 +811,10 @@ function _robustVisitStation(opts)
 		return true
 	end
 end
+
+-- | turtle is idle means: repl is not running command and workState.isRunningSwarmTask = false
+isIdle = mkIO(function()
+	--return not (_replState.isRunningCommand or workState.isRunningSwarmTask)
+	return not (_replState.isRunningCommand)
+end)
 

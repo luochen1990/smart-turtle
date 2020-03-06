@@ -1,7 +1,8 @@
 ----------------------------------- lua repl -----------------------------------
 
 _replState = {
-	running = true,
+	isExiting = false,
+	isRunningCommand = false,
 	latestCallStack = {},
 	history = readLines("/.st_repl_history") or {}, -- repl input command history
 	historyLimit = 100,
@@ -27,9 +28,9 @@ _replStyle = {
 }
 
 function _replMainCo()
-	_replState.running = true
+	_replState.isExiting = false
 	local tEnv = {
-		["exit"] = mkIO(function() _replState.running = false end),
+		["exit"] = mkIO(function() _replState.isExiting = true end),
 		["help"] = mkIO(function() print(_replStyle.helpText) end),
 	}
 	setmetatable( tEnv, { __index = _ST } )
@@ -108,7 +109,8 @@ function _replMainCo()
 		end
 	end)()
 
-	while _replState.running do
+	while not _replState.isExiting do
+		_replState.isRunningCommand = false
 		local s = replReadLineWithHotkeys()
 		if #s > 0 then
 			if s:match("%S") and _replState.history[#_replState.history] ~= s then
@@ -121,6 +123,7 @@ function _replMainCo()
 
 			local co1 = withColor(_replStyle.runCommandDefaultColor)(function() return eval(s, tEnv) end)
 			local co2 = mkIO(_waitForKeyCombination, keys.leftCtrl, keys.c)
+			_replState.isRunningCommand = true
 			local winner, ok, res = race(co1, co2)()
 			if winner == 1 then
 				if ok then

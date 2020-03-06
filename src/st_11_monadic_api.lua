@@ -119,27 +119,27 @@ if turtle then
 		local old_sn = selected()
 		local got = 0
 		while got < n do
-			local ok = suckHold(n - got)()
+			local ok = suckHold(math.min(64, n - got))()
 			if ok then
-				local det = details()
+				local det = details()()
 				if not itemName or det.name == itemName then
 					got = got + det.count
 				else
-					saveDir( turn.lateral * drop )()
+					saveDir( turn.lateral * drop() )()
 				end
 			else
 				break
 			end
 		end
 		selected(old_sn)
-		return got == n
+		return got == n, got
 	end))
 
 	dropExact = markIOfn("dropExact(n, itemName)")(mkIOfn(function(n, itemName)
 		local old_sn = turtle.getSelectedSlot()
 		local dropped = 0
 		while dropped < n do
-			if select(itemName) then
+			if select(itemName)() then
 				local got = math.min(n - dropped, turtle.getItemCount())
 				local ok = drop(got)()
 				if ok then
@@ -153,7 +153,7 @@ if turtle then
 			end
 		end
 		turtle.select(old_sn)
-		return dropped == n
+		return dropped == n, dropped
 	end))
 
 	-- | different from turtle.inspect, this only returns res

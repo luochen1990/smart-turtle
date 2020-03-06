@@ -38,11 +38,10 @@ if turtle then
 				return nil
 			end
 			local p1 = gpsPos(10)
+			while not goBack() do turtle.attack() end --TODO: dig sand but wait for turtle
 			if not p1 then
-				repeat turtle.dig(); turtle.attack() until ( goBack() )
 				return nil
 			end
-			repeat turtle.dig(); turtle.attack() until ( goBack() )
 			local d = calcDir(p1)
 			if vec.manhat(d) ~= 1 then
 				printC(colors.gray)("p0 = "..tostring(p0)..", p1 = "..tostring(p1))

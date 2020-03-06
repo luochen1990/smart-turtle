@@ -1,29 +1,29 @@
 -------------------------------- network utils ---------------------------------
 
-_consoleLoggerBuilder = function(serviceName, protocol)
+_consoleLoggerBuilder = function(protocol, hostname)
 	return {
 		verb = function(msg) end,
-		info = function(msg) printM(colors.gray  )(os.time().." ["..serviceName.."] "..msg) end,
-		succ = function(msg) printM(colors.green )(os.time().." ["..serviceName.."] "..msg) end,
-		fail = function(msg) printM(colors.yellow)(os.time().." ["..serviceName.."] "..msg) end,
-		warn = function(msg) printM(colors.orange)(os.time().." ["..serviceName.."] "..msg) end,
+		info = function(msg) printM(colors.gray  )(os.time().." ["..protocol.."] "..msg) end,
+		succ = function(msg) printM(colors.green )(os.time().." ["..protocol.."] "..msg) end,
+		fail = function(msg) printM(colors.yellow)(os.time().." ["..protocol.."] "..msg) end,
+		warn = function(msg) printM(colors.orange)(os.time().." ["..protocol.."] "..msg) end,
 	}
 end
 
 -- | build a server, returns an IO to start the server
--- , serviceName is for service lookup
--- , listenProtocol is for request receiving
+-- , listenProtocol is used for both request receiving and service discovery
 -- , handler is a function like `function(unwrappedMsg) return requestValid, logicResultTable end`
 -- , the response contains an extra boolean, means whether the request reaches the handler
-_buildServer = function(serviceName, listenProtocol, handler, logger)
+_buildServer = function(listenProtocol, handler, logger)
+	local hostname = os.getComputerID()..":"..math.random(0,9999)
 	handler = default(safeEval)(handler)
-	logger = default(_consoleLoggerBuilder(serviceName, listenProtocol))(logger)
+	logger = default(_consoleLoggerBuilder(listenProtocol, hostname))(logger)
 
 	return mkIO(function()
 		local eventQueue = {}
 		local listenCo = function()
-			rednet.host(serviceName, "server")
-			logger.info("start serving as "..literal(serviceName))
+			rednet.host(listenProtocol, hostname)
+			logger.info("start serving as "..literal(listenProtocol, hostname))
 			while true do
 				logger.verb("listening on "..literal(listenProtocol))
 				local senderId, rawMsg, _ = rednet.receive(listenProtocol)
@@ -86,13 +86,13 @@ _buildServer = function(serviceName, listenProtocol, handler, logger)
 	end)
 end
 
-_buildClient = function(serviceName, requestProtocol, knownServer)
+_buildClient = function(requestProtocol, knownServer)
 	local _counter = math.random(0, 9999)
 	local _knownServer = knownServer
-	local _findServer = function() return rednet.lookup(serviceName) end
+	local _findServer = function() return rednet.lookup(requestProtocol) end
 
 	-- | returns IO
-	local _request = mkIOfn(function(msg, totalTimeout)
+	local _request = mkIOfn(function(msg, totalTimeout, specifiedServerId)
 		totalTimeout = default(5)(totalTimeout)
 
 		-- generate responseProtocol
@@ -100,9 +100,12 @@ _buildClient = function(serviceName, requestProtocol, knownServer)
 		_counter = (_counter + 1) % 10000
 
 		local _req = mkIOfn(function(timeout)
-			local serverId = _knownServer or _findServer()
+			local serverId = specifiedServerId --TODO: use isolate api for specifiedServerId
 			if not serverId then
-				return false, "server not found: "..literal(serviceName)..", (protocol: "..requestProtocol..")"
+				serverId = _knownServer or _findServer()
+			end
+			if not serverId then
+				return false, "server not found: "..literal(requestProtocol)
 			end
 			rednet.send(serverId, literal(responseProtocol, msg), requestProtocol)
 			while true do
@@ -114,8 +117,8 @@ _buildClient = function(serviceName, requestProtocol, knownServer)
 					if ok then
 						return true, res
 					else
-						log.bug("[request] faild to parse response: ", literal({msg = msg, response = resp}))
-						return false, "faild to parse response"
+						log.bug("[request] failed to parse response: ", literal({msg = msg, response = resp}))
+						return false, "failed to parse response"
 					end
 				elseif not responserId then
 					_knownServer = nil
@@ -133,10 +136,48 @@ _buildClient = function(serviceName, requestProtocol, knownServer)
 		end
 	end)
 
+	-- | returns IO
+	local _broadcast = function(msg, totalTimeout)
+		totalTimeout = default(5)(totalTimeout)
+
+		-- generate responseProtocol
+		local responseProtocol = requestProtocol .. "_r" .. (_counter)
+		_counter = (_counter + 1) % 10000
+
+		local _req = mkIO(function()
+			rednet.broadcast(literal(responseProtocol, msg), requestProtocol)
+			local resps = {}
+			local endTime = os.clock() + totalTimeout
+			while true do
+				local timeout = endTime - os.clock()
+				local responserId, resp = rednet.receive(responseProtocol, timeout) --TODO: reduce timeout in next loop?
+				if responserId then
+					table.insert(resps, {responserId, resp})
+				else
+					break
+				end
+			end
+			local results = {}
+			for _, item in ipairs(resps) do
+				local responserId, resp = unpack(item)
+				local ok, res = safeEval(resp) -- parse response
+				if ok then
+					table.insert(results, {responserId, unpack(res)})
+				else
+					log.bug("[request] failed to parse response: ", literal({msg = msg, response = resp}))
+				end
+			end
+			return results
+		end)
+		return _req
+	end
+
 	local _client = {}
 	setmetatable(_client, {__index = function(t, k)
 		local env = {
 			request = _request,
+			send = _request,
+			broadcast = _broadcast,
 			_counter = _counter,
 			knownServer = _knownServer,
 		}

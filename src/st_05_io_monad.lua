@@ -18,9 +18,19 @@ mkIO, mkIOfn, isIO = (function()
 	end
 	_ioMetatable.__call = function(io) return io.run() end
 	_ioMetatable.__pow = function(io, n) return replicate(n)(io) end -- replicate a few times
-	_ioMetatable.__add = function(io1, io2) return _mkIO(function() return io1.run() or io2.run() end) end -- if io1 fail then io2
-	_ioMetatable.__mul = function(io1, io2) return _mkIO(function() return io1.run() and io2.run() end) end -- if io1 succ then io2
-	_ioMetatable.__div = function(io1, io2) return _mkIO(function() r = io1.run(); io2.run(); return r end) end -- `<*` in haskell
+	_ioMetatable.__add = _mkIOfn(function(io1, io2) -- if io1 fail then io2
+		local r = { io1.run() }
+		if r[1] then return unpack(r) else return io2.run() end
+	end)
+	_ioMetatable.__mul = _mkIOfn(function(io1, io2) -- if io1 succ then io2
+		local r = { io1.run() }
+		if r[1] then return io2.run() else return unpack(r) end
+	end)
+	_ioMetatable.__div = _mkIOfn(function(io1, io2) -- `<*` in haskell, always returns io1's result
+		local r = { io1.run() }
+		io2.run()
+		return unpack(r)
+	end)
 	_ioMetatable.__unm = function(io) return _mkIO(function() return not io.run() end) end -- use `-io` as `fmap not io` in haskell
 	local _isIO = function(v)
 		return type(v) == "table" and getmetatable(v) == _ioMetatable

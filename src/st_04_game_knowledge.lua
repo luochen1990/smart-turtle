@@ -53,6 +53,7 @@ const = {
 		["minecraft:coal"] = 80,
 		["minecraft:oak_log"] = 15,
 		["minecraft:light_gray_carpet"] = 3,
+		["minecraft:blue_carpet"] = 3,
 	},
 }
 

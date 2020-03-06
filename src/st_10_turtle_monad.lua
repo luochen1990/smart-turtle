@@ -29,6 +29,7 @@ if turtle then
 		isUnloading = false,
 		isFetching = false,
 		cryingFor = nil,
+		isRunningSwarmTask = false,
 		back = nil, -- save pos, facing and aiming here before interrupt
 	}
 

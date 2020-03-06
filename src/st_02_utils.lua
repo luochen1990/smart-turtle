@@ -79,6 +79,23 @@ end
 
 math.randomseed(os.time() * 1000) -- set randomseed for math.random()
 
+-- | generate a comparator via a list of attribute getters
+function comparator(...)
+	local attrs = {...}
+	return function(a, b)
+		for i, attr in ipairs(attrs) do
+			local aa, ab = attr(a), attr(b)
+			if i == #attrs or aa ~= ab then return aa < ab end
+		end
+	end
+end
+
+function field(key)
+	return function(tabl)
+		return tabl[key]
+	end
+end
+
 _ST = _ENV
 
 -- | eval an expr or a peice of code
@@ -227,7 +244,7 @@ function _literal(val)
 			if type(mt.__literal) == "function" then
 				return mt.__literal(val)
 			else
-				return nil
+				error("[literal] non-trivial table which not impl __literal metamethod is not serialisable")
 			end
 		else
 			return _serialiseTable(val, _literal)
@@ -235,7 +252,7 @@ function _literal(val)
 	elseif ty == "string" then
 		return _literalString(val)
 	elseif ty == "function" then
-		return nil
+		error("[literal] function is not serialisable")
 	else
 		return tostring(val)
 	end
