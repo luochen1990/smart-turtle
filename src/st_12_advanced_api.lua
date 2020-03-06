@@ -157,8 +157,6 @@ if turtle then
 
 			if rank <= 1 then
 				if area:volume() <= 0 then return true end
-				local near = area:vertexNear(workState.pos)
-				local far = area.low + area.high - near
 				if not move.to(near)() then return false end
 				local io1 = with({workArea = false})(savePosd(try(io)))
 				with({workArea = area})(io1 * move.toward(far) * rep(io1 * move))()

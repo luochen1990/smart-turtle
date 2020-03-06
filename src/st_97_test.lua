@@ -7,16 +7,20 @@ if turtle then
 		return savePosp(move.go(L * 2))()
 	end))
 
-	_test.move2 = markIO("_test.move")(mkIO(function()
+	_test.move2 = markIO("_test.move2")(mkIO(function()
 		return savePosp(move.go(F + L))()
 	end))
 
-	_test.move3 = markIO("_test.move")(mkIO(function()
+	_test.move3 = markIO("_test.move3")(mkIO(function()
 		return savePosp(move.go(F + R))()
 	end))
 
-	_test.moveVertical = markIO("_test.move")(mkIO(function()
+	_test.moveVertical = markIO("_test.moveVertical")(mkIO(function()
 		return with({workArea = (O + (L + D) * 1000) .. (O + (R + U) * 1000)})(savePosp(move.go(L * 2)))()
+	end))
+
+	_test.maze = markIO("_test.maze")(mkIO(function()
+		return with({destroy = false, workArea = (O + (L + D) * 1000) .. (O + (R + U) * 1000)})(savePosp(move.go(L * 2 + U * 17)))()
 	end))
 
 	_test.scan = markIO("_test.scan")(mkIO(function()
@@ -37,6 +41,37 @@ if turtle then
 
 	_test.scan0d = markIO("_test.scan0d")(mkIO(function()
 		return savePosp(scan(O .. O)(turn.U * try(dig) * place))()
+	end))
+
+	_test.buildFrame = markIOfn("_test.buildFrame")(mkIOfn(function(n)
+		print("n =", n)
+		local vs = {F * n, R * n, U * n}
+		print("1")
+		local P = O + U + F
+		print("2")
+		local Q = P + (F + R + U) * n
+		print("3")
+		local lines = {}
+		for _, v in ipairs(vs) do
+			print(v)
+			table.insert(lines, P..P+v)
+			table.insert(lines, Q..Q-v)
+			for _, v2 in ipairs(vs) do
+				if v2 ~= v then
+					table.insert(lines, P+v..P+v+v2)
+				end
+			end
+		end
+		print("4")
+		table.sort(lines, comparator(field("low", "y"), field("high", "y")))
+		print("lines", literal(lines))
+		for _, line in ipairs(lines) do
+			scan(line, U)(turn.D * place)()
+		end
+		print("5")
+		move.to(O)()
+		turn.to(F)()
+		return true
 	end))
 
 	_test.miner = markIOfn("_test.miner")(mkIOfn(function(n)

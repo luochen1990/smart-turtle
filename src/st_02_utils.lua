@@ -90,9 +90,16 @@ function comparator(...)
 	end
 end
 
-function field(key)
-	return function(tabl)
-		return tabl[key]
+function field(k, ...)
+	local rest = {...}
+	if #rest == 0 then
+		return function(tabl)
+			return tabl[k]
+		end
+	else
+		return function(tabl)
+			return field(unpack(rest))(tabl[k])
+		end
 	end
 end
 
