@@ -145,10 +145,11 @@ swarm._startService = (function()
 			return false, "got provider with priority "..provider.priority.." and requester with priority "..requester.priority..", no task found"
 		end
 		local intent = math.min(provider.intent, requester.intent)
+		local capacity = pool[show(provider.pos)].itemStackLimit * const.turtle.backpackSlotsNum * 0.75
 		local task = {
 			provider = provider,
 			requester = requester,
-			itemCount = intent,
+			itemCount = math.min(capacity, intent),
 			itemType = itemType,
 		}
 		return true, task
