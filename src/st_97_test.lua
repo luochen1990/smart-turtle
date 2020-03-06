@@ -15,6 +15,10 @@ if turtle then
 		return savePosp(move.go(F + R))()
 	end))
 
+	_test.moveVertical = markIO("_test.move")(mkIO(function()
+		return with({workArea = (O + (L + D) * 1000) .. (O + (R + U) * 1000)})(savePosp(move.go(L * 2)))()
+	end))
+
 	_test.scan = markIO("_test.scan")(mkIO(function()
 		return savePosp(scan(O .. (O + (U + R + F) * 2), D)(turn.U * try(dig) * place))()
 	end))
