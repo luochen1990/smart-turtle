@@ -116,7 +116,7 @@ swarm._startService = (function()
 		local providers, requesters = {}, {}
 		for _, station in pairs(pool) do
 			local cnt = station.itemCount + station.restocking - station.delivering
-			printC(colors.blue)("station = ", literal(station.itemType, station.itemCount, station.pos, {cnt = cnt, restockBar = station.restockBar, deliverBar = station.deliverBar}))
+			printC(colors.blue)("station =", literal(station.itemType, station.itemCount, station.pos, {cnt = cnt, restockBar = station.restockBar, deliverBar = station.deliverBar}))
 			--printC(colors.blue)("cnt = ", cnt)
 			--printC(colors.blue)("restockBar = ", station.restockBar)
 			--printC(colors.blue)("deliverBar = ", station.deliverBar)
@@ -156,7 +156,7 @@ swarm._startService = (function()
 
 	local daemonCo = function()
 		local carrierClient = rpc.buildClient("swarm-carrier")
-		sleep(5)
+		sleep(20)
 		printC(colors.gray)("begin finding carrier task...")
 		while true do
 			for itemType, pool in pairs(swarm._state.stationPool) do
@@ -164,10 +164,10 @@ swarm._startService = (function()
 				local ok, task = findCarrierTask(itemType, pool)
 				if ok then
 					printC(colors.green)("found task:", literal(task))
-					local results = carrierClient.broadcast("isIdle(), workState.pos")()
-					printC(colors.green)('results: ', literal(results)) -- r like {id, ok, {isIdle, pos}}
+					local carriers = carrierClient.broadcast("isIdle(), workState.pos")()
+					printC(colors.lime)('carriers:', literal(carriers)) -- r like {id, ok, {isIdle, pos}}
 					local candidates = {}
-					for _, r in ipairs(results) do
+					for _, r in ipairs(carriers) do
 						if r[2] and r[3][1] then
 							table.insert(candidates, {id = r[1], pos = r[3][2]})
 						end
@@ -177,7 +177,7 @@ swarm._startService = (function()
 						table.sort(candidates, comparator(cmpDis))
 						local carrierId = candidates[1].id
 						local taskResult = { carrierClient.send("carry("..literal(task.provider, task.requester, task.itemCount, task.itemType)..")()", 1000, carrierId)() }
-						printC(colors.green)("Task done: ", literal(taskResult))
+						printC(colors.lime)("Task done: ", literal(taskResult))
 						sleep(5)
 					else
 						printC(colors.gray)("no carrier available")
@@ -188,7 +188,7 @@ swarm._startService = (function()
 				end
 			end
 			printC(colors.gray)("finished a round...")
-			sleep(5)
+			sleep(20)
 		end
 	end
 
