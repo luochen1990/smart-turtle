@@ -29,6 +29,14 @@ if turtle then
 
 	move.to = markIOfn("move.to(destPos)")(function(destPos)
 		return mkIO(function()
+			local beginPos = workState.pos
+
+			-- auto refuel
+			if not workState.isRefueling then
+				refuelTo(destPos)()
+			end
+			-- refuel may change our pos
+
 			local latestDetourPos
 			while true do
 				-- attempt to approach destPos
@@ -136,7 +144,7 @@ if turtle then
 				if not move.to(near)() then return false end
 				io = with({workArea = false})(savePosd(try(io)))
 				local toward = move.toward(far, function(d, d0) return d ~= -d0 end)
-				local loop = save(currentDir)(toward * turn.to(fmap(negate)(saved))) * rep(io * move)
+				local loop = save(currentDir)(toward * fmap(negate)(saved):pipe(turn.to)) * rep(io * move)
 				local run = io * toward * rep(io * move) * rep(loop)
 				run()
 				return true

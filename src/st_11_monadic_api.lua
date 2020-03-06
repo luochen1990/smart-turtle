@@ -13,11 +13,6 @@ if turtle then
 		end)),
 	}
 	turn.to = markIOfn("turn.to(d)")(mkIOfn(function(d)
-		assert(d and ((d.x and d.y and d.z) or (d.run)), "[turn.to(d)] d must be a vector (or IO vector)!")
-		if d.run then -- in case d is IO vector
-			d = d.run()
-			assert(d and ((d.x and d.y and d.z) or (d.run)), "[turn.to(d)] d must be a vector (or IO vector)!")
-		end
 		assert(vec.manhat(d) == 1, "[turn.to(d)] d must be a dir, i.e. E/S/W/N/U/D")
 		workState.aiming = d.y
 		if d == workState.facing then return true
@@ -246,19 +241,29 @@ if turtle then
 
 	move = markIO("move")(mkIO(function()
 		-- auto refuel
-		local backPos = ((workState.fuelStation and workState.fuelStation.pos) or workState.beginPos)
-		local reserveFuel = 2 * vec.manhat(workState.pos + workState:aimingDir() - backPos)
 		if not workState.isRefueling then
-			local ok = refuel(reserveFuel)()
-			if not ok then
-				waitForHelp(reserveFuel)()
-			end
+			savePosd(refuelTo(workState.pos + workState:aimingDir()))() -- refuel may change our pos
 		else
 			if turtle.getFuelLevel() < 1 then
-				waitForHelp(reserveFuel)()
+				cryForHelpRefueling(1000)()
 			end
 		end
-		--
+
+		---- auto refuel
+		--local backPos = ((workState.fuelStation and workState.fuelStation.pos) or workState.beginPos)
+		--local reserveFuel = 2 * vec.manhat(workState.pos + workState:aimingDir() - backPos)
+		--if not workState.isRefueling then
+		--	local ok = refuel(reserveFuel)()
+		--	if not ok then
+		--		waitForHelp(reserveFuel)()
+		--	end
+		--else
+		--	if turtle.getFuelLevel() < 1 then
+		--		waitForHelp(reserveFuel)()
+		--	end
+		--end
+		----
+
 		local mov = _aiming.move
 		if workMode.destroy == 1 then
 			mov = mov + rep(isCheap * dig) * mov

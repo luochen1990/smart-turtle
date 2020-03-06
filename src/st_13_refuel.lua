@@ -40,10 +40,12 @@ if turtle then
 	end))
 
 	-- | the refuel interruption
-	-- , always success
+	-- , fails when workMode.allowInterruption is false
 	-- , will wait for refuel help when there is no fuelStation available
 	-- , will wait for manually move when cannot reach a fuelStation
 	refuelFromFuelStation = markIOfn("refuelFromFuelStation(nStep)")(mkIOfn(function(nStep)
+		if not workMode.allowInterruption then return false end
+
 		workState.isRefueling = true
 		workState.back = workState.back or getPosp() --NOTE: in case we are already in another interruption
 
@@ -81,7 +83,7 @@ if turtle then
 		-- arrived checked fuelStation here
 		print("Cost "..singleTripCost.." to reach this fuel station, now refueling ("..nStep.." + "..extra()..")...")
 		local enoughRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(nStep + extra()))
-		local greedyRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(turtle.getFuelLimit() - 1000))
+		local greedyRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(math.min(math.max((nStep + extra()) * 2, 1000), turtle.getFuelLimit() - 1000)))
 		rep(retry(suck()) * -enoughRefuel)() -- repeat until enough
 		if os.getComputerLabel() then
 			rep(suck() * -greedyRefuel)() -- try to full the tank
@@ -108,4 +110,18 @@ if turtle then
 		return ok
 	end))
 
+	refuelTo = markIOfn("refuelTo(destPos)")(mkIOfn(function(destPos)
+		if not workState.isRefueling then
+			local beginPos = workState.pos
+			local refuel_pos = workState.fuelStation and workState.fuelStation.pos
+			local refuel_dis = (refuel_pos and math.max(vec.manhat(beginPos - refuel_pos), vec.manhat(destPos - refuel_pos))) or 1000
+			local unload_pos = workState.unloadStation and workState.unloadStation.pos
+			local unload_dis = (unload_pos and math.max(vec.manhat(beginPos - unload_pos), vec.manhat(destPos - unload_pos))) or 1000
+			local required_fuel = vec.manhat(beginPos - destPos) + math.max(refuel_dis, unload_dis) * 2
+			local ok = refuel(required_fuel * 2)()
+			if not ok then
+				cryForHelpRefueling(required_fuel * 2)()
+			end
+		end
+	end))
 end
