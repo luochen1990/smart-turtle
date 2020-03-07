@@ -101,6 +101,7 @@ rpc.buildServer = function(listenProtocol, servingMode, handler, logger)
 	elseif servingMode == "blocking" then
 		return mkIO(function()
 			rednet.host(listenProtocol, hostname)
+			logger.info("start serving as "..literal(listenProtocol, hostname))
 			while true do
 				local requesterId, rawMsg = rednet.receive(listenProtocol)
 				local _, resp, responseProtocol = processEvent(requesterId, rawMsg)

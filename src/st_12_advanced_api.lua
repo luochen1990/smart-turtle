@@ -183,7 +183,7 @@ if turtle then
 		return visitStation(station) + cryForHelpMoving(leavePos, station.pos) * turn.to(station.dir)
 	end)
 
-	carry = markIOfn("carry(from, to, count, name)")(mkIOfn(function(from, to, count, name)
+	carry = markIOfn("carry(from,to,count,name)")(mkIOfn(function(from, to, count, name)
 		local got = slot.count(name)
 		return (visitStation(from) * try(suckExact(count - got, name)) * visitStation(to) * dropExact(count, name) / (turn.U * move ^ 3))()
 	end))
