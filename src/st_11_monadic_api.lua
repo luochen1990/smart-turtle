@@ -90,7 +90,7 @@ if turtle then
 	}
 
 	detect = _aiming.detect
-	-- compare = _aiming.compare --NOTE: deprecated
+	compare = _aiming.compare
 	attack = _aiming.attack
 	drop = _aiming.drop
 
