@@ -108,7 +108,7 @@ highPoint = function(p, q)
 	return vec(math.max(p.x, q.x), math.max(p.y, q.y), math.max(p.z, q.z))
 end
 
-mkArea = (function()
+mkArea, isArea = (function()
 	local _area_mt = {
 		__add = function(a, b) return _mkArea(lowPoint(a.low, b.low), highPoint(a.high, b.high)) end,
 		__tostring = function(a) return tostring(a.low)..".."..tostring(a.high) end,
@@ -136,9 +136,13 @@ mkArea = (function()
 		setmetatable(a, _area_mt)
 		return a
 	end
-	return function(p, q)
+	local mkArea = function(p, q)
 		assert(p and p.x and q and q.x, "[mkArea(p, q)] p and q should be vector")
 		return _mkArea(lowPoint(p, q), highPoint(p, q))
 	end
+	local isArea = function(a)
+		return type(a) == "table" and getmetatable(a) == _area_mt
+	end
+	return mkArea, isArea
 end)()
 

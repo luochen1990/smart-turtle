@@ -74,6 +74,18 @@ if turtle then
 		return true
 	end))
 
+	_test.flatGround = markIOfn("_test.flatGround(area,depth)")(mkIOfn(function(area, depth)
+		if vec.isVec(area) then
+			area = workState.pos .. workState.pos + area
+		end
+		if not isArea(area) then
+			print("[flatGround] please provide an area, like p1..p2")
+		end
+		depth = default(1)(depth)
+		buildFloor = currentPos:pipe(function(p) return scan(p .. p + D * (depth-1), U)(place) end)
+		return savePosp(scan(area)(buildFloor * turn.U * rep(dig * move)))()
+	end))
+
 	_test.miner = markIOfn("_test.miner")(mkIOfn(function(n)
 		n = math.max(1, n or 1)
 		return savePosp(scan(O .. (O + (R + F) * (n-1)), D)(turn.D * rep(try(dig) * move)))()
