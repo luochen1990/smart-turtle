@@ -133,26 +133,26 @@ if turtle then
 	-- , it scans layer by layer toward the mainDir
 	-- , when you want to dig an area, you might want to choose your mainDir same as your dig direction
 	-- , and when placing, choose your mainDir opposite to your place direction
-	scan = markIOfn2("scan(area,mainDir)(io)")(function(area,mainDir)
+	scan = markIOfn2("scan(area,mainDir)(io)")(function(area, mainDir)
 		assert(area:volume() > 0, "[scan] area:volume() should > 0")
 		local rank = vec.rank(area.diag)
 
 		return mkIOfn(function(io)
 			local near = area:vertexNear(workState.pos)
 			local far = area.low + area.high - near
-			local diag = far - near
 			local projLen
-			if mainDir then
+			if mainDir then -- mainDir specified by user
+				projLen = (far - near):dot(mainDir)
+				if projLen < 0 then near, far, projLen = far, near, -projLen end
+			elseif rank > 1 then -- choose shortest non-zero axis as mainDir
+				local candidates = {vec.axis.X, vec.axis.Y, vec.axis.Z}
+				local diag = far - near
+				local c1 = function(ax) return bool2int(diag:dot(ax) == 0) end
+				local c2 = function(ax) return bool2int(rank == 2 and ax.y ~= 0) end
+				local c3 = function(ax) return math.abs(diag:dot(ax)) end
+				table.sort(candidates, comparator(c1, c2, c3))
+				mainDir = candidates[1]
 				projLen = diag:dot(mainDir)
-				if projLen < 0 then
-					near, far, diag, projLen  =  far, near, -diag, -projLen
-				end
-			else
-				mainDir = vec._shortestNonZeroAxis(diag)
-				projLen = diag:dot(mainDir)
-				if projLen < 0 then
-					mainDir, projLen  =  -mainDir, -projLen
-				end
 			end
 
 			if rank <= 1 then
@@ -161,9 +161,9 @@ if turtle then
 				local io1 = with({workArea = false})(savePosd(try(io)))
 				with({workArea = area})(io1 * move.toward(far) * rep(io1 * move))()
 				return true
-			else
+			else -- rank > 1 means projLen ~= 0
 				local p, q = near, (far - mainDir * projLen)
-				for i = 0, math.abs(projLen) do
+				for i = 0, projLen, sign(projLen) do
 					scan( (p + mainDir * i) .. (q + mainDir * i) )(io)()
 				end
 				return true

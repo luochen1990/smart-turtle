@@ -50,6 +50,9 @@ end
 
 -------------------------------- general utils ---------------------------------
 
+sign = function(x) if x > 0 then return 1 elseif x < 0 then return -1 else return 0 end end
+bool2int = function(b) if b then return 1 else return -1 end end
+
 hasDictKey = function(t)
 	if type(t) ~= "table" then return false end
 	local x = false

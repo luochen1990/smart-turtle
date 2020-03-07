@@ -37,13 +37,6 @@ vec = {
 		if v.z ~= 0 then r = r + 1 end
 		return r
 	end,
-	_shortestNonZeroAxis = function(v)
-		local candidates = {vec.axis.X, vec.axis.Y, vec.axis.Z}
-		local cmp1 = function(ax) if v:dot(ax) == 0 then return 1 else return 0 end end
-		local cmp2 = function(ax) return math.abs(v:dot(ax)) end
-		table.sort(candidates, comparator(cmp1, cmp2))
-		return candidates[1]
-	end,
 }
 setmetatable(vec, {
 	__call = function(_, ...) return vector.new(...) end,
