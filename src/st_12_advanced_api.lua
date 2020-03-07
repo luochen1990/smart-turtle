@@ -73,7 +73,7 @@ if turtle then
 					local rot = dirRotationBetween(targetDir, detourDir)
 					local detourDirs = {targetDir, detourDir, rot(detourDir), rot(rot(detourDir))}
 					-- detourDirs (i.e. detour plane) decided
-					printC(colors.gray)("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
+					log.verb("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
 					-- begin detouring loop
 					local detourRotateCount = 1
 					local detourBeginDis = vec.manhat(destPos - detourBeginPos)
@@ -88,7 +88,7 @@ if turtle then
 							end
 						end
 					until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
-					printC(colors.gray)("cost "..detourCost.." from "..show(detourBeginPos).." to "..show(workState.pos))
+					log.verb("cost "..detourCost.." from "..show(detourBeginPos).." to "..show(workState.pos))
 					-- finish detouring
 					latestDetourPos = detourBeginPos
 					workState.detouring = false
@@ -162,6 +162,7 @@ if turtle then
 				with({workArea = area})(io1 * move.toward(far) * rep(io1 * move))()
 				return true
 			else -- rank > 1 means projLen ~= 0
+				log.verb("[scan] " .. rank .. "d, "..projLen.." layers toward "..showDir(mainDir))
 				local p, q = near, (far - mainDir * projLen)
 				for i = 0, projLen, sign(projLen) do
 					scan( (p + mainDir * i) .. (q + mainDir * i) )(io)()
@@ -197,10 +198,10 @@ if turtle then
 			;(cryingVisitStation(from) * rep(suck()) * cryingVisitStation(to) * rep(select(slot.isNonEmpty) * drop()))()
 			cnt = cnt + 1
 			if not slot._findThat(slot.isNonEmpty) then
-				printC(colors.gray)("[transportLine] finished "..cnt.." trips, now have a rest for 20 seconds...")
+				log.verb("[transportLine] finished "..cnt.." trips, now have a rest for 20 seconds...")
 				sleep(20)
 			else
-				printC(colors.gray)("[transportLine] the dest chest is full, waiting for space...")
+				log.verb("[transportLine] the dest chest is full, waiting for space...")
 				;(retry(select(slot.isNonEmpty) * drop()) * rep(select(slot.isNonEmpty) * drop()))()
 			end
 		end

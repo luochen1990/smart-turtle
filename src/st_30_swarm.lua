@@ -819,3 +819,7 @@ isIdle = mkIO(function()
 	return not (_replState.isRunningCommand)
 end)
 
+displayVerbLog = mkIO(function()
+	_logPrintCo({verb = true})
+end)
+

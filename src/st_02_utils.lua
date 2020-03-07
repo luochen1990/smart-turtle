@@ -429,6 +429,7 @@ function openWirelessModem()
 end
 
 _log_colors = {
+	verb = colors.gray,
 	info = colors.green,
 	warn = colors.yellow,
 	bug = colors.red,
@@ -436,24 +437,37 @@ _log_colors = {
 }
 
 function _log(ty)
-	return function(msg)
-		rednet.broadcast(literal(ty, msg), "log") --NOTE: use "log" as protocol code
-		printC(_log_colors[ty])(msg)
+	if ty == "verb" then
+		return function(msg)
+			if turtle and workMode.verbose then
+				rednet.broadcast(literal(ty, msg), "log") --NOTE: use "log" as protocol code
+			end
+			printC(_log_colors[ty])(msg)
+		end
+	else
+		return function(msg)
+			rednet.broadcast(literal(ty, msg), "log") --NOTE: use "log" as protocol code
+			printC(_log_colors[ty])(msg)
+		end
 	end
 end
 
-function _logPrintCo()
+function _logPrintCo(logFilter)
+	logFilter = default({info = true, warn = true, bug = true, cry = true})(logFilter)
 	while true do
 		local senderId, rawMsg = rednet.receive("log")
 		local ok, res = safeEval(rawMsg)
 		if ok then
 			local ty, msg = unpack(res)
-			printM(_log_colors[ty])("" .. os.time() .. " [" .. senderId .. "]: " .. msg)
+			if logFilter[ty] then
+				printM(_log_colors[ty])("" .. os.time() .. " [" .. senderId .. "]: " .. msg)
+			end
 		end
 	end
 end
 
 log = {
+	verb = _log("verb"), -- turtle verbose
 	info = _log("info"), -- information, like global state updation
 	warn = _log("warn"), -- some weird things happend, like network error, but not need to process it at once
 	bug = _log("bug"), -- bug, some weird things happend or some assertion failed, need to check the code

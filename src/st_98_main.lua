@@ -157,6 +157,10 @@ _roleDaemonCo = function()
 		_role = "log-printer"
 		os.pullEvent("system-ready")
 		_logPrintCo()
+	elseif label == "debugger" then
+		_role = "log-printer"
+		os.pullEvent("system-ready")
+		_logPrintCo({verb = true, info = true, warn = true, cry = true, bug = true})
 	elseif turtle and label == "provider" then
 		_role = "provider"
 		os.pullEvent("turtle-posd-ready")
