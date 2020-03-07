@@ -82,8 +82,8 @@ if turtle then
 			print("[flatGround] please provide an area, like p1..p2")
 		end
 		depth = default(1)(depth)
-		buildFloor = currentPos:pipe(function(p) return scan(p .. p + D * (depth-1), U)(place) end)
-		return savePosp(scan(area)(buildFloor * turn.U * rep(dig * move)))()
+		buildFloor = currentPos:pipe(function(p) return scan(p .. p + D * (depth-1), U)(turn.D * place) end)
+		return savePosp(with({destroy = true})(scan(area)(buildFloor * turn.U * rep(dig * move))))()
 	end))
 
 	_test.miner = markIOfn("_test.miner")(mkIOfn(function(n)
