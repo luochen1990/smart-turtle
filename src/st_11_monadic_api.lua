@@ -245,7 +245,7 @@ if turtle then
 			savePosd(refuelTo(workState.pos + workState:aimingDir()))() -- refuel may change our pos
 		else
 			if turtle.getFuelLevel() < 1 then
-				cryForHelpRefueling(1000)()
+				cryForHelpRefueling(100)()
 			end
 		end
 
