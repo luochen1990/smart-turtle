@@ -56,9 +56,9 @@ _retryWithTimeout = function(iof, totalTimeout, opts)
 	local sleepIntervalInit = default(0.1)(opts and opts.sleepIntervalInit)
 	local sleepIntervalIncreaseRatio = default(1.01)(opts and opts.sleepIntervalIncreaseRatio)
 	local sleepIntervalMax = default(300)(opts and opts.sleepIntervalMax)
-	local singleTimeoutInit = default(0.1)(opts and opts.singleTimeoutInit)
-	local singleTimeoutIncreaseRatio = default(4)(opts and opts.singleTimeoutIncreaseRatio)
-	local singleTimeoutMax = default(30)(opts and opts.singleTimeoutMax)
+	local singleTimeoutInit = default(0.2)(opts and opts.singleTimeoutInit)
+	local singleTimeoutIncreaseRatio = default(2)(opts and opts.singleTimeoutIncreaseRatio)
+	local singleTimeoutMax = default(15)(opts and opts.singleTimeoutMax)
 
 	return mkIO(function()
 		local singleTimeout = singleTimeoutInit
