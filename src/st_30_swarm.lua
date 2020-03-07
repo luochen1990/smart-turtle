@@ -19,6 +19,7 @@ end
 
 mkStationInfo = function(opts)
 	local s = {
+		role = opts.role, --NOTE: role field is not very useful, just for display
 		pos = opts.pos,
 		dir = opts.dir,
 		deliverBar = opts.deliverBar,
@@ -116,7 +117,7 @@ swarm._startService = (function()
 		local providers, requesters = {}, {}
 		for _, station in pairs(pool) do
 			local cnt = station.itemCount + station.restocking - station.delivering
-			log.verb("station =", literal(station.itemType, station.itemCount, station.pos, {cnt = cnt, restockBar = station.restockBar, deliverBar = station.deliverBar}))
+			log.verb("station: "..literal(station.role, station.itemType, station.itemCount, station.pos))
 			if station.restockPriority and cnt < station.restockBar then
 				local intent = station.deliverBar - cnt
 				local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.restockPriority}
@@ -530,6 +531,7 @@ serveAsProvider = mkIO(function()
 	end
 
 	local stationDef = {
+		role = "provider",
 		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
 		itemType = nil,
@@ -585,6 +587,7 @@ end)
 
 serveAsUnloader = mkIO(function()
 	local stationDef = {
+		role = "unloader",
 		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
 		itemType = "*anything", -- NOTE: this is a special constant value
@@ -620,6 +623,7 @@ end)
 
 serveAsRequester = mkIO(function()
 	local stationDef = {
+		role = "requester",
 		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
 		itemType = nil,
@@ -662,6 +666,7 @@ end)
 
 serveAsStorage = mkIO(function()
 	local stationDef = {
+		role = "storage",
 		pos = workState.pos - workState:aimingDir(),
 		dir = workState:aimingDir(),
 		itemType = nil,
