@@ -232,11 +232,8 @@ _main = function(...)
 	if #args > 0 then
 		printC(colors.gray)('cli arguments: ', show(args))
 
-		-- init system state
-		_initSystemCo()
-
 		-- exec command from cli args
-		race_(_inspectCo, function() exec(args[1], {}, _ENV) end)()
+		race_(_inspectCo, para_(function() exec(args[1], {}, _ENV) end, _initSystemCo))()
 	else
 		local _startupCo = race_(_startupScriptCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.c))
 
