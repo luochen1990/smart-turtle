@@ -116,10 +116,7 @@ swarm._startService = (function()
 		local providers, requesters = {}, {}
 		for _, station in pairs(pool) do
 			local cnt = station.itemCount + station.restocking - station.delivering
-			printC(colors.blue)("station =", literal(station.itemType, station.itemCount, station.pos, {cnt = cnt, restockBar = station.restockBar, deliverBar = station.deliverBar}))
-			--printC(colors.blue)("cnt = ", cnt)
-			--printC(colors.blue)("restockBar = ", station.restockBar)
-			--printC(colors.blue)("deliverBar = ", station.deliverBar)
+			log.verb("station =", literal(station.itemType, station.itemCount, station.pos, {cnt = cnt, restockBar = station.restockBar, deliverBar = station.deliverBar}))
 			if station.restockPriority and cnt < station.restockBar then
 				local intent = station.deliverBar - cnt
 				local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.restockPriority}
@@ -515,7 +512,7 @@ _updateInventoryCo = function(stationDef)
 						inventoryCount.isDirty = false
 						printC(colors.green)("itemCount reported: "..info.itemCount)
 					else
-						log.warn("[provider] failed to report inventory info: "..literal(res))
+						log.warn("("..stationDef.itemType..") failed to report inventory info: "..literal(res))
 					end
 				end
 			end
@@ -537,8 +534,8 @@ serveAsProvider = mkIO(function()
 		dir = workState:aimingDir(),
 		itemType = nil,
 		itemStackLimit = nil,
-		restockBar = 0,
-		deliverBar = 0,
+		restockBar = const.turtle.backpackSlotsNum * 0.25,
+		deliverBar = const.turtle.backpackSlotsNum * 0.75,
 		deliverPriority = -9, -- passive provider
 		stationHosterId = os.getComputerID()
 	}
@@ -548,6 +545,8 @@ serveAsProvider = mkIO(function()
 		local det = retry((select(slot.isNonEmpty) + getAndHold(1)) * details())()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
+		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.25
+		stationDef.deliverBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.75
 		printC(colors.green)("[provider] got "..det.name)
 		local _reg = function()
 			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
@@ -596,18 +595,18 @@ serveAsUnloader = mkIO(function()
 	}
 
 	local registerCo = function()
-		printC(colors.gray)("[provider] registering unload station")
+		printC(colors.gray)("[unloader] registering unload station")
 		local _reg = function()
 			local ok, res = swarm.client.request("swarm.services.registerStation("..literal(stationDef)..")")()
 			if not ok then
-				log.cry("[provider] failed to register station (network error): "..literal(res))
+				log.cry("[unloader] failed to register station (network error): "..literal(res))
 				return false
 			end
 			if not table.remove(res, 1) then
-				log.cry("[provider] failed to register station (logic error): "..literal(res))
+				log.cry("[unloader] failed to register station (logic error): "..literal(res))
 				return false
 			end
-			log.info("[provider] unload station registered at " .. show(stationDef.pos))
+			log.info("[unloader] unload station registered at " .. show(stationDef.pos))
 			return true
 		end
 		retry(_reg)()
@@ -625,9 +624,9 @@ serveAsRequester = mkIO(function()
 		dir = workState:aimingDir(),
 		itemType = nil,
 		itemStackLimit = nil,
-		restockBar = const.turtle.backpackSlotsNum * 0.25,
+		restockBar = const.turtle.backpackSlotsNum * 0.5,
 		restockPriority = 9,
-		deliverBar = const.turtle.backpackSlotsNum,
+		deliverBar = const.turtle.backpackSlotsNum * 1.0,
 		stationHosterId = os.getComputerID()
 	}
 
@@ -636,7 +635,7 @@ serveAsRequester = mkIO(function()
 		local det = retry((select(slot.isNonEmpty) + suckHold(1)) * details())()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
-		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.25
+		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.5
 		stationDef.deliverBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 1.0
 		printC(colors.green)("[requester] got "..det.name)
 		local _reg = function()
