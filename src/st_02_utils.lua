@@ -482,7 +482,7 @@ function glob(pat)
 	if n == 0 then
 		return function(s) return s == pat end
 	else
-		return function(s) string.find(s, regex) ~= nil end
+		return function(s) string.find(s, "^"..regex.."$") ~= nil end
 	else
 end
 
@@ -492,7 +492,7 @@ function globFind(pat)
 	if n == 0 then
 		return function(s) if s == pat then return 1, #pat else return nil end end
 	else
-		return function(s) string.find(s, regex) end
+		return function(s) string.find(s, "^"..regex.."$") end
 	else
 end
 
