@@ -117,7 +117,7 @@ end
 
 retryUntil = markIOfn2("retryUntil(ioStopCond)(io)")(function(ioStopCond)
 	return function(io)
-		return retry( save(ioStopCond)( try(saved + io) * saved ) )
+		return retry( ioStopCond + -try(io) )
 	end
 end)
 
