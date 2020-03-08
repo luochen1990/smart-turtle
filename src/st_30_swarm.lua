@@ -1,4 +1,4 @@
---------------------------------- swarm state ----------------------------------
+------------------------------ swarm server state ------------------------------
 
 mkTaskInfo = function(opts) -- not used yet
 	local t = {
@@ -53,13 +53,16 @@ mkWorkerInfo = function(opts) -- not used yet
 	return w
 end
 
-swarm = {
-	_state = {
-		asFuel = {"minecraft:charcoal", "minecraft:white_carpet", "minecraft:blue_carpet", "minecraft:light_gray_carpet"},
-		stationPool = {},
-		workerPool = {},
-		jobPool = {},
-	},
+swarm = {}
+
+swarm.config = {
+	asFuel = {"minecraft:charcoal", "minecraft:white_carpet"},
+}
+
+swarm._state = {
+	stationPool = {},
+	workerPool = {},
+	jobPool = {},
 }
 
 -------------------------------- telnet service --------------------------------
@@ -328,6 +331,17 @@ swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft
 		return true, best
 	end
 	return false, "no proper station now, please try latter"
+end
+
+swarm.services.requestFuelStation = function(nStep, startPos, fuelLeft)
+	for _, name in ipairs(swarm.config.asFuel) do
+		local count = math.ceil(nStep / const.fuelHeatContent[name])
+		local ok, res = swarm.services.requestStation(name, count, startPos, fuelLeft)
+		if ok then
+			return true, st
+		end
+	end
+	return false, "no fuel station available, swarm.config.asFuel = "..literal(swarm.config.asFuel)
 end
 
 --------------------------------- swarm client ---------------------------------
@@ -757,19 +771,10 @@ requestStation = mkIOfn(function(itemName, itemCount, startPos, fuelLeft)
 	return swarm.client.request("swarm.services.requestStation("..literal(itemName, itemCount, startPos, fuelLeft)..")")()
 end)
 
-requestFuelStation = mkIOfn(function(nStep)
-	for i, name in ipairs(swarm._state.asFuel) do
-		local requestSucc, res = requestStation(name, 0)() --TODO: calc fuel number
-		if not requestSucc then
-			log.warn("[requestFuelStation] request failed: "..res)
-		else
-			local ok, st = unpack(res)
-			if ok then
-				return true, st
-			end
-		end
-	end
-	return false, "no fuel station available, swarm._state.asFuel = "..literal(swarm._state.asFuel)
+requestFuelStation = mkIOfn(function(nStep, startPos, fuelLeft)
+	startPos = default(workState.pos)(startPos)
+	fuelLeft = default(turtle.getFuelLevel())(fuelLeft)
+	return swarm.client.request("swarm.services.requestFuelStation("..literal(nStep, startPos, fuelLeft)..")")()
 end)
 
 requestUnloadStation = mkIOfn(function(emptySlotRequired)
