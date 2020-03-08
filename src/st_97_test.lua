@@ -20,7 +20,7 @@ if turtle then
 	end))
 
 	_test.maze = markIO("_test.maze")(mkIO(function()
-		return with({destroy = false, workArea = (O + (L + D) * 1000) .. (O + (R + U) * 1000)})(savePosp(move.go(L * 2 + U * 17)))()
+		return with({workArea = (O + (L + D) * 1000) .. (O + (R + U) * 1000)})(savePosp(move.go(L * 2 + U * 17)))()
 	end))
 
 	_test.scan = markIO("_test.scan")(mkIO(function()

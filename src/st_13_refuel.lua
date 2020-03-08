@@ -104,7 +104,7 @@ if turtle then
 		local saved_sn = turtle.getSelectedSlot()
 		local ok = refuelFromBackpack(nStep)()
 		if not ok and workMode.allowInterruption then -- no fuel in backpack, go to fuelStation
-			ok = refuelFromFuelStation(nStep)()
+			ok = with({destroy = 1})(refuelFromFuelStation(nStep))()
 		end
 		turtle.select(saved_sn)
 		return ok
