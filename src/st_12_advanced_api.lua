@@ -185,7 +185,8 @@ if turtle then
 
 	carry = markIOfn("carry(from,to,count,name)")(mkIOfn(function(from, to, count, name)
 		local got = slot.count(name)
-		return (visitStation(from) * try(suckExact(count - got, name)) * visitStation(to) * dropExact(count, name) / (turn.U * move ^ 3))()
+		local visit = function(st) return visitStation(st) * (isStation + -try(unregisterStation(st) / (turn.U * move ^ 3))) end
+		return (visit(from) * try(suckExact(count - got, name)) * visit(to) * dropExact(count, name) / (turn.U * move ^ 3))()
 	end))
 
 	transportLine = markIOfn("transportLine(from, to)")(mkIOfn(function(from, to)
