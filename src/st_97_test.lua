@@ -86,6 +86,13 @@ if turtle then
 		return savePosp(with({destroy = true})(scan(area)(buildFloor * turn.U * rep(dig * move))))()
 	end))
 
+	_test.plant = markIO("_test.plant")(mkIO(function()
+		local ripen = retryUntil(isNamed("*:*_log"))(use("minecraft:bone_meal"))
+		local cutTrunk = dig * move * turn.U * rep(dig * move)
+		local cutLeaf = currentPos:pipe(function(p) return with({destroy = true})(scan(p+(F+L)*2 .. p+(B+R+D)*2, D)(turn.D * dig)) end)
+		return savePosd((isNamed("*:*_log") + use("*:*_sapling") * ripen) * cutTrunk * cutLeaf)()
+	end))
+
 	_test.miner = markIOfn("_test.miner")(mkIOfn(function(n)
 		n = math.max(1, n or 1)
 		return savePosp(scan(O .. (O + (R + F) * (n-1)), D)(turn.D * rep(try(dig) * move)))()
