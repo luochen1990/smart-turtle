@@ -146,74 +146,44 @@ _initSystemCo = function()
 end
 
 -- | detect device role via label and device type
--- , and run related script
+-- , and run related daemon process
 _roleDaemonCo = function()
-	local label = os.getComputerLabel()
 
-	if label == "swarm-server" then
-		_role = "swarm-server"
-		swarm._startService()
-	elseif label == "log-printer" then
-		_role = "log-printer"
-		os.pullEvent("system-ready")
-		_logPrintCo()
-	elseif label == "debugger" then
-		_role = "log-printer"
-		os.pullEvent("system-ready")
-		_logPrintCo({verb = true, info = true, warn = true, cry = true, bug = true})
-	elseif turtle and label == "provider" then
-		_role = "provider"
-		os.pullEvent("turtle-posd-ready")
-		serveAsProvider()
-	elseif turtle and label == "unloader" then
-		_role = "unloader"
-		os.pullEvent("turtle-posd-ready")
-		serveAsUnloader()
-	elseif turtle and label == "requester" then
-		_role = "requester"
-		os.pullEvent("turtle-posd-ready")
-		serveAsRequester()
-	elseif turtle and label == "storage" then
-		_role = "storage"
-		os.pullEvent("turtle-posd-ready")
-		serveAsStorage()
-	elseif turtle and label == "carrier" then
-		_role = "carrier"
-		os.pullEvent("system-ready")
-		serveAsCarrier()
-	--elseif turtle and label == "register" then
-	--	_role = "register"
-	--	os.pullEvent("turtle-posd-ready")
-	--	registerPassiveProvider()
-	elseif label == "blinker" then
-		_role = "blinker"
-		os.pullEvent("system-ready")
-		local b = false
-		while true do
-			redstone.setOutput("front", b)
-			b = not b
-			sleep(0.5)
+	local detectSwarmRole = function()
+		local label = os.getComputerLabel()
+		local surfixIdx = string.find(label, "-%d*$")
+		if surfixIdx then
+			label = string.sub(label, 1, surfixIdx-1)
 		end
-	elseif turtle and string.sub(label, 1, 6) == "guard-" then
-		_role = "guard"
-		os.pullEvent("system-ready")
-		local d = string.sub(label, 7, 7)
-		if const.dir[d] then
-			if d == "D" then
-				followYouCo(D)
-			else
-				followYouCo(const.dir[d])
-			end
+		local roleCfg = swarm.roles[label]
+		if roleCfg and roleCfg.check() then
+			return label, roleCfg
 		end
-	elseif pocket and label == "follow-me" then
-		_role = "follow-me"
-		os.pullEvent("system-ready")
-		followMeCo()
+	end
+
+	local role, roleCfg = detectSwarmRole()
+	if role then
+		os.setComputerLabel(role .. "-" .. os.getComputerID())
+		swarm.myRole = role
+		printC(colors.gray)("my role is "..role..", now running daemon...")
+		roleCfg.daemon()
 	else
-		if turtle then
-			_role = "worker"
-		else
-			_role = "pc"
+		local label = os.getComputerLabel()
+		if turtle and string.sub(label, 1, 6) == "guard-" then
+			_role = "guard"
+			os.pullEvent("system-ready")
+			local d = string.sub(label, 7, 7)
+			if const.dir[d] then
+				if d == "D" then
+					followYouCo(D)
+				else
+					followYouCo(const.dir[d])
+				end
+			end
+		elseif pocket and label == "follow-me" then
+			_role = "follow-me"
+			os.pullEvent("system-ready")
+			followMeCo()
 		end
 	end
 end

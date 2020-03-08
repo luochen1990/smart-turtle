@@ -827,3 +827,73 @@ displayVerbLog = mkIO(function()
 	_logPrintCo({verb = true})
 end)
 
+swarm.roles = {
+	["swarm-server"] = {
+		check = function() return true end,
+		daemon = function()
+			swarm._startService()
+		end,
+	},
+	["log-monitor"] = {
+		check = function() return true end,
+		daemon = function()
+			os.pullEvent("system-ready")
+			_logPrintCo()
+		end,
+	},
+	["debugger"] = {
+		check = function() return true end,
+		daemon = function()
+			os.pullEvent("system-ready")
+			_logPrintCo({verb = true, info = false, warn = true, cry = false, bug = true})
+		end,
+	},
+	["unloader"] = {
+		check = function() return turtle ~= nil end,
+		daemon = function()
+			os.pullEvent("turtle-posd-ready")
+			serveAsUnloader()
+		end,
+	},
+	["provider"] = {
+		check = function() return turtle ~= nil end,
+		daemon = function()
+			os.pullEvent("turtle-posd-ready")
+			serveAsProvider()
+		end,
+	},
+	["requester"] = {
+		check = function() return turtle ~= nil end,
+		daemon = function()
+			os.pullEvent("turtle-posd-ready")
+			serveAsRequester()
+		end,
+	},
+	["storage"] = {
+		check = function() return turtle ~= nil end,
+		daemon = function()
+			os.pullEvent("turtle-posd-ready")
+			serveAsStorage()
+		end,
+	},
+	["carrier"] = {
+		check = function() return turtle ~= nil end,
+		daemon = function()
+			os.pullEvent("system-ready")
+			serveAsCarrier()
+		end,
+	},
+	["blinker"] = {
+		check = function() return true end,
+		daemon = function()
+			os.pullEvent("system-ready")
+			local b = false
+			while true do
+				redstone.setOutput("front", b)
+				b = not b
+				sleep(0.5)
+			end
+		end,
+	},
+}
+
