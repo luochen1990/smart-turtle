@@ -17,10 +17,11 @@ if turtle then
 				return det and const.fuelHeatContent[det.name]
 			end
 		end,
-		isNamed = function(name)
+		isNamed = function(namePat)
+			local match = glob(namePat)
 			return function(sn)
 				local det = turtle.getItemDetail(sn)
-				return det and det.name == name
+				return det and match(det.name)
 			end
 		end,
 		isTool = function(toolType)

@@ -159,10 +159,13 @@ if turtle then
 
 	isEmpty = -detect
 
-	isNamed = mkIOfn(function(name)
-		local ok, res = _aiming.inspect()
-		return ok and res.name == name
-	end)
+	isNamed = function(namePat)
+		local match = glob(namePat)
+		return mkIO(function()
+			local ok, res = _aiming.inspect()
+			return ok and match(res.name)
+		end)
+	end
 
 	isSame = mkIO(function()
 		local ok, res = _aiming.inspect()

@@ -480,6 +480,16 @@ log = {
 function glob(pat)
 	local regex, n = string.gsub(pat, "\*", "\.\*")
 	if n == 0 then
+		return function(s) return s == pat end
+	else
+		return function(s) string.find(s, regex) ~= nil end
+	else
+end
+
+-- | Usage: local i, j = globFind(pat)(s); if i then return "succ" else return "fail" end
+function globFind(pat)
+	local regex, n = string.gsub(pat, "\*", "\.\*")
+	if n == 0 then
 		return function(s) if s == pat then return 1, #pat else return nil end end
 	else
 		return function(s) string.find(s, regex) end
