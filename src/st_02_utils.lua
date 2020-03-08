@@ -476,23 +476,13 @@ log = {
 	cry = _log("cry"), -- there is some turtle needing help, such as refueling or unloading
 }
 
--- | Usage: local i, j = glob(pat)(s); if i then return "succ" else return "fail" end
+-- | Usage: local ok = glob(pat)(s)
 function glob(pat)
-	local regex, n = string.gsub(pat, "\*", "\.\*")
+	local regex, n = string.gsub(pat, "\*", "[^:]\*")
 	if n == 0 then
 		return function(s) return s == pat end
 	else
-		return function(s) string.find(s, "^"..regex.."$") ~= nil end
-	else
-end
-
--- | Usage: local i, j = globFind(pat)(s); if i then return "succ" else return "fail" end
-function globFind(pat)
-	local regex, n = string.gsub(pat, "\*", "\.\*")
-	if n == 0 then
-		return function(s) if s == pat then return 1, #pat else return nil end end
-	else
-		return function(s) string.find(s, "^"..regex.."$") end
-	else
+		return function(s) return string.find(s, "^"..regex.."$") ~= nil end
+	end
 end
 
