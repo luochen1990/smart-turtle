@@ -5,6 +5,8 @@ identity = function(x) return x end
 
 negate = function(x) return -x end
 
+eq = function(x) return function(y) return x == y end end
+
 -- | pipe : (a -> b) -> (b -> c) -> a -> c
 -- , pipe == flip compose
 pipe = function(f, ...)
@@ -473,4 +475,14 @@ log = {
 	bug = _log("bug"), -- bug, some weird things happend or some assertion failed, need to check the code
 	cry = _log("cry"), -- there is some turtle needing help, such as refueling or unloading
 }
+
+-- | Usage: local i, j = glob(pat)(s); if i then return "succ" else return "fail" end
+function glob(pat)
+	local regex, n = string.gsub(pat, "\*", "\.\*")
+	if n == 0 then
+		return function(s) if s == pat then return 1, #pat else return nil end end
+	else
+		return function(s) string.find(s, regex) end
+	else
+end
 
