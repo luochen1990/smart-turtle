@@ -273,6 +273,17 @@ swarm.services.updateStation = function(opts)
 	return true, "station updated"
 end
 
+swarm.services.unregisterStation = function(st)
+	if not st.itemType or not st.pos then
+		return false, "station pos and itemType is required"
+	end
+	local pool = swarm._state.stationPool[st.itemType]
+	if pool then
+		pool[show(st.pos)] = nil
+	end
+	return true, "done"
+end
+
 swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft)
 	local pool = swarm._state.stationPool[itemType]
 	if not pool then
@@ -468,10 +479,6 @@ swarm.client = rpc.buildClient("swarm")
 ---- | interactive register complex station
 --registerStation = mkIOfn(function()
 --end)
-
-unregisterStation = function(st)
-	log.bug("unregisterStation not implemented yet!")
-end
 
 --registerPassiveProvider = mkIO(function()
 --	reserveOneSlot()
@@ -786,6 +793,10 @@ requestUnloadStation = mkIOfn(function(emptySlotRequired)
 		return unpack(res)
 	end
 end)
+
+unregisterStation = function(st)
+	return swarm.client.request("swarm.services.unregisterStation("..literal({itemType = st.itemType, pos = st.pos})..")")()
+end
 
 -- | a tool to visit station robustly
 -- , will unregister bad stations and try to get next
