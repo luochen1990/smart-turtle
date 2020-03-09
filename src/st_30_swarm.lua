@@ -771,31 +771,31 @@ end)
 --	})
 --end)
 
+foldSuccFlag = function(ok, res)
+	if ok then return unpack(res) else return false, res end
+end
+
 requestStation = mkIOfn(function(itemName, itemCount, startPos, fuelLeft)
 	itemCount = default(0)(itemCount)
 	startPos = default(workState.pos)(startPos)
 	fuelLeft = default(turtle.getFuelLevel())(fuelLeft)
-	return swarm.client.request("swarm.services.requestStation("..literal(itemName, itemCount, startPos, fuelLeft)..")")()
+	return foldSuccFlag(swarm.client.request("swarm.services.requestStation("..literal(itemName, itemCount, startPos, fuelLeft)..")")())
 end)
 
 requestFuelStation = mkIOfn(function(nStep, startPos, fuelLeft)
 	startPos = default(workState.pos)(startPos)
 	fuelLeft = default(turtle.getFuelLevel())(fuelLeft)
-	return swarm.client.request("swarm.services.requestFuelStation("..literal(nStep, startPos, fuelLeft)..")")()
+	return foldSuccFlag(swarm.client.request("swarm.services.requestFuelStation("..literal(nStep, startPos, fuelLeft)..")")())
 end)
 
-requestUnloadStation = mkIOfn(function(emptySlotRequired)
-	local requestSucc, res = requestStation("*anything", 0)() --TODO: calc slot number
-	if not requestSucc then
-		log.warn("[requestUnloadStation] request failed: "..res)
-		return false, res
-	else
-		return unpack(res)
-	end
+requestUnloadStation = mkIOfn(function(emptySlotRequired, startPos, fuelLeft)
+	startPos = default(workState.pos)(startPos)
+	fuelLeft = default(turtle.getFuelLevel())(fuelLeft)
+	return foldSuccFlag(swarm.client.request("swarm.services.requestStation("..literal("*anything", 0, startPos, fuelLeft)..")")()) --TODO: calc slot number
 end)
 
 unregisterStation = function(st)
-	return swarm.client.request("swarm.services.unregisterStation("..literal({itemType = st.itemType, pos = st.pos})..")")()
+	return foldSuccFlag(swarm.client.request("swarm.services.unregisterStation("..literal({itemType = st.itemType, pos = st.pos})..")")())
 end
 
 -- | a tool to visit station robustly

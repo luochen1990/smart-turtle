@@ -72,7 +72,7 @@ if turtle then
 		else
 			os.queueEvent("turtle-posd-ready")
 		end
-		local ok2, fuelStation = retry(10)(requestFuelStation(0))()
+		local ok2, fuelStation = retry(5)(requestFuelStation(0))()
 		if ok2 then
 			workState.fuelStation = fuelStation
 		else
