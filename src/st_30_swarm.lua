@@ -30,7 +30,7 @@ mkStationInfo = function(opts)
 		itemStackLimit = opts.itemStackLimit,
 		stationHosterId = opts.stationHosterId,
 		-- states
-		itemCount = opts.itemCount or 0,
+		itemCount = opts.itemCount,
 		delivering = 0,
 		restocking = 0,
 		isVisiting = default(false)(opts.isVisiting),
@@ -119,17 +119,19 @@ swarm._startService = (function()
 	local findCarrierTask = function(itemType, pool)
 		local providers, requesters = {}, {}
 		for _, station in pairs(pool) do
-			local cnt = station.itemCount + station.restocking - station.delivering
-			log.verb("station: "..literal(station.role, station.itemType, station.itemCount, station.pos))
-			if station.restockPriority and cnt < station.restockBar then
-				local intent = station.deliverBar - cnt
-				local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.restockPriority}
-				table.insert(requesters, info)
-			end
-			if station.deliverPriority and cnt > station.deliverBar then
-				local intent = cnt - station.restockBar
-				local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.deliverPriority}
-				table.insert(providers, info)
+			if station.itemCount then -- only itemCount reported station considered
+				local cnt = station.itemCount + station.restocking - station.delivering
+				log.verb("station: "..literal(station.role, station.itemType, station.itemCount, station.pos))
+				if station.restockPriority and cnt < station.restockBar then
+					local intent = station.deliverBar - cnt
+					local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.restockPriority}
+					table.insert(requesters, info)
+				end
+				if station.deliverPriority and cnt > station.deliverBar then
+					local intent = cnt - station.restockBar
+					local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.deliverPriority}
+					table.insert(providers, info)
+				end
 			end
 		end
 		if #providers == 0 or #requesters == 0 then
