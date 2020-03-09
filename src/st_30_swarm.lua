@@ -323,7 +323,7 @@ swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft
 	-- boolean conditions
 	local nearer = function(pos1, pos2) return vec.manhat(pos1 - startPos) < vec.manhat(pos2 - startPos) end
 	local nearEnough = function(st) return vec.manhat(st.pos - startPos) * 2 <= fuelLeft end
-	local itemEnough = function(st) if itemCount >= 0 then return st.itemCount >= itemCount else return st.itemCount < itemCount end end
+	local itemEnough = function(st) return st.itemCount and st.itemCount >= itemCount end
 	local queueNotFull = function(st) return st.currentQueueLength < st.maxQueueLength end
 	-- number conditions
 	local dist = function(st) return vec.manhat(st.pos - startPos) end
