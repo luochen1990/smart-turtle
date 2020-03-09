@@ -505,7 +505,7 @@ swarm.client = rpc.buildClient("swarm")
 --end)
 
 
-_updateInventoryCo = function(stationDef)
+_updateInventoryCo = function(stationDef, needReport)
 	local inventoryCount = {
 		isDirty = true,
 		lastReport = stationDef.itemCount,
@@ -514,6 +514,16 @@ _updateInventoryCo = function(stationDef)
 		while true do
 			local ev = { os.pullEvent("turtle_inventory") } -- no useful information :(
 			inventoryCount.isDirty = true
+		end
+	end
+	if not needReport then
+		needReport = function(old_cnt)
+			local cnt = slot.count(stationDef.itemType)
+			if cnt ~= old_cnt then
+				return true, cnt
+			else
+				return false, cnt
+			end
 		end
 	end
 	local updateCo = function()
@@ -525,8 +535,8 @@ _updateInventoryCo = function(stationDef)
 		while true do
 			sleep(5)
 			if inventoryCount.isDirty then
-				local cnt = slot.count(stationDef.itemType)
-				if cnt ~= inventoryCount.lastReport then
+				local need, cnt = needReport(inventoryCount.lastReport)
+				if need then
 					print(os.time().." current count: "..cnt)
 					info.itemCount = cnt
 					local ok, res = swarm.client.request("swarm.services.updateStation("..literal(info)..")")()
@@ -723,10 +733,27 @@ serveAsStorage = mkIO(function()
 		retry(_reg)()
 	end
 
+	local needReport = function(old_cnt)
+		local new_cnt = slot.count(stationDef.itemType)
+		local increased = new_cnt - old_cnt
+		if increased > 0 then
+			local ok, dropped = (isChest * dropExact(increased, stationDef.itemType))()
+			if not ok then
+				return true, new_cnt - (dropped or 0)
+			end
+		elseif increased < 0 then
+			local ok, sucked = (isChest * suckExact(increased, stationDef.itemType))()
+			if not ok then
+				return true, new_cnt + (sucked or 0)
+			end
+		end
+		return false, old_cnt
+	end
+
 	local keepDroppingCo = rep(retry(isChest * select(slot.isNonEmpty) * drop()))
 
 	registerCo()
-	para_(keepDroppingCo, _updateInventoryCo(stationDef))()
+	para_(keepDroppingCo, _updateInventoryCo(stationDef, needReport))()
 end)
 
 serveAsCarrier = mkIO(function()
