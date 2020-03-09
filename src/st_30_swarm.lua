@@ -538,15 +538,16 @@ _updateInventoryCo = function(stationDef, needReport)
 			sleep(5)
 			if inventoryCount.isDirty then
 				local need, cnt = needReport(inventoryCount.lastReport)
+				inventoryCount.isDirty = false --NOTE: position of this line is very important
 				if need then
-					print(os.time().." current count: "..cnt)
+					printC(colors.gray)(os.time().." current count: "..cnt)
 					info.itemCount = cnt
 					local ok, res = swarm.client.request("swarm.services.updateStation("..literal(info)..")")()
 					if ok then
-						inventoryCount.isDirty = false
+						inventoryCount.lastReport = cnt
 						printC(colors.green)("itemCount reported: "..info.itemCount)
 					else
-						log.warn("("..stationDef.itemType..") failed to report inventory info: "..literal(res))
+						log.warn("("..stationDef.itemType..") failed to report inventory: "..literal(res))
 					end
 				end
 			end
@@ -737,25 +738,22 @@ serveAsStorage = mkIO(function()
 
 	local needReport = function(old_cnt)
 		local new_cnt = slot.count(stationDef.itemType)
-		local increased = new_cnt - old_cnt
-		if increased > 0 then
-			local ok, dropped = (isChest * dropExact(increased, stationDef.itemType))()
-			if not ok then
-				return true, new_cnt - (dropped or 0)
-			end
-		elseif increased < 0 then
-			local ok, sucked = (isChest * suckExact(increased, stationDef.itemType))()
-			if not ok then
-				return true, new_cnt + (sucked or 0)
-			end
+		local target = (stationDef.restockBar - 1)
+		local intent = target - new_cnt
+		if intent > 0 then
+			local ok, sucked = (isChest * suckExact(intent, stationDef.itemType))()
+			--log.verb(literal({ok = ok, sucked = sucked, intent = intent, item = stationDef.itemType}))
+			new_cnt = new_cnt + (sucked or 0)
+		elseif intent < 0 then
+			local ok, dropped = (isChest * dropExact(-intent, stationDef.itemType))()
+			--log.verb(literal({ok = ok, dropped = dropped, intent = intent, item = stationDef.itemType}))
+			new_cnt = new_cnt - (dropped or 0)
 		end
-		return false, old_cnt
+		return (new_cnt ~= old_cnt), new_cnt
 	end
 
-	local keepDroppingCo = rep(retry(isChest * select(slot.isNonEmpty) * drop()))
-
 	registerCo()
-	para_(keepDroppingCo, _updateInventoryCo(stationDef, needReport))()
+	_updateInventoryCo(stationDef, needReport)()
 end)
 
 serveAsCarrier = mkIO(function()
