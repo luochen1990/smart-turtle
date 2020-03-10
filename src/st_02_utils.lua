@@ -230,7 +230,7 @@ function _serialiseTable(t, serialElem, spliter, head, tail, placeholder)
 			if not (sk and sv) then
 				return nil
 			end
-			s = s .. sk .. "=" .. sv --TODO: wrap special key with [] and escape
+			s = s .. sk .. "=" .. sv
 		end
 	end
 	if not sp and placeholder then
@@ -275,7 +275,11 @@ end
 
 function _literalKey(k)
 	if type(k) == "string" then
-		return k --TODO: escape special chars
+		if string.match(k, "^[a-zA-Z_]+$") then -- simple identifier
+			return k
+		else
+			return "[" .. _literalString(k) .. "]"
+		end
 	else
 		return "[" .. _literal(k) .. "]"
 	end
