@@ -54,12 +54,18 @@ rpc.buildServer = function(listenProtocol, servingMode, handler, logger)
 					resp = literal(false, "bad request (E3): "..literal(res))
 					logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
 				else
-					resp = literal(true, res)
-					local ok, r = unpack(res)
-					if ok then
-						logger.succ("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
+					local ok4, lit = pcall(literal, true, res)
+					if not ok4 then
+						resp = literal(false, "not serialisable result (E4): "..showLit(res))
+						logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. resp)
 					else
-						logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
+						resp = lit
+						local ok, r = unpack(res)
+						if ok then
+							logger.succ("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
+						else
+							logger.fail("to " .. requesterId .. ":" .. reqId .. ": " .. literal(ok, r))
+						end
 					end
 				end
 			end
