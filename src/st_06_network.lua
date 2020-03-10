@@ -12,6 +12,14 @@ rpc._consoleLoggerBuilder = function(protocol, hostname)
 	}
 end
 
+rpc._nopeLogger = {
+	verb = function() end,
+	info = function() end,
+	succ = function() end,
+	fail = function() end,
+	warn = function() end,
+}
+
 -- | build a server, returns an IO to start the server
 -- , `listenProtocol` is used for both request receiving and service discovery
 -- , `servingMode` is one of "queuing", "blocking", "aborting"

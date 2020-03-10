@@ -188,6 +188,23 @@ _roleDaemonCo = function()
 	end
 end
 
+-- | run device type related daemon process
+_deviceDaemonCo = function()
+	local turtleDaemon = rpc.buildServer("st-turtle", "queuing", function(msg)
+		return safeEval(msg) --TODO: set proper env
+	end, rpc._nopeLogger)
+
+	local computerDaemon = rpc.buildServer("st-computer", "queuing", function(msg)
+		return safeEval(msg) --TODO: set proper env
+	end, rpc._nopeLogger)
+
+	if turtle then
+		para_(turtleDaemon, computerDaemon)()
+	else
+		computerDaemon()
+	end
+end
+
 _startupScriptCo = function()
 	-- startup logic by script st_startup.lua
 	local code = readFile("/st_startup.lua")
@@ -225,7 +242,7 @@ _main = function(...)
 				_waitForKeyCombination(keys.leftCtrl, keys.q)
 				print("[ctrl+q] exit daemon process")
 			end
-			race_(_exitCo, para_(_daemonScriptCo, _roleDaemonCo))()
+			race_(_exitCo, para_(_daemonScriptCo, _deviceDaemonCo, _roleDaemonCo))()
 		end
 
 		local _replCo = function()
