@@ -56,22 +56,22 @@ _retryWithTimeout = function(iof, totalTimeout, opts)
 	local sleepIntervalInit = default(0.1)(opts and opts.sleepIntervalInit)
 	local sleepIntervalIncreaseRatio = default(1.01)(opts and opts.sleepIntervalIncreaseRatio)
 	local sleepIntervalMax = default(300)(opts and opts.sleepIntervalMax)
+
 	local singleTimeoutInit = default(0.2)(opts and opts.singleTimeoutInit)
 	local singleTimeoutIncreaseRatio = default(2)(opts and opts.singleTimeoutIncreaseRatio)
 	local singleTimeoutMax = default(15)(opts and opts.singleTimeoutMax)
 
 	return mkIO(function()
 		local singleTimeout = singleTimeoutInit
-		--printC(colors.red)("singleTimeout =", singleTimeout)
 		local r = { iof(singleTimeout)() } -- first try
 		if r[1] then return unpack(r) end -- direct success
+
 		local sleepInterval = sleepIntervalInit
-		--local waitedSeconds = 0.0
 		local startTime = os.clock()
 		while true do
 			singleTimeout = math.min(singleTimeoutMax, singleTimeout * singleTimeoutIncreaseRatio)
 			local sleepSeconds
-			if totalTimeout == nil then -- not inf (i.e. nil)
+			if totalTimeout == nil then -- means wait infinitly
 				sleepSeconds = sleepInterval * math.random()
 			else -- totalTimeout ~= nil
 				local timeLeft = (startTime + totalTimeout - os.clock())
@@ -79,11 +79,9 @@ _retryWithTimeout = function(iof, totalTimeout, opts)
 				sleepSeconds = math.min(timeLeft, sleepInterval * math.random())
 			end
 			sleep(sleepSeconds)
-			--printC(colors.red)("singleTimeout =", singleTimeout)
-			r = { iof(singleTimeout)() }
+			r = { iof(singleTimeout)() } -- retry
 			if r[1] then return unpack(r) end
 			sleepInterval = math.min(sleepIntervalMax, sleepInterval * sleepIntervalIncreaseRatio)
-			--singleTimeout = math.min(singleTimeoutMax, singleTimeout * singleTimeoutIncreaseRatio)
 		end
 		return unpack(r) -- return result of last failed try
 	end)
@@ -94,7 +92,7 @@ end
 -- ,  Usage 2: (Seconds -> IO (Maybe a)) -> IO a
 retryWithTimeout = function(arg, opts)
 	if type(arg) == "number" then
-		return markIOfn("retryWithTimeout(totalTimeout, opts)(iof)")(function(iof)
+		return markIOfn("retryWithTimeout(totalTimeout,opts)(iof)")(function(iof)
 			return _retryWithTimeout(iof, arg, opts)
 		end)
 	else -- the `retryWithTimeout(iof)` usage
@@ -107,7 +105,7 @@ end
 -- , Usage 2: IO (Maybe a) -> IO a
 retry = function(arg, opts)
 	if type(arg) == "number" then
-		return markIOfn("retry(totalTimeout, opts)(io)")(function(io)
+		return markIOfn("retry(totalTimeout,opts)(io)")(function(io)
 			return _retryWithTimeout(function(t) return io end, arg, opts)
 		end)
 	else -- the `retry(io)` usage
