@@ -206,8 +206,17 @@ _main = function(...)
 	if #args > 0 then
 		printC(colors.gray)('cli arguments: ', show(args))
 
+		local _exitCo = function()
+			_waitForKeyCombination(keys.leftCtrl, keys.d)
+			print("[ctrl+d] exit smart-turtle")
+		end
+
 		-- exec command from cli args
-		race_(_inspectCo, para_(function() exec(args[1], {}, _ENV) end, _initSystemCo))()
+		local _cliCommandCo = function()
+			exec(args[1], {}, _ENV)
+		end
+
+		race_(_exitCo, _cliCommandCo, para_(_inspectCo, _initSystemCo))()
 	else
 		local _startupCo = race_(_startupScriptCo, delay(_waitForKeyCombination, keys.leftCtrl, keys.c))
 
@@ -229,8 +238,7 @@ _main = function(...)
 		end
 
 		-- run startup scripts & init system state
-		race_(_inspectCo, para_(_startupCo, _daemonCo, _replCo, _initSystemCo))()
-
+		race_(_replCo, para_(_inspectCo, _startupCo, _daemonCo, _initSystemCo))()
 	end
 end
 
