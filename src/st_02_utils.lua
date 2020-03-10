@@ -131,7 +131,7 @@ eval = function(code, env, readOnlyEnv)
 				else
 					local new_stack = _callStack
 					_callStack = old_stack
-					return false, {msg = res2[1], stack = new_stack}
+					return false, {title = 'runtime error', msg = res2[1], stack = new_stack}
 				end
 			else -- trivial case
 				return true, res1
@@ -142,7 +142,7 @@ eval = function(code, env, readOnlyEnv)
 			return false, {msg = res1[1], stack = new_stack}
 		end
 	else
-		return false, {msg = '[compile error] '..compileErr, stack = nil}
+		return false, {title = 'compile error', msg = compileErr}
 	end
 end
 
@@ -282,6 +282,31 @@ function _literalKey(k)
 		end
 	else
 		return "[" .. _literal(k) .. "]"
+	end
+end
+
+function showLit(...)
+	return _serialiseTable({...}, _showLit, ",", "", "", "nil")
+end
+
+-- | never fail version of literal()
+function _showLit(val)
+	local ty = type(val)
+	if ty == "table" then
+		local mt = getmetatable(val)
+		if type(mt) == "table" then
+			if type(mt.__literal) == "function" then
+				return mt.__literal(val)
+			else
+				return tostring(val)
+			end
+		else
+			return _serialiseTable(val, _showLit)
+		end
+	elseif ty == "string" then
+		return _literalString(val)
+	else
+		return tostring(val)
 	end
 end
 
