@@ -870,6 +870,28 @@ displayVerbLog = mkIO(function()
 	_logPrintCo({verb = true})
 end)
 
+_stTurtles = rpc.buildClient("st-turtle")
+_stComputers = rpc.buildClient("st-computer")
+
+list = {}
+list.turtles = mkIO(function()
+	local resps = _stTurtles.broadcast("gpsPos(), swarm.myRole or '~'")()
+	local rs = {}
+	for _, r in ipairs(resps) do
+		if r[2] then
+			table.insert(rs, {id = r[1], role = r[3][2], pos = r[3][1]})
+		end
+	end
+	local pos = gpsPos()
+	local dist = function(p) return vec.manhat(pos - p) end
+	table.sort(rs, comparator(pipe(field("pos"), dist)))
+	for i, r in ipairs(rs) do
+		print(i, r.role, r.id, r.pos, dist(r.pos))
+	end
+end)
+
+---------------------------------- swarm roles ---------------------------------
+
 swarm.roles = {
 	["swarm-server"] = {
 		check = function() return true end,
