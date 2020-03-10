@@ -45,11 +45,12 @@ setmetatable(vec, {
 -- | naive gps locate, without retry
 _gpsLocate = function(timeout)
 	local x, y, z = gps.locate(timeout)
-	--local x, y, z = unpack({nil, nil, nil}) --gps.locate(timeout)
-	if not (x and y and z) then
-		log.warn("gps.locate(" .. (timeout or "nil") .. ") failed:", show(x), show(y), show(z))
+	if (x and x == x) then --NOTE: it is possible that gps.locate() returns nan,nan,nan
+		return vec(x, y, z)
+	else
+		log.warn("gps.locate(" .. (timeout or "") .. ") failed: "..show(x, y, z))
+		return nil
 	end
-	return x and vec(x, y, z)
 end
 
 -- | return a vector, which coord value might not be integer (pocket)
