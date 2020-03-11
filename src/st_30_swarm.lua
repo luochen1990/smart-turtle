@@ -866,8 +866,8 @@ isIdle = mkIO(function()
 	return not (_replState.isRunningCommand)
 end)
 
-displayVerbLog = mkIO(function()
-	_logPrintCo({verb = true})
+displayLog = mkIOfn(function(computerId)
+	_logPrintCo(nil, computerId)
 end)
 
 _stTurtles = rpc.buildClient("st-turtle")
@@ -903,7 +903,7 @@ swarm.roles = {
 		check = function() return true end,
 		daemon = function()
 			os.pullEvent("system-ready")
-			_logPrintCo()
+			_logPrintCo({verb = false})
 		end,
 	},
 	["debugger"] = {

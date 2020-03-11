@@ -20,6 +20,21 @@ default = function(dft)
 	return function(x) if x ~= nil then return x else return dft end end
 end
 
+-- | default : Dict k a -> Maybe (Dict k a) -> Dict k a
+defaultDict = function(dft)
+	return function(d)
+		if type(d) == "table" then
+			local rst = deepcopy(dft)
+			for k, v in pairs(d) do
+				rst[k] = v
+			end
+			return rst
+		else
+			return dft
+		end
+	end
+end
+
 -- | maybe : (b, a -> b) -> Maybe a -> b
 maybe = function(dft, wrap)
 	return function(x) if x == nil then return dft else return wrap(x) end end
@@ -483,15 +498,17 @@ function _log(ty)
 	end
 end
 
-function _logPrintCo(logFilter)
-	logFilter = default({info = true, warn = true, bug = true, cry = true})(logFilter)
+function _logPrintCo(levelFilter, senderFilter)
+	levelFilter = defaultDict({verb = true, info = true, warn = true, bug = true, cry = true})(levelFilter)
 	while true do
 		local senderId, rawMsg = rednet.receive("log")
-		local ok, res = safeEval(rawMsg)
-		if ok then
-			local ty, msg = unpack(res)
-			if logFilter[ty] then
-				printM(_log_colors[ty])("" .. os.time() .. " [" .. senderId .. "]: " .. msg)
+		if not senderFilter or senderId == senderFilter then
+			local ok, res = safeEval(rawMsg)
+			if ok then
+				local ty, msg = unpack(res)
+				if levelFilter[ty] then
+					printM(_log_colors[ty])("" .. os.time() .. " [" .. senderId .. "]: " .. msg)
+				end
 			end
 		end
 	end
