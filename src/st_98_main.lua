@@ -208,7 +208,7 @@ end
 _startupScriptCo = function()
 	-- startup logic by script st_startup.lua
 	local code = readFile("/st_startup.lua")
-	if code then exec(code) end
+	if code then exec(code, _ST) end
 end
 
 _daemonScriptCo = function()
