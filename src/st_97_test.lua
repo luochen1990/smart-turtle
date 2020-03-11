@@ -98,6 +98,16 @@ if turtle then
 		return savePosp(scan(O .. (O + (R + F) * (n-1)), D)(turn.D * rep(try(dig) * move)))()
 	end))
 
+	_test.clearBlock = markIOfn("_test.clearBlock")(mkIOfn(function(area)
+		if vec.isVec(area) then
+			area = workState.pos .. workState.pos + area
+		end
+		if not isArea(area) then
+			print("[clearBlock] please provide an area, like p1..p2")
+		end
+		return savePosp( with({destroy = true, keepCheapItems = false})( scan(area, D)(dig) ) )()
+	end))
+
 	_test.transportLine = markIO("_test.transportLine")(mkIO(function()
 		local s = {pos = O + L * 2 + F * 2 + U * 3, dir = R}
 		local t = {pos = O + R * 4 + U, dir = L}
