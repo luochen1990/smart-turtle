@@ -189,13 +189,13 @@ if turtle then
 			end,
 			beforeLeave = function(triedTimes, singleTripCost, station)
 				workState.unloadStation = station
-				print("Visiting unload station "..show(station.pos).."...")
+				log.verb("Visiting unload station "..show(station.pos).."...")
 			end,
 			beforeRetry = function(triedTimes, singleTripCost, station, cost)
-				print("Cost "..cost.." to reach "..triedTimes.."th station, but still unavailable, trying next...")
+				log.verb("Cost "..cost.." to reach "..triedTimes.."th station, but still unavailable, trying next...")
 			end,
 			beforeWait = function(triedTimes, singleTripCost, station)
-				print("Cost "..cost.." to reach "..triedTimes.."th station, but still unavailable, trying next...")
+				log.verb("Cost "..cost.." to reach "..triedTimes.."th station, but still unavailable, trying next...")
 			end,
 			waitForUserHelp = function(triedTimes, singleTripCost, station)
 				cryForHelpUnloading()
@@ -203,7 +203,12 @@ if turtle then
 		})
 
 		-- drop items into station
-		;( isStation *  rep(-backpackEmpty + retry(backpackEmpty + drop)) )()
+		log.verb("Begin unloading...")
+		;( isStation * rep( select(slot.isNonEmpty) * drop() ) )()
+
+		if not slot.find(slot.isEmpty) then
+			cryForHelpUnloading()
+		end
 
 		recoverPosp(workState.back)()
 		workState.back = nil

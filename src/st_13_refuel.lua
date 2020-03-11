@@ -60,14 +60,14 @@ if turtle then
 				return false, triedTimes -- will wait for help
 			end
 			-- got fresh fuelStation here
-			print("Visiting fuel station "..show(workState.fuelStation.pos).."...")
+			log.verb("Visiting fuel station "..show(workState.fuelStation.pos).."...")
 			local leavePos, fuelBeforeLeave = workState.pos, turtle.getFuelLevel()
 			with({workArea = false})(cryingVisitStation(workState.fuelStation))()
 			-- arrived fuelStation here
 			local cost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
 			singleTripCost = singleTripCost + cost
 			if not isStation() then -- the fuelStation is not available
-				print("Cost "..cost.." to reach "..triedTimes.."th unavailable fuel station, now trying next...")
+				log.verb("Cost "..cost.." to reach "..triedTimes.."th unavailable fuel station, now trying next...")
 
 				unregisterStation(workState.fuelStation)
 				return gotoFuelStation(triedTimes + 1)
@@ -81,7 +81,7 @@ if turtle then
 			return true
 		end
 		-- arrived checked fuelStation here
-		print("Cost "..singleTripCost.." to reach this fuel station, now refueling ("..nStep.." + "..extra()..")...")
+		log.verb("Cost "..singleTripCost.." to reach this fuel station, now refueling ("..nStep.." + "..extra()..")...")
 		local enoughRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(nStep + extra()))
 		local greedyRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(math.min(math.max((nStep + extra()) * 2, 1000), turtle.getFuelLimit() - 1000)))
 		rep(retry(suck()) * -enoughRefuel)() -- repeat until enough
@@ -89,7 +89,7 @@ if turtle then
 			rep(suck() * -greedyRefuel)() -- try to full the tank
 		end
 		-- refuel done
-		print("Finished refueling, now back to work pos "..show(workState.back.pos))
+		log.verb("Finished refueling, now back to work pos "..show(workState.back.pos))
 
 		recoverPosp(workState.back)()
 		workState.back = nil
