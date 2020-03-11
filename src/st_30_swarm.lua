@@ -351,7 +351,7 @@ swarm.services.requestFuelStation = function(nStep, startPos, fuelLeft)
 		local count = math.ceil(nStep / const.fuelHeatContent[name])
 		local ok, res = swarm.services.requestStation(name, count, startPos, fuelLeft)
 		if ok then
-			return true, st
+			return true, res
 		end
 	end
 	return false, "no fuel station available, swarm.config.asFuel = "..literal(swarm.config.asFuel)
