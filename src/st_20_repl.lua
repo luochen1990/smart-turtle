@@ -30,5 +30,3 @@ _repl = replTool.buildRepl({
 	style = _replStyle,
 })
 
-_replMainCo = _repl.start
-

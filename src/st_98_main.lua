@@ -219,14 +219,14 @@ end
 _main = function(...)
 	term.clear(); term.setCursorPos(1, 1)
 
+	local _exitCo = function()
+		_waitForKeyCombination(keys.leftCtrl, keys.d)
+		print("[ctrl+d] exit smart-turtle")
+	end
+
 	local args = {...}
 	if #args > 0 then
 		printC(colors.gray)('cli arguments: ', show(args))
-
-		local _exitCo = function()
-			_waitForKeyCombination(keys.leftCtrl, keys.d)
-			print("[ctrl+d] exit smart-turtle")
-		end
 
 		-- exec command from cli args
 		local _cliCommandCo = function()
@@ -247,15 +247,11 @@ _main = function(...)
 
 		local _replCo = function()
 			os.pullEvent("system-ready")
-			local _exitCo = function()
-				_waitForKeyCombination(keys.leftCtrl, keys.d)
-				print("[ctrl+d] exit repl")
-			end
-			race_(_exitCo, _replMainCo)()
+			_repl.start()
 		end
 
 		-- run startup scripts & init system state
-		race_(_replCo, para_(_inspectCo, _startupCo, _daemonCo, _initSystemCo))()
+		race_(_exitCo, _replCo, para_(_inspectCo, _startupCo, _daemonCo, _initSystemCo))()
 	end
 end
 
