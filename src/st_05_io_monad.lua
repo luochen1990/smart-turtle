@@ -71,7 +71,7 @@ _retryWithTimeout = function(iof, totalTimeout, opts)
 		while true do
 			singleTimeout = math.min(singleTimeoutMax, singleTimeout * singleTimeoutIncreaseRatio)
 			local sleepSeconds
-			if totalTimeout == nil then -- means wait infinitly
+			if not totalTimeout then -- means wait infinitly
 				sleepSeconds = sleepInterval * math.random()
 			else -- totalTimeout ~= nil
 				local timeLeft = (startTime + totalTimeout - os.clock())
@@ -91,12 +91,12 @@ end
 -- ,  Usage 1: Seconds -> (Seconds -> IO (Maybe a)) -> IO (Maybe a), e.g. io = retryWithTimeout(totalTimeout)(iof)
 -- ,  Usage 2: (Seconds -> IO (Maybe a)) -> IO a
 retryWithTimeout = function(arg, opts)
-	if type(arg) == "number" then
+	if type(arg) == "function" then -- arg is iof
+		return markIO("retryWithTimeout(iof)")(_retryWithTimeout(arg, nil, opts))
+	else -- arg is totalTimeout
 		return markIOfn("retryWithTimeout(totalTimeout,opts)(iof)")(function(iof)
 			return _retryWithTimeout(iof, arg, opts)
 		end)
-	else -- the `retryWithTimeout(iof)` usage
-		return markIO("retryWithTimeout(iof)")(_retryWithTimeout(arg, nil, opts))
 	end
 end
 
@@ -104,12 +104,12 @@ end
 -- , Usage 1: Seconds -> IO (Maybe a) -> IO (Maybe a)
 -- , Usage 2: IO (Maybe a) -> IO a
 retry = function(arg, opts)
-	if type(arg) == "number" then
+	if type(arg) == "function" or type(arg) == "table" then -- arg is io
+		return markIO("retry(io)")(_retryWithTimeout(function(t) return arg end, nil, opts))
+	else -- arg is totalTimeout
 		return markIOfn("retry(totalTimeout,opts)(io)")(function(io)
 			return _retryWithTimeout(function(t) return io end, arg, opts)
 		end)
-	else -- the `retry(io)` usage
-		return markIO("retry(io)")(_retryWithTimeout(function(t) return arg end, nil, opts))
 	end
 end
 

@@ -133,9 +133,7 @@ rpc.buildClient = function(requestProtocol, knownServer)
 	local _findServer = function() return rednet.lookup(requestProtocol) end
 
 	-- | returns IO
-	local _request = mkIOfn(function(msg, totalTimeout, specifiedServerId)
-		totalTimeout = default(5)(totalTimeout)
-
+	local _request = function(msg, totalTimeout, specifiedServerId, allowRetry) return mkIO(function()
 		-- generate responseProtocol
 		local responseProtocol = requestProtocol .. "_r" .. (_counter)
 		_counter = (_counter + 1) % 10000
@@ -169,13 +167,18 @@ rpc.buildClient = function(requestProtocol, knownServer)
 				end
 			end
 		end)
-		local ok, res = retryWithTimeout(totalTimeout)(_req)() --NOTE: only protocol level failure should be retried
+		local ok, res
+		if allowRetry then
+			ok, res = retryWithTimeout(totalTimeout)(_req)() --NOTE: only protocol level failure should be retried
+		else
+			ok, res = _req(totalTimeout)()
+		end
 		if not ok then
 			return false, res
 		else
 			return unpack(res) --NOTE: fold the failure flag
 		end
-	end)
+	end) end
 
 	-- | returns IO
 	local _broadcast = function(msg, totalTimeout)
@@ -216,8 +219,10 @@ rpc.buildClient = function(requestProtocol, knownServer)
 	local _client = {}
 	setmetatable(_client, {__index = function(t, k)
 		local env = {
-			request = _request,
-			send = _request,
+			request = function(msg, tmout) return _request(msg, tmout or 5, nil, true) end,
+			send = function(id, msg, tmout)
+				return _request(msg, tmout or 5, id, false)
+			end,
 			broadcast = _broadcast,
 			_counter = _counter,
 			knownServer = _knownServer,
