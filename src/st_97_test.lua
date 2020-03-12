@@ -105,7 +105,7 @@ if turtle then
 		if not isArea(area) then
 			print("[clearBlock] please provide an area, like p1..p2")
 		end
-		return savePosp( with({destroy = true, keepCheapItems = false})( scan(area, D)(dig) ) )()
+		return savePosp( with({destroy = true, keepCheapItems = false})( scan(area, D, 3)(try(turn.U * dig) * (turn.D * dig)) ) )()
 	end))
 
 	_test.transportLine = markIO("_test.transportLine")(mkIO(function()
