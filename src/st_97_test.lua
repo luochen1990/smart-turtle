@@ -43,17 +43,38 @@ if turtle then
 		return savePosp(scan(O .. O)(turn.U * try(dig) * place))()
 	end))
 
-	_test.buildFrame = markIOfn("_test.buildFrame")(mkIOfn(function(n)
-		print("n =", n)
+	_test.buildBox = markIOfn("_test.buildBox(area)")(mkIOfn(function(area)
+		if vec.isVec(area) then
+			area = workState.pos .. (workState.pos + area)
+		end
+		assert(isArea(area), "[buildBox] please provide an area, like p1..p2")
+
+		local area1 = (area.low - vec.one) .. (area.high + vec.one)
+		local tasks = {}
+		for _, d in pairs(const.dir) do
+			local face = area1:face(d)
+			local a = (face.low + d) .. (face.high + d)
+			table.insert(tasks, {area = a, exec = scan(a)(turn.to(-d) * place)})
+		end
+
+		local old_posp = getPosp()
+		while #tasks > 0 do
+			local pos = currentPos()
+			local dis = function(t) return vec.manhat(t.area:vertexNear(pos) - pos) end
+			table.sort(tasks, comparator(field("area", "low", "y"), field("area", "high", "y"), dis))
+			local task = table.remove(tasks, 1)
+			task.exec()
+		end
+		recoverPosp(old_posp)()
+		return true
+	end))
+
+	_test.buildFrame = markIOfn("_test.buildFrame(n)")(mkIOfn(function(n)
 		local vs = {F * n, R * n, U * n}
-		print("1")
 		local P = O + U + F
-		print("2")
 		local Q = P + (F + R + U) * n
-		print("3")
 		local lines = {}
 		for _, v in ipairs(vs) do
-			print(v)
 			table.insert(lines, P..P+v)
 			table.insert(lines, Q..Q-v)
 			for _, v2 in ipairs(vs) do
@@ -62,13 +83,11 @@ if turtle then
 				end
 			end
 		end
-		print("4")
 		table.sort(lines, comparator(field("low", "y"), field("high", "y")))
 		print("lines", literal(lines))
 		for _, line in ipairs(lines) do
 			scan(line, U)(turn.D * place)()
 		end
-		print("5")
 		move.to(O)()
 		turn.to(F)()
 		return true
@@ -78,9 +97,8 @@ if turtle then
 		if vec.isVec(area) then
 			area = workState.pos .. workState.pos + area
 		end
-		if not isArea(area) then
-			print("[flatGround] please provide an area, like p1..p2")
-		end
+		assert(isArea(area), "[flatGround] please provide an area, like p1..p2")
+
 		depth = default(1)(depth)
 		buildFloor = currentPos:pipe(function(p) return scan(p .. p + D * (depth-1), U)(turn.D * place) end)
 		return savePosp(with({destroy = true})(scan(area)(buildFloor * turn.U * rep(dig * move))))()
@@ -102,9 +120,8 @@ if turtle then
 		if vec.isVec(area) then
 			area = workState.pos .. workState.pos + area
 		end
-		if not isArea(area) then
-			print("[clearBlock] please provide an area, like p1..p2")
-		end
+		assert(isArea(area), "[clearBlock] please provide an area, like p1..p2")
+
 		return savePosp( with({destroy = true, keepCheapItems = false})( scan(area, D, 3)(try(turn.U * dig) * (turn.D * dig)) ) )()
 	end))
 

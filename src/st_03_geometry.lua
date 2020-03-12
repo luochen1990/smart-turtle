@@ -108,7 +108,8 @@ mkArea, isArea = (function()
 		__tostring = function(a) return tostring(a.low)..".."..tostring(a.high) end,
 		__literal = function(a) return "mkArea("..literal(a.low)..","..literal(a.high)..")" end,
 	}
-	local _mkArea = function(low, high) -- including
+	local _mkArea
+	_mkArea = function(low, high) -- including
 		local a = {
 			low = low, high = high, diag = high - low,
 			volume = function(a) return (a.diag.x + 1) * (a.diag.y + 1) * (a.diag.z + 1) end,
@@ -125,6 +126,14 @@ mkArea, isArea = (function()
 					if (p - pos):length() < (near - pos):length() then near = p end
 				end
 				return near
+			end,
+			face = function(a, dir)
+				local projLen = a.diag:dot(dir)
+				if projLen > 0 then
+					return _mkArea((a.low + dir * projLen), a.high)
+				else
+					return _mkArea(a.low, (a.high - dir * projLen))
+				end
 			end,
 		}
 		setmetatable(a, _area_mt)
