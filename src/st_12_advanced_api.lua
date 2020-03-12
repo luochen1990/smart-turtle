@@ -133,9 +133,13 @@ if turtle then
 	-- , it scans layer by layer toward the mainDir
 	-- , when you want to dig an area, you might want to choose your mainDir same as your dig direction
 	-- , and when placing, choose your mainDir opposite to your place direction
-	scan = markIOfn2("scan(area,mainDir)(io)")(function(area, mainDir)
+	scan = markIOfn2("scan(area,mainDir,layerFilter)(io)")(function(area, mainDir, layerFilter)
 		assert(area:volume() > 0, "[scan] area:volume() should > 0")
 		local rank = vec.rank(area.diag)
+		if type(layerFilter) == "number" then
+			layerFilter = (function(n) return function(i) return i % n == 0 end end)(layerFilter)
+		end
+		assert(not layerFilter or type(layerFilter) == "function", "[scan] layerFilter should be number or function")
 
 		return mkIOfn(function(io)
 			local near = area:vertexNear(workState.pos)
@@ -162,10 +166,12 @@ if turtle then
 				with({workArea = area})(io1 * move.toward(far) * rep(io1 * move))()
 				return true
 			else -- rank > 1 means projLen ~= 0
-				log.verb("[scan] " .. rank .. "d, "..projLen.." layers toward "..showDir(mainDir))
+				log.verb("[scan] " .. rank .. "d, " .. math.abs(projLen) .. " layers toward " .. showDir(mainDir * sign(projLen)))
 				local p, q = near, (far - mainDir * projLen)
 				for i = 0, projLen, sign(projLen) do
-					scan( (p + mainDir * i) .. (q + mainDir * i) )(io)()
+					if not layerFilter or layerFilter(math.abs(i)) then
+						scan( (p + mainDir * i) .. (q + mainDir * i) )(io)()
+					end
 				end
 				return true
 			end
