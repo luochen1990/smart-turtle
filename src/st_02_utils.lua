@@ -522,29 +522,65 @@ log = {
 	cry = _log("cry"), -- there is some turtle needing help, such as refueling or unloading
 }
 
+------------------------------ string glob utils -------------------------------
+
+-- | Usage: local isSimpleString, judgeFunction = _globCompile(patternString)
+function _globCompile(pat)
+	local regex, n = string.gsub(pat, "\*", "[^:]\*")
+	if n == 0 then
+		return true, function(s) return s == pat end
+	else
+		return false, function(s) return s and string.find(s, "^"..regex.."$") ~= nil end
+	end
+end
+
 -- | Usage 1: local ok = glob(pat)(s)
 -- | Usage 2: local ok = glob({pat1, pat2})(s)
 function glob(pat)
 	if type(pat) == "string" then
-		local regex, n = string.gsub(pat, "\*", "[^:]\*")
-		if n == 0 then
-			return function(s) return s == pat end
-		else
-			return function(s) return string.find(s, "^"..regex.."$") ~= nil end
-		end
+		local _, judge = _globCompile(pat)
+		return judge
 	elseif type(pat) == "table" then
-		local globs = {}
+		local simpleSet = {}
+		local globList = {}
 		for _, p in ipairs(pat) do
-			table.insert(globs, glob(p))
+			local isSimple, judge = _globCompile(p)
+			if isSimple then
+				simpleSet[p] = true
+			else
+				table.insert(globList, judge)
+			end
 		end
 		return function(s)
-			for _, g in ipairs(globs) do
+			local v0 = simpleSet[s]
+			if v0 == true then return true end
+			for _, g in ipairs(globList) do
 				if g(s) then return true end
 			end
 			return false
 		end
 	else
 		error("[glob] pat should be string or table")
+	end
+end
+
+function globDict(patDict)
+	assert(type(patDict) == "table", "[globDict] patDict should be table")
+
+	local globPairs = {}
+	for k, v in pairs(patDict) do
+		local isSimple, judge = _globCompile(k)
+		if not isSimple then
+			table.insert(globPairs, {judge, v})
+		end
+	end
+	return function(s)
+		local v0 = patDict[s]
+		if v0 ~= nil then return v0 end
+		for _, x in ipairs(globPairs) do
+			local judge, v = unpack(x)
+			if judge(s) then return v end
+		end
 	end
 end
 
