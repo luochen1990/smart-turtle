@@ -13,6 +13,12 @@ if turtle then
 			return true
 		end)),
 	}
+
+	help.turn.to = doc({
+		signature = "turn.to : Dir -> IO Bool",
+		usage = "local succ = turn.to(dir)()",
+		desc = "turn to the specified direction, see 'tankModel' for more detail",
+	})
 	turn.to = markIOfn("turn.to(d)")(mkIOfn(function(d)
 		assert(vec.manhat(d) == 1, "[turn.to(d)] d must be a dir, i.e. E/S/W/N/U/D")
 		workState.aiming = d.y
@@ -22,6 +28,15 @@ if turtle then
 		elseif d == rightSide(workState.facing) then return turn.right()
 		else return true end
 	end))
+
+	help.turn.lateral = doc({
+		signature = "turn.lateral : IO Bool",
+		usage = "local succ = turn.lateral()",
+		desc = {
+			"turn to a lateral direction, which is perpendicular to aiming dir",
+			"prefer U (when aiming dir is horizental) or facing dir (when aiming dir is vertical)",
+		},
+	})
 	turn.lateral = markIO("turn.lateral")(mkIO(function() return turn.to(workState:lateralDir())() end))
 	for k, v in pairs(const.dir) do turn[k] = turn.to(v) end
 
@@ -101,20 +116,39 @@ if turtle then
 	details = mkIOfn(turtle.getItemDetail)
 	selected = mkIO(turtle.getSelectedSlot)
 
+	help.suck = doc({
+		signature = "suck : Number -> IO Bool",
+		usage = "local succ = suck(n)()",
+		desc = {
+			"suck items from the aiming dir",
+			"fails when reserveOneSlot fails or suck fails",
+		},
+	})
 	suck = markIOfn("suck(n)")(mkIOfn(function(n)
 		return ( reserveOneSlot * _aiming.suck(n) )()
 	end))
 
-	-- | suck into an isolate slot and return true for success
-	-- , this will change selected slot
-	-- , fail reasons:
-	-- , * when reserveOneSlot fails
-	-- , * nothing to suck
+	help.suckHold = doc({
+		signature = "suckHold : Number -> IO Bool",
+		usage = "local succ = suckHold(n)()",
+		desc = {
+			"suck into an isolate slot, this will change selected slot",
+			"fails when reserveOneSlot fails or suck fails",
+		},
+	})
 	suckHold = markIOfn("suckHold(n)")(mkIOfn(function(n)
 		return ( reserveOneSlot * select(slot.isEmpty) * _aiming.suck(n) )()
 	end))
 
-	suckExact = markIOfn("suckExact(n, itemName)")(mkIOfn(function(n, itemName)
+	help.suckExact = doc({
+		signature = "suckExact : (Number, ItemName) -> IO (Bool, Number)",
+		usage = "local succ, sucked = suckExact(n, name)()",
+		desc = {
+			"suck exact n specified items, discard unrelated things",
+			"fails when sucked items less than n",
+		},
+	})
+	suckExact = markIOfn("suckExact(n,itemName)")(mkIOfn(function(n, itemName)
 		local old_sn = selected()
 		local got = 0
 		while got < n do
@@ -134,7 +168,15 @@ if turtle then
 		return got == n, got
 	end))
 
-	dropExact = markIOfn("dropExact(n, itemName)")(mkIOfn(function(n, itemName)
+	help.dropExact = doc({
+		signature = "dropExact : IO (Bool, Number)",
+		usage = "local succ, dropped = dropExact(n, name)",
+		desc = {
+			"drop exact n specified items",
+			"fails when dropped items less than n",
+		},
+	})
+	dropExact = markIOfn("dropExact(n,itemName)")(mkIOfn(function(n, itemName)
 		local old_sn = turtle.getSelectedSlot()
 		local dropped = 0
 		while dropped < n do
@@ -155,8 +197,14 @@ if turtle then
 		return dropped == n, dropped
 	end))
 
-	-- | different from turtle.inspect, this only returns name
-	-- , and returns false when fail
+	help.inspect = doc({
+		signature = "inspect : IO ItemName?",
+		usage = "local itemName = inspect()",
+		desc = {
+			"get the item name of the block toward the aiming dir",
+			"fails when there is no block",
+		},
+	})
 	inspect = markIO("inspect")(mkIO(function()
 		ok, res = _aiming.inspect()
 		return ok and res.name
@@ -183,20 +231,37 @@ if turtle then
 		return not (workMode.workArea and workMode.workArea:contains(workState.pos) and not workMode.workArea:contains(workState.pos + workState:aimingDir()))
 	end)
 
+	help.dig = doc({
+		signature = "dig : IO Bool",
+		usage = "local succ = dig()",
+		desc = {
+			"dig a block toward the aiming dir",
+			"fails when reserveOneSlot fails or dig fails",
+		},
+	})
 	dig = markIO("dig")(mkIO(function()
 		return ( reserveOneSlot * _aiming.dig )()
 	end))
 
-	-- | dig into an isolate slot and return true for success
-	-- , this will change selected slot
-	-- , fail reasons:
-	-- , * when reserveOneSlot fails
-	-- , * nothing to dig
+	help.digHold = doc({
+		signature = "digHold : IO Bool",
+		usage = "local succ = digHold()",
+		desc = {
+			"dig into an isolate slot, this will change selected slot",
+			"fails when reserveOneSlot fails or dig fails",
+		},
+	})
 	digHold = markIO("digHold")(mkIO(function()
 		return ( reserveOneSlot * select(slot.isEmpty) * _aiming.dig )()
 	end))
 
-	-- | keep current slot not empty after place
+	help.place = doc({
+		signature = "place : IO Bool",
+		usage = "local succ = place()",
+		desc = {
+			"place a block toward aiming dir, keep current slot not empty after place"
+		}
+	})
 	place = markIO("place")(mkIO(function()
 		local c = turtle.getItemCount()
 		local s = turtle.getItemSpace()
@@ -204,7 +269,13 @@ if turtle then
 		return c > 1 and _aiming.place()
 	end))
 
-	-- | use item, another use case of turtle.place
+	help.use = doc({
+		signature = "use : ItemName -> IO Bool",
+		usage = "local succ = use(itemName)()",
+		desc = {
+			"use item, another use case of turtle.place",
+		},
+	})
 	use = markIOfn("use(itemName)")(mkIOfn(function(itemName)
 		local det = turtle.getItemDetail()
 		if det and det.name == itemName then return _aiming.place() end
@@ -223,7 +294,7 @@ if turtle then
 		signature = "move : IO Bool",
 		usage = "local succ = move()",
 		desc = {
-			"move one step toward the aiming dir, it will automatic refuel, and might auto dig & attack & retry when move blocked (see workMode.destroy & workMode.violence & workMode.retrySeconds).",
+			"move one step toward the aiming dir, it will automatic refuel, and might auto dig/attack/retry when move blocked (see workMode.destroy / .violence / .retrySeconds).",
 			"sub-commands of 'move' is high level wrappings of move."
 		},
 	})

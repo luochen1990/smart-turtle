@@ -27,6 +27,13 @@ if turtle then
 		end)
 	end)
 
+	help.move.to = doc({
+		signature = "move.to : Pos -> IO Bool",
+		usage = "local succ = move.to(pos)()",
+		desc = {
+			"move to specified position, might detour when blocked",
+		},
+	})
 	move.to = markIOfn("move.to(destPos)")(function(destPos)
 		return mkIO(function()
 			local beginPos = workState.pos
@@ -97,6 +104,13 @@ if turtle then
 		end)
 	end)
 
+	help.move.go = doc({
+		signature = "move.go : Vector -> IO Bool",
+		usage = "local succ = move.go(vec)()",
+		desc = {
+			"move.go(vec) is alias of move.to(currentPos() + vec), (see move.to)",
+		},
+	})
 	move.go = markIOfn("move.go(destVec)")(function(destVec)
 		return mkIO(function()
 			return move.to(workState.pos + destVec)()
@@ -129,10 +143,15 @@ if turtle then
 		workState.aiming = back.aiming
 	end))
 
-	-- | a very useful function, scan over a 3d area (including trivial cases)
-	-- , it scans layer by layer toward the mainDir
-	-- , when you want to dig an area, you might want to choose your mainDir same as your dig direction
-	-- , and when placing, choose your mainDir opposite to your place direction
+	help.scan = doc({
+		signature = "scan : (Area, Dir?, LayerFilter?) -> IO a -> IO Bool",
+		usage = "scan(area, mainDir, layerFilter)(io)()",
+		desc = {
+			"scan over a 1d/2d/3d area, and perform specified io action at each position",
+			"if mainDir is specified, it scans layer by layer toward the mainDir, you might want to choose your mainDir same as your digging dir, or opposite to your placing dir",
+			"if layerFilter is specified, only part of layers will be scaned, a demo layerFilter is `function(i) return i % 3 == 0 end`, and can use number `3` for short",
+		},
+	})
 	scan = markIOfn2("scan(area,mainDir,layerFilter)(io)")(function(area, mainDir, layerFilter)
 		assert(area:volume() > 0, "[scan] area:volume() should > 0")
 		local rank = vec.rank(area.diag)
