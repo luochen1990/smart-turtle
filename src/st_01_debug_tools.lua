@@ -5,6 +5,55 @@ __assert = assert
 if DEBUG then assert = __assert else assert = function() end end
 --assert = function(...) if DEBUG then __assert(...) end end
 
+---------------------------------- help tools ----------------------------------
+
+help = {}
+
+function _printDocSignature(sig)
+	if sig then
+		printC(colors.blue)(sig)
+	end
+end
+
+function _printDocUsage(usage)
+	if usage then
+		if type(usage) == "string" then
+			printC(colors.green)(usage)
+		elseif type(usage) == "table" then --list of string
+			printC(colors.green)(table.concat(usage, "\n"))
+		end
+	end
+end
+
+function _printDocDesc(desc)
+	if desc then
+		if type(desc) == "string" then
+			printC(colors.lightGray)(desc)
+		elseif type(desc) == "table" then --list of string
+			printC(colors.lightGray)(table.concat(desc, "\n\n "))
+		end
+	end
+end
+
+-- | usage: help.fun1 = doc("usage desc of fun1")
+function doc(info)
+	if type(info) == "string" then
+		return mkIO(_printDocDesc, info)
+	elseif type(info) == "table" then
+		if hasDictKey(info) then
+			return mkIO(function()
+				_printDocSignature(info.signature)
+				_printDocUsage(info.usage)
+				_printDocDesc(info.desc)
+			end)
+		else
+			return mkIO(_printDocDesc, info)
+		end
+	end
+end
+
+------------------------------ stacktrace tools --------------------------------
+
 _callStack = {}
 
 -- | markCallSite : CallSiteName -> (() -> a) -> a

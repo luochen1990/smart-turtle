@@ -49,7 +49,7 @@ replTool.buildRepl = function(config)
 
 	local _start = function()
 		state.isExiting = false
-		local modifiableEnv = deepcopy(internalCommands)
+		local modifiableEnv = {["exit"] = false} --NOTE: a placeholder for autocomplete
 		setmetatable( modifiableEnv, { __index = config.readOnlyEnv } )
 
 		-- Replace our package.path, so that it loads from the current directory, rather

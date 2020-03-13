@@ -2,6 +2,7 @@
 
 if turtle then
 
+	help.turn = doc("sub-commands of 'turn' reference to facing and aiming of turtle and call turtle.turnLeft() and turtle.turnRight().")
 	turn = {
 		left = markIO("turn.left")(mkIO(function() turtle.turnLeft(); workState.facing = leftSide(workState.facing); return true end)),
 		right = markIO("turn.right")(mkIO(function() turtle.turnRight(); workState.facing = rightSide(workState.facing); return true end)),
@@ -218,6 +219,14 @@ if turtle then
 		return r
 	end))
 
+	help.move = doc({
+		signature = "move : IO Bool",
+		usage = "local succ = move()",
+		desc = {
+			"move one step toward the aiming dir, it will automatic refuel, and might auto dig & attack & retry when move blocked (see workMode.destroy & workMode.violence & workMode.retrySeconds).",
+			"sub-commands of 'move' is high level wrappings of move."
+		},
+	})
 	move = markIO("move")(mkIO(function()
 		-- auto refuel
 		if not workState.isRefueling then
