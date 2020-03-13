@@ -2,6 +2,8 @@
 
 if turtle then
 
+	__isValuable = glob(const.valuableItems)
+
 	slot = {
 		isEmpty = function(sn) return turtle.getItemCount(sn) == 0 end,
 		isNonEmpty = function(sn) return turtle.getItemCount(sn) > 0 end,
@@ -9,12 +11,20 @@ if turtle then
 			local det = turtle.getItemDetail(sn)
 			return det and const.cheapItems[det.name]
 		end,
+		isValuable = function(sn)
+			local det = turtle.getItemDetail(sn)
+			return det and __isValuable(det.name)
+		end,
+		isNotValuable = function(sn)
+			local det = turtle.getItemDetail(sn)
+			return det and not __isValuable(det.name)
+		end,
 		isFuel = function(sn)
 			local det = turtle.getItemDetail(sn)
 			if workMode.asFuel then
 				return det and det.name == workMode.asFuel and const.fuelHeatContent[det.name]
 			else
-				return det and const.fuelHeatContent[det.name]
+				return det and not not const.fuelHeatContent[det.name]
 			end
 		end,
 		isNamed = function(namePat)
@@ -156,17 +166,7 @@ if turtle then
 		end
 	end)
 
-	-- | find some cheap item slot to drop
-	dropCheapItemSlot = function()
-		local dropSn = slot._findThat(slot.isCheap)
-		if dropSn then
-			local saved_sn = turtle.getSelectedSlot()
-			turtle.select(dropSn)
-			local drp = (saveDir(turn.lateral * -isContainer * drop()) + -isContainer * drop())
-			turtle.select(saved_sn)
-			if drp() then return dropSn end
-		end
-	end
+	discard = markIO("discard")(fmap(slot.isFuel)(selected) * mkIO(turtle.refuel) * fmap(slot.isEmpty)(selected) + saveDir(turn.lateral * -isContainer * drop()) + -isContainer * drop())
 
 	backpackEmpty = -mkIO(slot._findThat, slot.isNonEmpty)
 
@@ -216,6 +216,22 @@ if turtle then
 		return true
 	end
 
+	selectDroppable = function(keepLevel)
+		local sel = pure(false)
+		if keepLevel == true then keepLevel = 3 end
+		if keepLevel == false then keepLevel = 0 end
+		if keepLevel < 3 then
+			sel = select(slot.isCheap)
+			if keepLevel < 2 then
+				sel = sel + select(slot.isNotValuable)
+				if keepLevel < 1 then
+					sel = sel + select(slot.isValuable)
+				end
+			end
+		end
+		return sel
+	end
+
 	-- | tidy backpack to reserve 1 empty slot
 	-- , when success, return the sn of the reserved empty slot
 	reserveOneSlot = mkIO(function() -- tidy backpack to reserve 1 empty slot
@@ -225,17 +241,17 @@ if turtle then
 		slot.tidy()
 		sn = slot._findLastThat(slot.isEmpty)
 		if sn then return sn end
+
 		if not workState.isUnloading then -- avoid recursion
-			if not workMode.keepCheapItems then
-				sn = dropCheapItemSlot()
-				if sn then return sn end
-			end
+			sn = saveSelected(selectDroppable(workMode.keepItems) * discard * selected)()
+			if sn then return sn end
+
 			if workMode.allowInterruption then
 				local ok = unloadBackpack()
 				if ok then return slot._findLastThat(slot.isEmpty) end
 			end
 		else
-			return dropCheapItemSlot()
+			return saveSelected(selectDroppable(1) * discard * selected)()
 		end
 	end)
 

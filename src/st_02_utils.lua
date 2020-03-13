@@ -522,13 +522,29 @@ log = {
 	cry = _log("cry"), -- there is some turtle needing help, such as refueling or unloading
 }
 
--- | Usage: local ok = glob(pat)(s)
+-- | Usage 1: local ok = glob(pat)(s)
+-- | Usage 2: local ok = glob({pat1, pat2})(s)
 function glob(pat)
-	local regex, n = string.gsub(pat, "\*", "[^:]\*")
-	if n == 0 then
-		return function(s) return s == pat end
+	if type(pat) == "string" then
+		local regex, n = string.gsub(pat, "\*", "[^:]\*")
+		if n == 0 then
+			return function(s) return s == pat end
+		else
+			return function(s) return string.find(s, "^"..regex.."$") ~= nil end
+		end
+	elseif type(pat) == "table" then
+		local globs = {}
+		for _, p in ipairs(pat) do
+			table.insert(globs, glob(p))
+		end
+		return function(s)
+			for _, g in ipairs(globs) do
+				if g(s) then return true end
+			end
+			return false
+		end
 	else
-		return function(s) return string.find(s, "^"..regex.."$") ~= nil end
+		error("[glob] pat should be string or table")
 	end
 end
 

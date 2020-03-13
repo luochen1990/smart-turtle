@@ -25,12 +25,12 @@ const = {
 		["minecraft:grass_block"] = "minecraft:dirt",
 	},
 	valuableItems = {
-		"minecraft:diamond_ore",
-		"minecraft:gold_ore",
-		"minecraft:iron_ore",
-		"minecraft:coal_ore",
-		"minecraft:redstone_ore",
-		"minecraft:lapis_ore",
+		"*:diamond*",
+		"*:gold_*",
+		"*:redstone*",
+		"*:emerald*",
+		"*:lapis*",
+		"*:*_ore",
 	},
 	toolItems = {
 		["computercraft:wireless_modem"] = "modem",

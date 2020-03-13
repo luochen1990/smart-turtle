@@ -27,25 +27,28 @@ if turtle then
 	currentPos = mkIO(function() return workState.pos end)
 	currentDir = mkIO(function() return workState:aimingDir() end)
 
-	savePosture = markIOfn("savePosture(io)")(function(io)
-		return mkIO(function()
-			local saved_facing = workState.facing
-			local saved_aiming = workState.aiming
-			local r = {io()}
-			turn.to(saved_facing)()
-			workState.aiming = saved_aiming
-			return unpack(r)
-		end)
-	end)
+	savePosture = markIOfn("savePosture(io)")(mkIOfn(function(io)
+		local old_facing = workState.facing
+		local old_aiming = workState.aiming
+		local r = { io() }
+		turn.to(old_facing)()
+		workState.aiming = old_aiming
+		return unpack(r)
+	end))
 
-	saveDir = markIOfn("saveDir(io)")(function(io)
-		return mkIO(function()
-			local saved_dir = workState:aimingDir()
-			local r = {io()}
-			turn.to(saved_dir)()
-			return unpack(r)
-		end)
-	end)
+	saveDir = markIOfn("saveDir(io)")(mkIOfn(function(io)
+		local old_dir = workState:aimingDir()
+		local r = { io() }
+		turn.to(old_dir)()
+		return unpack(r)
+	end))
+
+	saveSelected = markIOfn("saveSelected(io)")(mkIOfn(function(io)
+		local old_sn = turtle.getSelectedSlot()
+		local r = { io() }
+		turtle.select(old_sn)
+		return unpack(r)
+	end))
 
 	-- usage demo: save(currentPos)(move.go(F) * saved:pipe(move.to))
 	save, saved = (function()
