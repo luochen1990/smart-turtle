@@ -1,6 +1,7 @@
 ----------------------- basic knowledge about the game -------------------------
 
 const = {
+	activeRadius = 100, -- this will decide default refuel level 
 	turtle = {
 		needfuel = true,
 		backpackSlotsNum = 16,
@@ -16,13 +17,8 @@ const = {
 		},
 	},
 	cheapItems = {
-		["minecraft:cobblestone"] = true,
-		["minecraft:dirt"] = true,
-		["minecraft:sand"] = true,
-	},
-	afterDig = {
-		["minecraft:stone"] = "minecraft:cobblestone",
-		["minecraft:grass_block"] = "minecraft:dirt",
+		"minecraft:cobblestone",
+		"minecraft:dirt",
 	},
 	valuableItems = {
 		"*:diamond*",
@@ -32,29 +28,30 @@ const = {
 		"*:lapis*",
 		"*:*_ore",
 	},
-	toolItems = {
-		["computercraft:wireless_modem"] = "modem",
-		["computercraft:wireless_modem_advanced"] = "modem",
+	afterDig = {
+		["minecraft:stone"] = "minecraft:cobblestone",
+		["minecraft:grass_block"] = "minecraft:dirt",
 	},
-	turtleBlocks = {
-		["computercraft:turtle_normal"] = true,
-		["computercraft:turtle_advanced"] = true,
+	groundBlocks = {
+		"minecraft:dirt",
+		"minecraft:stone",
+		"minecraft:cobblestone",
+		"minecraft:sand",
 	},
 	chestBlocks = {
-		["minecraft:chest"] = true,
-		["minecraft:trapped_chest"] = true,
-		["minecraft:shulker_box"] = true,
+		"minecraft:chest",
+		"minecraft:trapped_chest",
+		"minecraft:shulker_box",
 	},
-	containerBlocks = { -- containers other than turtle or chest
+	otherContainerBlocks = { -- containers other than turtle or chest
 	},
 	fuelHeatContent = {
 		["minecraft:lava_bucket"] = 1000,
 		["minecraft:charcoal"] = 80,
 		["minecraft:coal"] = 80,
-		["minecraft:oak_log"] = 15,
-		["minecraft:white_carpet"] = 3,
-		["minecraft:light_gray_carpet"] = 3,
-		["minecraft:blue_carpet"] = 3,
+		["minecraft:*_log"] = 15,
+		["minecraft:*_planks"] = 15,
+		["minecraft:*_carpet"] = 3,
 	},
 }
 
@@ -70,4 +67,17 @@ for k, v in pairs(const.dir) do _ENV[k] = v end -- define U/E/S/W/N/D
 showDir = function(d)
 	for k, v in pairs(const.dir) do if d == v then return k end end
 end
+
+_item = {
+	isTurtle = glob("computercraft:turtle_*"),
+	isModem = glob("computercraft:wireless_modem*"),
+	isChest = glob(const.chestBlocks),
+	isContainer = (function()
+		local p = glob(const.otherContainerBlocks)
+		return function(name) return _item.isChest(name) or _item.isTurtle(name) or p(name) end
+	end)(),
+	isCheap = glob(const.cheapItems),
+	isValuable = glob(const.valuableItems),
+	fuelHeatContent = globDict(const.fuelHeatContent),
+}
 

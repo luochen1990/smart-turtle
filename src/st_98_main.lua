@@ -118,7 +118,7 @@ _initComputerCo = function()
 			return ok
 		end)
 		local ok -- equip modem success
-		local sn = slot.find(slot.isTool("modem"))
+		local sn = slot.find(slot.nameSat(_item.isModem))
 		if sn then
 			ok = ( select(sn) * equip )()
 		end

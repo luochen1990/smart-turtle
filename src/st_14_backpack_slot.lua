@@ -2,65 +2,46 @@
 
 if turtle then
 
-	__isValuable = glob(const.valuableItems)
+	slot = (function()
+		local slot = {}
 
-	slot = {
-		isEmpty = function(sn) return turtle.getItemCount(sn) == 0 end,
-		isNonEmpty = function(sn) return turtle.getItemCount(sn) > 0 end,
-		isCheap = function(sn)
+		slot.isEmpty = function(sn) return turtle.getItemCount(sn) == 0 end
+		slot.isNonEmpty = function(sn) return turtle.getItemCount(sn) > 0 end
+		slot.isFuel = function(sn)
 			local det = turtle.getItemDetail(sn)
-			return det and const.cheapItems[det.name]
-		end,
-		isValuable = function(sn)
+			return det and (not workMode.asFuel or det.name == workMode.asFuel) and not not _item.fuelHeatContent(det.name)
+		end
+		slot.fuelHeatContent = function(sn)
 			local det = turtle.getItemDetail(sn)
-			return det and __isValuable(det.name)
-		end,
-		isNotValuable = function(sn)
-			local det = turtle.getItemDetail(sn)
-			return det and not __isValuable(det.name)
-		end,
-		isFuel = function(sn)
-			local det = turtle.getItemDetail(sn)
-			if workMode.asFuel then
-				return det and det.name == workMode.asFuel and const.fuelHeatContent[det.name]
-			else
-				return det and not not const.fuelHeatContent[det.name]
-			end
-		end,
-		isNamed = function(namePat)
-			local match = glob(namePat)
+			return (det and _item.fuelHeatContent(det.name) or 0) * (det and det.count or 0)
+		end
+		slot.nameSat = function(judge)
 			return function(sn)
 				local det = turtle.getItemDetail(sn)
-				return det and match(det.name)
+				return det and judge(det.name)
 			end
-		end,
-		isTool = function(toolType)
-			return function(sn)
-				local det = turtle.getItemDetail(sn)
-				if toolType then
-					return det and const.toolItems[det.name] == toolType
-				else
-					return det and const.toolItems[det.name] ~= nil
-				end
-			end
-		end,
+		end
+		slot.isCheap = slot.nameSat(_item.isCheap)
+		slot.isValuable = slot.nameSat(_item.isValuable)
+		slot.isNotValuable = slot.nameSat(_item.isNotValuable)
+		slot.isNamed = function(namePat) return slot.nameSat(glob(namePat)) end
 
 		-- | find a specific slot sn, return nil when not find
-		_findThat = function(cond, beginSlot) -- find something after beginSlot which satisfy cond
+		slot._findThat = function(cond, beginSlot) -- find something after beginSlot which satisfy cond
 			for sn = default(1)(beginSlot), const.turtle.backpackSlotsNum do
 				if cond(sn) then return sn end
 			end
-		end,
+		end
 
 		-- | find from back to front
-		_findLastThat = function(cond, beginSlot)
+		slot._findLastThat = function(cond, beginSlot)
 			for sn = const.turtle.backpackSlotsNum, default(1)(beginSlot), -1 do
 				if cond(sn) then return sn end
 			end
-		end,
+		end
 
 		-- | a polymorphic wrapper of _findThat
-		find = function(slotFilter, beginSlot)
+		slot.find = function(slotFilter, beginSlot)
 			if type(slotFilter) == "string" then
 				local name = slotFilter
 				return slot._findThat(slot.isNamed(name), beginSlot)
@@ -69,10 +50,10 @@ if turtle then
 			else
 				error("[slot.find(slotFilter)] slotFilter should be string or function")
 			end
-		end,
+		end
 
 		-- | a polymorphic wrapper of _findLastThat
-		findLast = function(slotFilter, beginSlot)
+		slot.findLast = function(slotFilter, beginSlot)
 			if type(slotFilter) == "string" then
 				local name = slotFilter
 				return slot._findLastThat(slot.isNamed(name), beginSlot)
@@ -81,11 +62,11 @@ if turtle then
 			else
 				error("[slot.findLast(slotFilter)] slotFilter should be string or function")
 			end
-		end,
+		end
 
 		-- | count item number in the backpack
 		-- , countSingleSlot(sn) = c  where c is either number or boolean
-		_countVia = function(countSingleSlot)
+		slot._countVia = function(countSingleSlot)
 			local cnt = 0
 			for sn = 1, const.turtle.backpackSlotsNum do
 				local n = countSingleSlot(sn)
@@ -95,10 +76,10 @@ if turtle then
 				if n then cnt = cnt + n end
 			end
 			return cnt
-		end,
+		end
 
 		-- | a polymorphic wrapper of _countVia
-		count = function(slotCounter)
+		slot.count = function(slotCounter)
 			if type(slotCounter) == "string" then
 				local name = slotCounter
 				return slot._countVia(function(sn)
@@ -110,10 +91,10 @@ if turtle then
 			else
 				error("[slot.count(slotCounter)] slotCounter should be string or function")
 			end
-		end,
+		end
 
 		-- | fill a slot using items from slots behind this slot
-		fill = function(sn)
+		slot.fill = function(sn)
 			local saved_sn = turtle.getSelectedSlot()
 			sn = default(saved_sn)(sn)
 			local det = turtle.getItemDetail(sn)
@@ -132,13 +113,15 @@ if turtle then
 			end
 			turtle.select(saved_sn)
 			return count ~= 0
-		end,
+		end
 
 		-- | tidy backpack slots
-		tidy = function()
+		slot.tidy = function()
 			for sn = 1, const.turtle.backpackSlotsNum do slot.fill(sn) end
-		end,
-	}
+		end
+
+		return slot
+	end)()
 
 	select = mkIOfn(function(selector)
 		if type(selector) == "number" then

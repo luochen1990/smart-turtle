@@ -154,59 +154,32 @@ if turtle then
 		return dropped == n, dropped
 	end))
 
-	-- | different from turtle.inspect, this only returns res
+	-- | different from turtle.inspect, this only returns name
+	-- , and returns false when fail
 	inspect = markIO("inspect")(mkIO(function()
 		ok, res = _aiming.inspect()
-		return ok and res
+		return ok and res.name
 	end))
 
 	isEmpty = -detect
-
 	isNamed = function(namePat)
-		local match = glob(namePat)
-		return mkIO(function()
-			local ok, res = _aiming.inspect()
-			return ok and match(res.name)
-		end)
+		return fmap(glob(namePat))(inspect)
 	end
-
 	isSame = mkIO(function()
 		local ok, res = _aiming.inspect()
 		return ok and res.name == turtle.getItemDetail().name
 	end)
-
-	isTurtle = mkIO(function()
-		local ok, res = _aiming.inspect()
-		return ok and const.turtleBlocks[res.name] == true
-	end)
-
-	isChest = mkIO(function()
-		local ok, res = _aiming.inspect()
-		return ok and const.chestBlocks[res.name] == true
-	end)
-
+	isTurtle = fmap(_item.isTurtle)(inspect)
+	isChest = fmap(_item.isChest)(inspect)
+	isContainer = fmap(_item.isContainer)(inspect)
+	isGround = fmap(glob(const.groundBlocks))(inspect)
 	isStation = mkIO(function()
 		local ok, res = _aiming.inspect()
-		return ok and (const.turtleBlocks[res.name] == true or const.chestBlocks[res.name] == true)
-	end)
-
-	isContainer = mkIO(function()
-		local ok, res = _aiming.inspect()
-		return ok and (const.turtleBlocks[res.name] == true or const.chestBlocks[res.name] == true or const.containerBlocks[res.name] == true)
-	end)
-
-	isCheap = mkIO(function()
-		local ok, res = _aiming.inspect()
-		return ok and (const.cheapItems[res.name] or const.cheapItems[const.afterDig[res.name]]) == true
+		return ok and (_item.isTurtle(res.name) or _item.isChest(res.name))
 	end)
 
 	isWorkArea = mkIO(function()
-		if workMode.workArea and workMode.workArea:contains(workState.pos) and not workMode.workArea:contains(workState.pos + workState:aimingDir()) then return false else return true end
-	end)
-
-	isProtected = mkIO(function()
-		local ok, res = _aiming.inspect()
-		return ok and (const.turtleBlocks[res.name] == true or const.chestBlocks[res.name] == true)
+		return not (workMode.workArea and workMode.workArea:contains(workState.pos) and not workMode.workArea:contains(workState.pos + workState:aimingDir()))
 	end)
 
 	dig = markIO("dig")(mkIO(function()
@@ -251,30 +224,15 @@ if turtle then
 			savePosd(refuelTo(workState.pos + workState:aimingDir()))() -- refuel may change our pos
 		else
 			if turtle.getFuelLevel() < 1 then
-				cryForHelpRefueling(100)()
+				cryForHelpRefueling(const.activeRadius * 2)()
 			end
 		end
 
-		---- auto refuel
-		--local backPos = ((workState.fuelStation and workState.fuelStation.pos) or workState.beginPos)
-		--local reserveFuel = 2 * vec.manhat(workState.pos + workState:aimingDir() - backPos)
-		--if not workState.isRefueling then
-		--	local ok = refuel(reserveFuel)()
-		--	if not ok then
-		--		waitForHelp(reserveFuel)()
-		--	end
-		--else
-		--	if turtle.getFuelLevel() < 1 then
-		--		waitForHelp(reserveFuel)()
-		--	end
-		--end
-		----
-
 		local mov = _aiming.move
 		if workMode.destroy == 1 then
-			mov = mov + rep(isCheap * dig) * mov
+			mov = mov + rep(isGround * dig) * mov
 		elseif workMode.destroy == 2 or workMode.destroy == true then
-			mov = mov + rep(-isProtected * dig) * mov
+			mov = mov + rep(-isStation * dig) * mov
 		end
 		if workMode.violence then
 			mov = mov + rep(attack) * mov

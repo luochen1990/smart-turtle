@@ -114,9 +114,9 @@ if turtle then
 		if not workState.isRefueling then
 			local beginPos = workState.pos
 			local refuel_pos = workState.fuelStation and workState.fuelStation.pos
-			local refuel_dis = (refuel_pos and math.max(vec.manhat(beginPos - refuel_pos), vec.manhat(destPos - refuel_pos))) or 100
+			local refuel_dis = (refuel_pos and math.max(vec.manhat(beginPos - refuel_pos), vec.manhat(destPos - refuel_pos))) or const.activeRadius
 			local unload_pos = workState.unloadStation and workState.unloadStation.pos
-			local unload_dis = (unload_pos and math.max(vec.manhat(beginPos - unload_pos), vec.manhat(destPos - unload_pos))) or 100
+			local unload_dis = (unload_pos and math.max(vec.manhat(beginPos - unload_pos), vec.manhat(destPos - unload_pos))) or const.activeRadius
 			local required_fuel = vec.manhat(beginPos - destPos) + math.max(refuel_dis, unload_dis) * 2
 			local ok = refuel(required_fuel * 2)()
 			if not ok then
