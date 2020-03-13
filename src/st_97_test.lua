@@ -108,7 +108,7 @@ if turtle then
 		local ripen = retryUntil(isNamed("*:*_log"))(use("minecraft:bone_meal"))
 		local cutTrunk = dig * move * turn.U * rep(dig * move)
 		local cutLeaf = currentPos:pipe(function(p) return with({destroy = true})(scan(p+(F+L)*2 .. p+(B+R+D)*2, D)(turn.D * dig)) end)
-		return savePosd((isNamed("*:*_log") + use("*:*_sapling") * ripen) * cutTrunk * cutLeaf)()
+		return savePosd((isNamed("*:*_log") + (isNamed("*:*_sapling") + use("*:*_sapling")) * ripen) * cutTrunk * cutLeaf)()
 	end))
 
 	_test.miner = markIOfn("_test.miner")(mkIOfn(function(n)
