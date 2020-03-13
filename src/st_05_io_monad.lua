@@ -120,35 +120,9 @@ retryUntil = markIOfn2("retryUntil(ioStopCond)(io)")(function(ioStopCond)
 end)
 
 -- | replicate : Int -> IO a -> IO Int
-replicate = function(n)
-	return function(io)
-		return markIO("replicate(n)(io)")(mkIO(function()
-			local c = 0
-			for i = 1, n do
-				local r = io()
-				if r then c = c + 1 end
-			end
-			return c
-		end))
-	end
-end
-
--- deprecated
----- | Usage 1: (a -> Bool) -> IO a -> IO Int
----- | Usage 2: IO Bool -> IO a -> IO Int
---repeatUntil = function(stopCond)
---	if type(stopCond) == "function" then
---		return markIOfn("repeatUntil(stopCond)(io)")(mkIOfn(function(io)
---			local c = 0; while not stopCond(io()) do c = c + 1 end; return c
---		end))
---	elseif isIO(stopCond) then
---		return markIOfn("repeatUntil(ioStopCond)(io)")(mkIOfn(function(io)
---			local c = 0; while not stopCond() do io(); c = c + 1 end; return c
---		end))
---	else
---		error("[repeatUntil] stopCond must be function or IO")
---	end
---end
+replicate = markIOfn2("replicate(n)(io)")(function(n)
+	return mkIOfn(function(io) local c = 0; while c < n and io() do c = c + 1 end; return c end)
+end)
 
 -- | repeat until fail,  (use `rep(-io)` as repeat until success)
 -- , return successfully repeated times
