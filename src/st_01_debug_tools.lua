@@ -28,9 +28,13 @@ end
 function _printDocDesc(desc)
 	if desc then
 		if type(desc) == "string" then
-			printC(colors.lightGray)(desc)
+			withColor(colors.lightGray)(function()
+				textutils.pagedPrint(desc, table.pack(term.getSize())[2] - 4)
+			end)()
 		elseif type(desc) == "table" then --list of string
-			printC(colors.lightGray)(table.concat(desc, "\n\n "))
+			withColor(colors.lightGray)(function()
+				textutils.pagedPrint(table.concat(desc, "\n\n "), table.pack(term.getSize())[2] - 4)
+			end)()
 		end
 	end
 end
