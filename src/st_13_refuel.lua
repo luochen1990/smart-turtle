@@ -16,7 +16,7 @@ if turtle then
 			if fuelSn then
 				turtle.select(fuelSn)
 				local det = turtle.getItemDetail(fuelSn)
-				local heat = const.fuelHeatContent[det.name]
+				local heat = _item.fuelHeatContent(det.name)
 				while turtle.getFuelLevel() < nStep and turtle.getItemCount(fuelSn) > 0 do
 					if turtle.getItemCount(fuelSn) < 2 then slot.fill(fuelSn) end
 					turtle.refuel(math.max(1, (nStep - turtle.getFuelLevel()) / heat))

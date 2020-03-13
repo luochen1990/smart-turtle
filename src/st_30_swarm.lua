@@ -348,7 +348,7 @@ end
 
 swarm.services.requestFuelStation = function(nStep, startPos, fuelLeft)
 	for _, name in ipairs(swarm.config.asFuel) do
-		local count = math.ceil(nStep / const.fuelHeatContent[name])
+		local count = math.ceil(nStep / _item.fuelHeatContent(name))
 		local ok, res = swarm.services.requestStation(name, count, startPos, fuelLeft)
 		if ok then
 			return true, res
