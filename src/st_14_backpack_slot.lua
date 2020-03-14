@@ -178,7 +178,7 @@ if turtle then
 				log.verb("Cost "..cost.." to reach "..triedTimes.."th station, but still unavailable, trying next...")
 			end,
 			beforeWait = function(triedTimes, singleTripCost, station)
-				log.verb("Cost "..cost.." to reach "..triedTimes.."th station, but still unavailable, trying next...")
+				log.verb("Cost "..singleTripCost.." and visited "..triedTimes.." stations, but all unavailable, now waiting for help...")
 			end,
 			waitForUserHelp = function(triedTimes, singleTripCost, station)
 				cryForHelpUnloading()
