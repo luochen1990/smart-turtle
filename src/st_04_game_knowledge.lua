@@ -19,6 +19,7 @@ const = {
 	cheapItems = {
 		"minecraft:cobblestone",
 		"minecraft:dirt",
+		"minecraft:gravel",
 	},
 	valuableItems = {
 		"*:diamond*",
@@ -37,6 +38,8 @@ const = {
 		"minecraft:stone",
 		"minecraft:cobblestone",
 		"minecraft:sand",
+		"minecraft:end_stone",
+		"minecraft:netherrack",
 	},
 	chestBlocks = {
 		"minecraft:chest",
