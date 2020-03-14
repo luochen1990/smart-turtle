@@ -438,6 +438,9 @@ function findPeripheral(deviceType, sides)
 end
 
 _monitor = findPeripheral("monitor")
+if _monitor then
+	_monitor.setTextScale(0.5)
+end
 
 function printM(fg, bg)
 	if _monitor then
