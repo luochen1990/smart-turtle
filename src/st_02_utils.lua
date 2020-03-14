@@ -9,6 +9,8 @@ eq = function(x) return function(y) return x == y end end
 
 plus = function(x) return function(y) return x + y end end
 
+combine = function(f) return function(g) return function(x) return f(g(x)) end end end
+
 -- | pipe : (a -> b) -> (b -> c) -> a -> c
 -- , pipe == flip compose
 pipe = function(f, ...)

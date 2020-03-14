@@ -79,6 +79,7 @@ _item = {
 	end)(),
 	isCheap = glob(const.cheapItems),
 	isValuable = glob(const.valuableItems),
+	isNotValuable = combine(function(b) return not b end)(glob(const.valuableItems)),
 	fuelHeatContent = globDict(const.fuelHeatContent),
 }
 
