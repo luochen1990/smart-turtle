@@ -180,7 +180,7 @@ swarm._startService = (function()
 						local cmpDis = function(c) return vec.manhat(c.pos - task.provider.pos) end
 						table.sort(candidates, comparator(cmpDis))
 						local carrierId = candidates[1].id
-						local taskResult = { carrierClient.send("carry("..literal(task.provider, task.requester, task.itemCount, task.itemType)..")()", 1000, carrierId)() }
+						local taskResult = { carrierClient.send(carrierId, "carry("..literal(task.provider, task.requester, task.itemCount, task.itemType)..")()", 1000)() }
 						printC(colors.lime)("Task done: ", literal(taskResult))
 						sleep(5)
 					else
@@ -862,8 +862,8 @@ end
 
 -- | turtle is idle means: repl is not running command and workState.isRunningSwarmTask = false
 isIdle = mkIO(function()
-	--return not (_replState.isRunningCommand or workState.isRunningSwarmTask)
-	return not (_replState.isRunningCommand)
+	--return not (_repl.state.isRunningCommand or workState.isRunningSwarmTask)
+	return not (_repl.state.isRunningCommand)
 end)
 
 displayLog = mkIOfn(function(computerId)

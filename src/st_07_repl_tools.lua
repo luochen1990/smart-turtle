@@ -175,6 +175,7 @@ replTool.buildRepl = function(config)
 		start = _start,
 		env = modifiableEnv,
 		config = config,
+		state = state,
 		style = style,
 	}
 end
