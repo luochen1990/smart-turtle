@@ -125,6 +125,10 @@ if turtle then
 		return savePosp( with({destroy = true})( scan(area, D, 3)(try(turn.U * dig) * (turn.D * dig)) ) )()
 	end))
 
+	_test.clearBlock1 = markIO("_test.clearBlock1")(mkIO(function()
+		return _test.clearBlock((O+U*2)..(O+(U+F+R)*2))()
+	end))
+
 	_test.transportLine = markIO("_test.transportLine")(mkIO(function()
 		local s = {pos = O + L * 2 + F * 2 + U * 3, dir = R}
 		local t = {pos = O + R * 4 + U, dir = L}

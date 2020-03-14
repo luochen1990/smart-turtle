@@ -163,6 +163,10 @@ if turtle then
 		end
 		assert(not layerFilter or type(layerFilter) == "function", "[scan] layerFilter should be number or function")
 
+		if rank == 0 then
+			return mkIOfn(function(io) savePosd(io)(); return 1 end)
+		end
+		-- rank >= 1
 		return mkIOfn(function(io)
 			local near = area:vertexNear(workState.pos)
 			local far = area.low + area.high - near
@@ -170,27 +174,25 @@ if turtle then
 			if mainDir then -- mainDir specified by user
 				projLen = (far - near):dot(mainDir)
 				if projLen < 0 then near, far, projLen = far, near, -projLen end
-			elseif rank > 1 then -- choose shortest non-zero axis as mainDir
-				local candidates = {vec.axis.X, vec.axis.Y, vec.axis.Z}
+			else -- choose shortest non-zero axis as mainDir
 				local diag = far - near
-				local c1 = function(ax) return bool2int(diag:dot(ax) == 0) end
-				local c2 = function(ax) return bool2int(rank == 2 and ax.y ~= 0) end
-				local c3 = function(ax) return math.abs(diag:dot(ax)) end
-				table.sort(candidates, comparator(c1, c2, c3))
+				local candidates = vec.unitComponents(diag)
+				local c1 = function(d) return bool2int(rank == 2 and d.y ~= 0) end
+				local c2 = function(d) return diag:dot(d) end
+				table.sort(candidates, comparator(c1, c2))
 				mainDir = candidates[1]
 				projLen = diag:dot(mainDir)
 			end
 
-			if rank <= 1 then
-				if area:volume() <= 0 then return 0 end
-				local io1, n = savePosd(try(io)), vec.manhat(far - near)
-				return (move.to(near) * try(turn.toward(far)) * io1 * fmap(plus(1))((move * io1) ^ n))()
-			else -- rank > 1 means projLen ~= 0
-				log.verb("[scan] " .. rank .. "d, " .. math.abs(projLen) .. " layers toward " .. showDir(mainDir * sign(projLen)))
+			log.verb("[scan] " .. rank .. "d, " .. (projLen+1) .. " layers toward " .. showDir(mainDir))
+			if rank == 1 then
+				local io1, n = try(savePosd(io)), vec.manhat(far - near)
+				return (move.to(near) * turn.toward(far) * io1 * fmap(plus(1))((move * io1) ^ n))()
+			else -- rank > 1
 				local p, q = near, (far - mainDir * projLen)
 				local cnt = 0
-				for i = 0, projLen, sign(projLen) do
-					if not layerFilter or layerFilter(math.abs(i)) then
+				for i = 0, projLen do
+					if not layerFilter or layerFilter(i) then
 						cnt = cnt + (scan((p + mainDir * i) .. (q + mainDir * i))(io)() or 0)
 					end
 				end

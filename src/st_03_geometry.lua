@@ -37,6 +37,13 @@ vec = {
 		if v.z ~= 0 then r = r + 1 end
 		return r
 	end,
+	unitComponents = function(v)
+		local r = {}
+		if v.x ~= 0 then table.insert(r, vec.axis.X * sign(v.x)) end
+		if v.y ~= 0 then table.insert(r, vec.axis.Y * sign(v.y)) end
+		if v.z ~= 0 then table.insert(r, vec.axis.Z * sign(v.z)) end
+		return r
+	end,
 }
 setmetatable(vec, {
 	__call = function(_, ...) return vector.new(...) end,
