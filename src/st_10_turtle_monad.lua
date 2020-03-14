@@ -43,6 +43,11 @@ if turtle then
 			if workState.aiming == 0 then return const.dir.U
 			else return workState.facing end
 		end,
+		preferDirections = function()
+			local d0 = workState.facing
+			local d1 = leftSide(d0)
+			return {U, d0, d1, leftSide(d1), rightSide(d0), D}
+		end,
 	}})
 
 	-- | run io with specified workMode fields

@@ -61,9 +61,9 @@ const.dir = {
 	['U'] = vec.axis.Y, ['D'] = -vec.axis.Y,
 	['S'] = vec.axis.Z, ['N'] = -vec.axis.Z,
 }
-const.directions = {"U", "E", "S", "W", "N", "D"}
-const.rotate = { left = const.dir.D, right = const.dir.U, }
 for k, v in pairs(const.dir) do _ENV[k] = v end -- define U/E/S/W/N/D
+const.preferDirections = {U, E, S, W, N, D}
+const.rotate = { left = const.dir.D, right = const.dir.U, }
 
 showDir = function(d)
 	for k, v in pairs(const.dir) do if d == v then return k end end

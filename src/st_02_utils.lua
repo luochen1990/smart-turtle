@@ -7,6 +7,8 @@ negate = function(x) return -x end
 
 eq = function(x) return function(y) return x == y end end
 
+plus = function(x) return function(y) return x + y end end
+
 -- | pipe : (a -> b) -> (b -> c) -> a -> c
 -- , pipe == flip compose
 pipe = function(f, ...)

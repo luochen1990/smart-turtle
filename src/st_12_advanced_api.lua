@@ -11,20 +11,23 @@ if turtle then
 		move.to(destPos)
 	end))
 
-	-- | attempt to approach destPos by one step
-	move.toward = markIOfn("move.toward(destPos, cond)")(function(destPos, cond)
+	turn.toward = markIOfn("turn.toward(destPos,dirFilter,ioCond)")(function(destPos, dirFilter, ioCond)
 		return mkIO(function()
+			local v, d0 = destPos - workState.pos, workState:aimingDir()
 			local ok = false
-			local v = destPos - workState.pos
-			local d0 = workState:aimingDir()
-			for _, d in ipairs(const.directions) do
-				if v:dot(const.dir[d]) > 0 and (not cond or cond(const.dir[d], d0)) then
-					ok = ok or (turn[d] * move)()
+			for _, d in ipairs(workState:preferDirections()) do
+				if v:dot(d) > 0 and (not dirFilter or dirFilter(d, d0)) then
+					ok = ok or (turn.to(d) * (ioCond or pure(true)))()
 					if ok then break end
 				end
 			end
 			return ok
 		end)
+	end)
+
+	-- | attempt to approach destPos by one step
+	move.toward = markIOfn("move.toward(destPos,dirFilter)")(function(destPos, dirFilter)
+		return turn.toward(destPos, dirFilter, move)
 	end)
 
 	help.move.to = doc({
@@ -61,15 +64,15 @@ if turtle then
 					local detourBeginPos = workState.pos
 					local detourCost = 0 -- record detouring cost
 					local targetDir
-					for _, d in ipairs(const.directions) do
-						if v:dot(const.dir[d]) > 0 then targetDir = const.dir[d]; break end
+					for _, d in ipairs(workState:preferDirections()) do
+						if v:dot(d) > 0 then targetDir = d; break end
 					end
 					-- targetDir decided
 					local detourDir
-					for _, d in ipairs(const.directions) do
-						if d ~= 'D' and targetDir:dot(const.dir[d]) == 0 then --NOTE: prefer not to go down
-							local ok = (turn.to(const.dir[d]) * move)()
-							if ok then detourDir = const.dir[d]; detourCost = detourCost + 1; break end
+					for _, d in ipairs(workState:preferDirections()) do
+						if d ~= 'D' and targetDir:dot(d) == 0 then --NOTE: prefer not to go down
+							local ok = (turn.to(d) * move)()
+							if ok then detourDir = d; detourCost = detourCost + 1; break end
 						end
 					end
 					if not detourDir then
@@ -179,20 +182,19 @@ if turtle then
 			end
 
 			if rank <= 1 then
-				if area:volume() <= 0 then return true end
-				if not move.to(near)() then return false end
-				local io1 = with({workArea = false})(savePosd(try(io)))
-				with({workArea = area})(io1 * move.toward(far) * rep(io1 * move))()
-				return true
+				if area:volume() <= 0 then return 0 end
+				local io1, n = savePosd(try(io)), vec.manhat(far - near)
+				return (move.to(near) * try(turn.toward(far)) * io1 * fmap(plus(1))((move * io1) ^ n))()
 			else -- rank > 1 means projLen ~= 0
 				log.verb("[scan] " .. rank .. "d, " .. math.abs(projLen) .. " layers toward " .. showDir(mainDir * sign(projLen)))
 				local p, q = near, (far - mainDir * projLen)
+				local cnt = 0
 				for i = 0, projLen, sign(projLen) do
 					if not layerFilter or layerFilter(math.abs(i)) then
-						scan( (p + mainDir * i) .. (q + mainDir * i) )(io)()
+						cnt = cnt + (scan((p + mainDir * i) .. (q + mainDir * i))(io)() or 0)
 					end
 				end
-				return true
+				return cnt
 			end
 		end)
 	end)
