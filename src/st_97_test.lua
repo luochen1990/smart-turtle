@@ -107,7 +107,9 @@ if turtle then
 	_test.plant = markIO("_test.plant")(mkIO(function()
 		local ripen = retryUntil(isNamed("*:*_log"))(use("minecraft:bone_meal"))
 		local cutTrunk = dig * move * turn.U * rep(dig * move)
-		local cutLeaf = currentPos:pipe(function(p) return with({destroy = true})(scan(p+(F+L)*2 .. p+(B+R+D)*2, D)(turn.D * dig)) end)
+		local cutLeaf = currentPos:pipe(function(p)
+			return with({destroy = true})(scan(p+(D+F+L)*2 .. p+(D+B+R)*2, D, 3)(try(turn.U * dig) * turn.D * dig))
+		end)
 		return savePosd((isNamed("*:*_log") + (isNamed("*:*_sapling") + use("*:*_sapling")) * ripen) * cutTrunk * cutLeaf)()
 	end))
 
