@@ -4,15 +4,15 @@ if turtle then
 
 	help.turn = doc("sub-commands of 'turn' reference to facing and aiming of turtle and call turtle.turnLeft() and turtle.turnRight().")
 	turn = {
-		left = markIO("turn.left")(mkIO(function() turtle.turnLeft(); workState.facing = leftSide(workState.facing); return true end)),
-		right = markIO("turn.right")(mkIO(function() turtle.turnRight(); workState.facing = rightSide(workState.facing); return true end)),
-		around = markIO("turn.around")(mkIO(function() turtle.turnLeft(); turtle.turnLeft(); workState.facing = -workState.facing; return true end)),
-		back = markIO("turn.back")(mkIO(function()
-			if workState.aiming == 0 then turtle.turnLeft(); turtle.turnLeft(); workState.facing = -workState.facing
-			else workState.aiming = -workState.aiming end
-			return true
-		end)),
+		left = markIO("turn.left")(mkIO(function() workState.facing = leftSide(workState.facing); turtle.turnLeft(); return true end)),
+		right = markIO("turn.right")(mkIO(function() workState.facing = rightSide(workState.facing); turtle.turnRight(); return true end)),
 	}
+	turn.around = markIO("turn.around")(turn.left * turn.left)
+	turn.back = markIO("turn.back")(mkIO(function()
+		if workState.aiming == 0 then turn.left(); turn.left()
+		else workState.aiming = -workState.aiming end
+		return true
+	end))
 
 	help.turn.to = doc({
 		signature = "turn.to : Dir -> IO Bool",
