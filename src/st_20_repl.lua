@@ -48,3 +48,8 @@ _repl = replTool.buildRepl({
 	style = _replStyle,
 })
 
+abortReplCommand = mkIO(function()
+	os.queueEvent("abort-repl-command")
+	return retry(function() not _repl.state.isRunningCommand end)()
+end)
+

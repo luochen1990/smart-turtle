@@ -1,7 +1,7 @@
 ---------------------------------- telnet repl ---------------------------------
 
-_telnet_repl_config = {
-	inputHandler = eval,
+_telnet_repl_config = { --this is only a prototype, some fields not filled yet.
+	inputHandler = nil,
 	readOnlyEnv = _ST,
 	abortHandler = nil,
 	abortEventListener = nil,
