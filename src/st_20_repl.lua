@@ -23,6 +23,20 @@ _replStyle = {
 
 _repl = replTool.buildRepl({
 	inputHandler = eval,
+	abortHandler = function()
+		if turtle and workState.moveNotCommitted then
+			if workState.gpsCorrected then
+				log.verb("last move aborted, now correcting gps pos again...")
+				sleep(1) -- wait for pos stable
+				workState.pos = gpsPos()
+				log.verb("gps pos corrected, now at "..show(workState.pos))
+			else
+				log.cry("last move aborted, now trying to approach beginPos and waiting for user reboot...")
+				move.to(O)()
+				turn.to(F)()
+			end
+		end
+	end,
 	readOnlyEnv = _ST,
 	abortHander = nil,
 	historyLimit = 100,

@@ -30,6 +30,7 @@ if turtle then
 		isFetching = false,
 		cryingFor = false,
 		isRunningSwarmTask = false,
+		moveNotCommitted = false,
 		back = false, -- save pos, facing and aiming here before interrupt
 	}
 

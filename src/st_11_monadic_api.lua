@@ -320,8 +320,10 @@ if turtle then
 		if workMode.retrySeconds > 0 then --NOTE: only worth retry when blocked by turtle
 			mov = mov + isTurtle * retry(workMode.retrySeconds)(mov)
 		end
+		workState.moveNotCommitted = true
 		local r = (isWorkArea * mov)()
 		if r then workState.pos = workState.pos + workState:aimingDir() end
+		workState.moveNotCommitted = false
 		return r
 	end))
 
