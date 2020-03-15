@@ -111,6 +111,8 @@ end
 
 mkArea, isArea = (function()
 	local _area_mt = {
+		__eq = function(a, b) return a.low == b.low and a.high == b.high end,
+		__le = function(a, b) return a.low >= b.low and a.high <= b.high end,
 		__add = function(a, b) return _mkArea(lowPoint(a.low, b.low), highPoint(a.high, b.high)) end,
 		__tostring = function(a) return tostring(a.low)..".."..tostring(a.high) end,
 		__literal = function(a) return "mkArea("..literal(a.low)..","..literal(a.high)..")" end,

@@ -162,37 +162,36 @@ if turtle then
 			layerFilter = (function(n) return function(i) return i % n == 0 end end)(layerFilter)
 		end
 		assert(not layerFilter or type(layerFilter) == "function", "[scan] layerFilter should be number or function")
-
 		if rank == 0 then
 			return mkIOfn(function(io) savePosd(io)(); return 1 end)
 		end
 		-- rank >= 1
 		return mkIOfn(function(io)
 			local near = area:vertexNear(workState.pos)
+			if mainDir then near = area:face(-mainDir):vertexNear(workState.pos) end
 			local far = area.low + area.high - near
-			local projLen
-			if mainDir then -- mainDir specified by user
-				projLen = (far - near):dot(mainDir)
-				if projLen < 0 then near, far, projLen = far, near, -projLen end
-			else -- choose shortest non-zero axis as mainDir
-				local diag = far - near
+			local diag = far - near
+			if not mainDir then -- mainDir specified by user
 				local candidates = vec.unitComponents(diag)
 				local c1 = function(d) return bool2int(rank == 2 and d.y ~= 0) end
 				local c2 = function(d) return diag:dot(d) end
 				table.sort(candidates, comparator(c1, c2))
 				mainDir = candidates[1]
-				projLen = diag:dot(mainDir)
 			end
+			local projLen = diag:dot(mainDir)
 
-			log.verb("[scan] " .. rank .. "d, " .. (projLen+1) .. " layers toward " .. showDir(mainDir))
+			log.verb("[scan] "..show(near)..".."..show(far)..", "..rank.."d "..(projLen+1).." layers toward " .. showDir(mainDir))
+			assert((near..far) == area, "(near..far) should eq area")
 			if rank == 1 then
 				local io1, n = try(savePosd(io)), vec.manhat(far - near)
 				return (move.to(near) * turn.toward(far) * io1 * fmap(plus(1))((move * io1) ^ n))()
 			else -- rank > 1
 				local p, q = near, (far - mainDir * projLen)
+				assert(area:contains(p) and area:contains(q), "p, q should inside area")
 				local cnt = 0
 				for i = 0, projLen do
 					if not layerFilter or layerFilter(i) then
+						assert(area:contains(p + mainDir * i) and area:contains(q + mainDir * i), "p[i], q[i] should inside area")
 						cnt = cnt + (scan((p + mainDir * i) .. (q + mainDir * i))(io)() or 0)
 					end
 				end
