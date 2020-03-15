@@ -28,6 +28,7 @@ replTool.buildRepl = function(config)
 	config = defaultDict({
 		inputHandler = replTool.echoInputHandler,
 		abortHandler = nil,
+		abortEventListener = nil, -- a coroutine which returns on abort event happens
 		readOnlyEnv = nil,
 		historyFilePath = false,
 		historyLimit = 100,
@@ -132,7 +133,7 @@ replTool.buildRepl = function(config)
 			if #input > 0 then
 				if input:match("%S") and state.history[#state.history] ~= input then
 					table.insert(state.history, input)
-					if #state.history > (config.historyLimit or 100) then
+					if #state.history > config.historyLimit then
 						table.remove(state.history, 1)
 					end
 					if config.historyFilePath then
@@ -140,7 +141,7 @@ replTool.buildRepl = function(config)
 					end
 				end
 
-				local co1 = withColor(style.runCommandDefaultColor)(function()
+				local execCo = withColor(style.runCommandDefaultColor)(function()
 					local cmd = internalCommands[input]
 					if cmd then
 						return true, cmd()
@@ -148,11 +149,11 @@ replTool.buildRepl = function(config)
 						return false, config.inputHandler(input, modifiableEnv)
 					end
 				end)
-				local co2 = delay(_waitForKeyCombination, keys.leftCtrl, keys.c)
 
 				state.isRunningCommand = true
-				local winner, isInternalCmd, ok, res = race(co1, co2)()
+				local winner, rst = race(execCo, config.abortEventListener)()
 				if winner == 1 then
+					local isInternalCmd, ok, res = unpack(rst)
 					if not isInternalCmd then
 						if ok then
 							printC(style.resultColor)(show(unpack(res)))
@@ -163,8 +164,9 @@ replTool.buildRepl = function(config)
 						end
 					end
 				else -- winner == 2
+					local abortMsg = unpack(rst)
 					if config.abortHandler then
-						config.abortHandler(modifiableEnv)
+						config.abortHandler(abortMsg, modifiableEnv)
 					end
 				end
 			end

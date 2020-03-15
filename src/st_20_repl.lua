@@ -22,8 +22,10 @@ _replStyle = {
 }
 
 _repl = replTool.buildRepl({
+	readOnlyEnv = _ST,
 	inputHandler = eval,
-	abortHandler = function()
+	abortEventListener = delay(_waitForKeyCombination, keys.leftCtrl, keys.c),
+	abortHandler = function(msg, env)
 		if turtle and workState.moveNotCommitted then
 			if workState.gpsCorrected then
 				log.verb("last move aborted, now correcting gps pos again...")
@@ -37,8 +39,6 @@ _repl = replTool.buildRepl({
 			end
 		end
 	end,
-	readOnlyEnv = _ST,
-	abortHander = nil,
 	historyLimit = 100,
 	historyFilePath = "/.st_repl_history",
 	style = _replStyle,

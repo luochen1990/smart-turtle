@@ -149,7 +149,7 @@ race = mkIOfn(function(...)
 		cos[i] = function() res = { io() } end
 	end
 	local id = parallel.waitForAny(unpack(cos))
-	return id, unpack(res)
+	return id, res
 end)
 
 -- | similar to race, but ignore the result

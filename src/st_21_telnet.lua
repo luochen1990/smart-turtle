@@ -3,7 +3,8 @@
 _telnet_repl_config = {
 	inputHandler = eval,
 	readOnlyEnv = _ST,
-	abortHander = nil,
+	abortHandler = nil,
+	abortEventListener = nil,
 	historyLimit = 100,
 	historyFilePath = "/.st_telnet_history",
 	style = {
