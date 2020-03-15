@@ -25,8 +25,10 @@ _repl = replTool.buildRepl({
 	readOnlyEnv = _ST,
 	inputHandler = eval,
 	abortEventListener = function()
-		local id = race_(delay(_waitForKeyCombination, keys.leftCtrl, keys.c), delay(os.pullEvent, "abort-repl-command"))
-		if id == 1 then return "by user keyboard shortcut" else return "by 'abort-repl-command' event" end
+		local id = race_(delay(_waitForKeyCombination, keys.leftCtrl, keys.c), delay(os.pullEvent, "abort-repl-command"))()
+		if id == 1 then return "by user keyboard shortcut"
+		elseif id == 2 then return "by 'abort-repl-command' event"
+		else error("[_repl.abortEventListener] id == "..show(id)) end
 	end,
 	abortHandler = function(msg, cmd, env)
 		log.verb("repl command `"..cmd.."` aborted ("..msg..")")
@@ -50,6 +52,6 @@ _repl = replTool.buildRepl({
 
 abortReplCommand = mkIO(function()
 	os.queueEvent("abort-repl-command")
-	return retry(function() not _repl.state.isRunningCommand end)()
+	return retry(function() return not _repl.state.isRunningCommand end)()
 end)
 
