@@ -4,10 +4,6 @@ if turtle then
 
 	fuelGot = mkIO(turtle.getFuelLevel)
 
-	--fuelEnough = markIOfn("fuelEnough(nStep)")(mkIOfn(function(nStep)
-	--	return turtle.getFuelLevel() >= nStep
-	--end))
-
 	refuelFromBackpack = markIOfn("refuelFromBackpack(nStep)")(mkIOfn(function(nStep)
 		nStep = math.max(1 , nStep)
 		local saved_sn = turtle.getSelectedSlot()
