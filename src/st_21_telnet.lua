@@ -36,7 +36,9 @@ telnet = function(computerId)
 	else
 		_telnet_repl_config.style.promptText = "telnet "..computerId.."> "
 		_telnet_repl_config.inputHandler = function(cmd, _env)
-			return _stComputers.send(computerId, cmd)()
+			local winner, rst = race(_stComputers.send(computerId, cmd), displayLog(computerId))
+			assert("winner == 1")
+			return unpack(rst)
 		end
 		local repl = replTool.buildRepl(_telnet_repl_config)
 		repl.start()
