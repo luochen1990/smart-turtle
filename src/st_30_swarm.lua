@@ -953,8 +953,10 @@ swarm.roles = {
 		daemon = function()
 			os.pullEvent("system-ready")
 			local b = false
+			local side = "back"
+			if turtle then side = "front" end
 			while true do
-				redstone.setOutput("front", b)
+				redstone.setOutput(side, b)
 				b = not b
 				sleep(0.5)
 			end
