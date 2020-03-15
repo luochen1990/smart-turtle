@@ -157,7 +157,7 @@ if turtle then
 		workState.cryingFor = "unloading"
 		log.cry("Help me! I need to unload backpack at "..show(workState.pos))
 		retry(backpackEmpty)
-		workState.cryingFor = nil
+		workState.cryingFor = false
 	end
 
 	-- | the unload interrput: back to unload station and clear the backpack

@@ -32,7 +32,7 @@ if turtle then
 		workState.cryingFor = "refueling"
 		log.cry("Help me! I need "..nStep.." fuel at "..show(workState.pos))
 		with({asFuel = false})(retry(refuelFromBackpack(nStep)))()
-		workState.cryingFor = nil
+		workState.cryingFor = false
 	end))
 
 	-- | the refuel interruption

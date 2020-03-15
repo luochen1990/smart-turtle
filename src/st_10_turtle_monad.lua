@@ -23,14 +23,14 @@ if turtle then
 		facing = const.dir.E, -- current facing direction, const.dir.N/S/W/E
 		aiming = 0, -- 0:front, 1:up, -1:down
 		beginPos = vec.zero, -- pos when the program start
-		fuelStation = nil,
-		unloadStation = nil,
+		fuelStation = false,
+		unloadStation = false,
 		isRefueling = false,
 		isUnloading = false,
 		isFetching = false,
-		cryingFor = nil,
+		cryingFor = false,
 		isRunningSwarmTask = false,
-		back = nil, -- save pos, facing and aiming here before interrupt
+		back = false, -- save pos, facing and aiming here before interrupt
 	}
 
 	setmetatable(workState, {__index = {

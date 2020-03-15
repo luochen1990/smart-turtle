@@ -7,7 +7,7 @@ if turtle then
 		log.cry("Cannot move from "..show(beginPos).." to "..show(destPos)..", please help")
 		printC(colors.green)("Press Ctrl+G to continue...")
 		_waitForKeyCombination(keys.leftCtrl, keys.g)
-		workState.cryingFor = nil
+		workState.cryingFor = false
 		move.to(destPos)
 	end))
 
