@@ -8,8 +8,8 @@ if turtle then
 		violence = false, -- whether auto attack when move blocked
 		detour = true, -- whether to detour when move.to or move.go blocked
 		retrySeconds = 2, -- seconds to retry before fail back when move blocked by other turtles
-		workArea = nil, -- an electric fence
-		asFuel = nil, -- when nil, use every possible thing as fuel
+		workArea = false, -- an electric fence
+		asFuel = false, -- when false, use every possible thing as fuel
 		keepItems = 2, -- 0:always drop, 1:only keep valuable items, 2:keep non-cheap items, 3:keep all
 		allowInterruption = true, -- whether allow turtle interrupt current task to refuel or unload or fetch
 		--backpackWhiteList = {}, -- not used yet
@@ -58,9 +58,13 @@ if turtle then
 				local _wm = workMode
 				workMode = deepcopy(_wm)
 				for k, v in pairs(wm_patch) do
-					workMode[k] = v or nil
+					if workMode[k] ~= nil then
+						workMode[k] = v
+					else
+						error("[with] workMode has no such field: `"..k.."`")
+					end
 				end
-				r = {io()}
+				r = { io() }
 				workMode = _wm
 				return unpack(r)
 			end)
