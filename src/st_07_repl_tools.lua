@@ -166,7 +166,7 @@ replTool.buildRepl = function(config)
 				else -- winner == 2
 					local abortMsg = unpack(rst)
 					if config.abortHandler then
-						config.abortHandler(abortMsg, modifiableEnv)
+						config.abortHandler(abortMsg, input, modifiableEnv)
 					end
 				end
 			end

@@ -24,16 +24,20 @@ _replStyle = {
 _repl = replTool.buildRepl({
 	readOnlyEnv = _ST,
 	inputHandler = eval,
-	abortEventListener = delay(_waitForKeyCombination, keys.leftCtrl, keys.c),
-	abortHandler = function(msg, env)
+	abortEventListener = function()
+		local id = race_(delay(_waitForKeyCombination, keys.leftCtrl, keys.c), delay(os.pullEvent, "abort-repl-command"))
+		if id == 1 then return "by user keyboard shortcut" else return "by 'abort-repl-command' event" end
+	end,
+	abortHandler = function(msg, cmd, env)
+		log.verb("repl command `"..cmd.."` aborted ("..msg..")")
 		if turtle and workState.moveNotCommitted then
 			if workState.gpsCorrected then
-				log.verb("last move aborted, now correcting gps pos again...")
+				log.verb("move aborted, now correcting gps pos again...")
 				sleep(1) -- wait for pos stable
 				workState.pos = gpsPos()
 				log.verb("gps pos corrected, now at "..show(workState.pos))
 			else
-				log.cry("last move aborted, now trying to approach beginPos and waiting for user reboot...")
+				log.cry("move aborted, now trying to approach beginPos and wait for user reboot...")
 				move.to(O)()
 				turn.to(F)()
 			end
