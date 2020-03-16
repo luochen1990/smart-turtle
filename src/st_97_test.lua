@@ -54,7 +54,7 @@ if turtle then
 		for _, d in pairs(const.dir) do
 			local face = area1:face(d)
 			local a = (face.low + d) .. (face.high + d)
-			table.insert(tasks, {area = a, exec = scan(a)(turn.to(-d) * place)})
+			table.insert(tasks, {area = a, exec = scan(a)(turn.to(-d) * (compare + try(dig) * place))})
 		end
 
 		local old_posp = getPosp()
