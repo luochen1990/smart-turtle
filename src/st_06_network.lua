@@ -171,7 +171,7 @@ rpc.buildClient = function(requestProtocol, knownServer)
 		if allowRetry then
 			ok, res = retryWithTimeout(totalTimeout)(_req)() --NOTE: only protocol level failure should be retried
 		else
-			ok, res = _req(totalTimeout)()
+			ok, res = _req(totalTimeout or nil)()
 		end
 		if not ok then
 			return false, res
@@ -219,10 +219,8 @@ rpc.buildClient = function(requestProtocol, knownServer)
 	local _client = {}
 	setmetatable(_client, {__index = function(t, k)
 		local env = {
-			request = function(msg, tmout) return _request(msg, tmout or 5, nil, true) end,
-			send = function(id, msg, tmout)
-				return _request(msg, tmout or 5, id, false)
-			end,
+			request = function(msg, tmout) return _request(msg, default(5)(tmout), nil, true) end,
+			send = function(id, msg, tmout) return _request(msg, tmout or false, id, false) end,
 			broadcast = _broadcast,
 			_counter = _counter,
 			knownServer = _knownServer,
