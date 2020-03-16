@@ -310,6 +310,7 @@ _updateInventoryCo = function(stationDef, needReport)
 				if need then
 					printC(colors.gray)(os.time().." current count: "..cnt)
 					info.itemCount = cnt
+					swarm.myState.itemCount = cnt
 					local ok, res = swarm.client.request("swarm.services.updateStation("..literal(info)..")")()
 					if ok then
 						inventoryCount.lastReport = cnt
@@ -362,6 +363,7 @@ serveAsProvider = mkIO(function()
 				log.warn("[provider] failed to register station (logic error): "..literal(res)..", retrying...")
 				return false
 			end
+			swarm.myState.stationDef = stationDef
 			log.info("[provider] provider of " .. stationDef.itemType .. " registered at " .. show(stationDef.pos))
 			return true
 		end
@@ -411,6 +413,7 @@ serveAsUnloader = mkIO(function()
 				log.cry("[unloader] failed to register station (logic error): "..literal(res))
 				return false
 			end
+			swarm.myState.stationDef = stationDef
 			log.info("[unloader] unload station registered at " .. show(stationDef.pos))
 			return true
 		end
@@ -454,6 +457,7 @@ serveAsRequester = mkIO(function()
 				log.cry("[requester] failed to register station (logic error): "..literal(res))
 				return false
 			end
+			swarm.myState.stationDef = stationDef
 			log.info("[requester] requester of " .. stationDef.itemType .. " registered at " .. show(stationDef.pos))
 			return true
 		end
@@ -498,6 +502,7 @@ serveAsStorage = mkIO(function()
 				log.cry("[storage] failed to register station (logic error): "..literal(res))
 				return false
 			end
+			swarm.myState.stationDef = stationDef
 			log.info("[storage] storage of " .. stationDef.itemType .. " registered at " .. show(stationDef.pos))
 			return true
 		end
@@ -526,13 +531,16 @@ end)
 
 serveAsCarrier = mkIO(function()
 	local serviceCo = rpc.buildServer("swarm-carrier", "blocking", function(msg)
+		swarm.myState.isRunningSwarmTask = true
 		workState.isRunningSwarmTask = true
 		local res = { safeEval(msg) } --TODO: set proper env
 		workState.isRunningSwarmTask = false
+		swarm.myState.isRunningSwarmTask = false
 		return unpack(res)
 	end)
 
 	workState.isRunningSwarmTask = false
+	swarm.myState.isRunningSwarmTask = false
 	serviceCo()
 end)
 
@@ -611,6 +619,10 @@ end)
 _stTurtles = rpc.buildClient("st-turtle")
 _stComputers = rpc.buildClient("st-computer")
 
+swarm.reboot = mkIO(function()
+	return _stComputers.broadcast("os.reboot()")()
+end)
+
 -- List (IO (a -> b)) -> IO a -> IO ()
 _displayIO = function(ioFs)
 	local colorList = {colors.green, colors.lightGray, colors.yellow}
@@ -647,17 +659,54 @@ end)
 
 list = {}
 list.turtles = mkIO(function()
-	local resps = _stTurtles.broadcast("gpsPos(), swarm.myRole or '~', os.getComputerLabel()")()
+	local resps = _stTurtles.broadcast("gpsPos(), swarm.myRole or '~', os.getComputerLabel(), swarm.myState")()
 	local rs = {}
 	for _, r in ipairs(resps) do
 		if r[2] then
-			table.insert(rs, {id = r[1], pos = r[3][1], role = r[3][2], label = r[3][3]})
+			table.insert(rs, {id = r[1], pos = r[3][1], role = r[3][2], label = r[3][3], state = r[3][4]})
 		end
 	end
 	table.sort(rs, comparator(pipe(field("pos"), distance())))
 	return rs
 end)
 list.turtles.display = _displayIO({"label", "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(list.turtles)
+
+list.turtles.filterRole = function(roleFilter)
+	local io = mkIO(function()
+		local ls = list.turtles()
+		local rs = {}
+		for _, x in ipairs(ls) do
+			if roleFilter(x.role) then
+				table.insert(rs, x)
+			end
+		end
+		return rs
+	end)
+	io.display = _displayIO({"label", "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(io)
+	return io
+end
+
+list.stations = list.turtles.filterRole(glob({"provider", "requester", "storage", "unloader"}))
+list.stations.display = _displayIO({field("state", "stationDef", "itemType"), "label", field("state", "itemCount"), "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(list.stations)
+
+list.stations.filterItem = function(itemFilter)
+	if type(itemFilter) == "string" or type(itemFilter) == "table" then
+		itemFilter = glob(itemFilter)
+	end
+	assert(type(itemFilter) == "function", "[list.stations.filterItem] itemFilter should be function")
+	local io = mkIO(function()
+		local ls = list.stations()
+		local rs = {}
+		for _, x in ipairs(ls) do
+			if x.state and itemFilter(x.state.stationDef.itemType) then --TODO: get station.itemType somehow
+				table.insert(rs, x)
+			end
+		end
+		return rs
+	end)
+	io.display = _displayIO({field("state", "stationDef", "itemType"), "label", field("state", "itemCount"), "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(io)
+	return io
+end
 
 ---------------------------------- swarm roles ---------------------------------
 

@@ -165,6 +165,7 @@ _roleDaemonCo = function()
 	if role then
 		os.setComputerLabel(role .. "-" .. os.getComputerID())
 		swarm.myRole = role
+		swarm.myState = {}
 		printC(colors.gray)("my role is "..role..", now running daemon...")
 		roleCfg.daemon()
 	else
