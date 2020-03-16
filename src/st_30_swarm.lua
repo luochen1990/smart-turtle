@@ -611,22 +611,53 @@ end)
 _stTurtles = rpc.buildClient("st-turtle")
 _stComputers = rpc.buildClient("st-computer")
 
+-- List (IO (a -> b)) -> IO a -> IO ()
+_displayIO = function(ioFs)
+	local colorList = {colors.green, colors.lightGray, colors.yellow}
+	return mkIOfn(function(io)
+		local ls = io()
+		local fs = {}
+		for _, mf in ipairs(ioFs) do
+			if type(mf) == "string" then
+				table.insert(fs, field(mf))
+			elseif type(mf) == "function" then
+				table.insert(fs, mf)
+			elseif isIO(mf) then
+				table.insert(fs, mf())
+			end
+		end
+		for i = 1, #ls do
+			for j, f in ipairs(fs) do
+				if j > 1 then write(" ") end
+				withColor(colorList[(j - 1) % #colorList + 1])(function()
+					write(show(f(ls[#ls + 1 - i])))
+				end)()
+			end
+			write("\n")
+		end
+		return true
+	end)
+end
+
+-- | distance : IO (Pos -> Int)
+distance = mkIO(function()
+	local pos = gpsPos()
+	return function(p) return vec.manhat(pos - p) end
+end)
+
 list = {}
 list.turtles = mkIO(function()
-	local resps = _stTurtles.broadcast("gpsPos(), swarm.myRole or '~'")()
+	local resps = _stTurtles.broadcast("gpsPos(), swarm.myRole or '~', os.getComputerLabel()")()
 	local rs = {}
 	for _, r in ipairs(resps) do
 		if r[2] then
-			table.insert(rs, {id = r[1], role = r[3][2], pos = r[3][1]})
+			table.insert(rs, {id = r[1], pos = r[3][1], role = r[3][2], label = r[3][3]})
 		end
 	end
-	local pos = gpsPos()
-	local dist = function(p) return vec.manhat(pos - p) end
-	table.sort(rs, comparator(pipe(field("pos"), dist)))
-	for i, r in ipairs(rs) do
-		print(i, r.role, r.id, r.pos, dist(r.pos))
-	end
+	table.sort(rs, comparator(pipe(field("pos"), distance())))
+	return rs
 end)
+list.turtles.display = _displayIO({"label", "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(list.turtles)
 
 ---------------------------------- swarm roles ---------------------------------
 
