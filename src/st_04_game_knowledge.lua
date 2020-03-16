@@ -35,6 +35,7 @@ const = {
 	},
 	groundBlocks = {
 		"minecraft:dirt",
+		"minecraft:grass_block",
 		"minecraft:stone",
 		"minecraft:cobblestone",
 		"minecraft:sand",
