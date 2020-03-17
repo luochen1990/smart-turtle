@@ -53,9 +53,9 @@ if turtle then
 				markCallSite("approaching")(function()
 					rep(move.toward(destPos))()
 				end)
-				local v = destPos - workState.pos
-				local md = vec.manhat(v)
-				if md <= 1 then return md == 0 end
+				local destVec = destPos - workState.pos
+				local dis = vec.manhat(destVec)
+				if dis <= 1 then return dis == 0 end
 				if not workMode.detour then return false end
 				if workState.pos == latestDetourPos then return false end
 				-- begin detouring
@@ -65,7 +65,7 @@ if turtle then
 					local detourCost = 0 -- record detouring cost
 					local targetDir
 					for _, d in ipairs(workState:preferDirections()) do
-						if v:dot(d) > 0 then targetDir = d; break end
+						if destVec:dot(d) > 0 then targetDir = d; break end
 					end
 					-- targetDir decided
 					local detourDir
@@ -88,16 +88,18 @@ if turtle then
 					local detourRotateCount = 1
 					local detourBeginDis = vec.manhat(destPos - detourBeginPos)
 					repeat
-						for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
-							candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
-							local ok = (turn.to(candidateDir) * move)()
-							if ok then
-								detourRotateCount = detourRotateCount + i
-								detourCost = detourCost + 1
-								break
+						repeat
+							for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
+								candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
+								local ok = (turn.to(candidateDir) * move)()
+								if ok then
+									detourRotateCount = detourRotateCount + i
+									detourCost = detourCost + 1
+									break
+								end
 							end
-						end
-					until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
+						until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
+					until (move.toward(destPos)())
 					log.verb("cost "..detourCost.." from "..show(detourBeginPos).." to "..show(workState.pos))
 					-- finish detouring
 					latestDetourPos = detourBeginPos
