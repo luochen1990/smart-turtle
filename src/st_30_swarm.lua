@@ -776,6 +776,20 @@ setmetatable(swarm.vars, {
 	end,
 })
 
+myPos = mkIO(function()
+	if turtle then
+		if workState.gpsCorrected and not workState.moveNotCommitted then
+			return workState.pos
+		else
+			return gpsPos()
+		end
+	elseif pocket then
+		return gpsPos() + D
+	else
+		return gpsPos()
+	end
+end)
+
 ---------------------------------- swarm roles ---------------------------------
 
 swarm.roles = {
