@@ -81,7 +81,8 @@ if turtle then
 					end
 					-- init detourDir decided
 					local rot = dirRotationBetween(targetDir, detourDir)
-					local detourDirs = {targetDir, detourDir, rot(detourDir), rot(rot(detourDir))}
+					local detourDirs = {targetDir, detourDir, targetDir:cross(detourDir), rot(detourDir), rot(rot(detourDir)), -(targetDir:cross(detourDir))}
+					print(showLit(detourDirs))
 					-- detourDirs (i.e. detour plane) decided
 					log.verb("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
 					-- begin detouring loop
@@ -89,7 +90,7 @@ if turtle then
 					local detourBeginDis = vec.manhat(destPos - detourBeginPos)
 					repeat
 						for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
-							candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
+							candidateDir = detourDirs[(detourRotateCount + i) % 6 + 1]
 							local ok = (turn.to(candidateDir) * move)()
 							if ok then
 								detourRotateCount = detourRotateCount + i
@@ -97,7 +98,7 @@ if turtle then
 								break
 							end
 						end
-					until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
+					until (vec.manhat(destPos - workState.pos) < detourBeginDis) --NOTE: this condition is very important
 					log.verb("cost "..detourCost.." from "..show(detourBeginPos).." to "..show(workState.pos))
 					-- finish detouring
 					latestDetourPos = detourBeginPos
