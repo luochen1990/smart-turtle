@@ -47,7 +47,6 @@ if turtle then
 			end
 			-- refuel may change our pos
 
-			local latestDetourPos
 			while true do
 				-- attempt to approach destPos
 				markCallSite("approaching")(function()
@@ -55,56 +54,57 @@ if turtle then
 				end)
 				local destVec = destPos - workState.pos
 				local dis = vec.manhat(destVec)
-				if dis <= 1 then return dis == 0 end
-				if not workMode.detour then return false end
-				if workState.pos == latestDetourPos then return false end
+				if dis == 0 then return true elseif dis == 1 then return false, "destPos unreachable" end
+				if not workMode.detour then return false, "workMode.detour is switched off" end
 				-- begin detouring
-				markCallSite("detouring")(function()
-					workState.detouring = true
-					local detourBeginPos = workState.pos
-					local detourCost = 0 -- record detouring cost
-					local targetDir
-					for _, d in ipairs(workState:preferDirections()) do
-						if destVec:dot(d) > 0 then targetDir = d; break end
+				workState.detouring = true
+				local detourBeginPos = workState.pos
+				local detourCost = 0 -- record detouring cost
+				local targetDir
+				for _, d in ipairs(workState:preferDirections()) do
+					if destVec:dot(d) > 0 then targetDir = d; break end
+				end
+				-- targetDir decided
+				local detourDir
+				for _, d in ipairs(workState:preferDirections()) do
+					if d ~= 'D' and targetDir:dot(d) == 0 then --NOTE: prefer not to go down
+						local ok = (turn.to(d) * move)()
+						if ok then detourDir = d; detourCost = detourCost + 1; break end
 					end
-					-- targetDir decided
-					local detourDir
-					for _, d in ipairs(workState:preferDirections()) do
-						if d ~= 'D' and targetDir:dot(d) == 0 then --NOTE: prefer not to go down
-							local ok = (turn.to(d) * move)()
-							if ok then detourDir = d; detourCost = detourCost + 1; break end
-						end
-					end
-					if not detourDir then
-						detourDir = lateralSide(targetDir)
-						-- turn.to(detourDir) --TODO: not sure whether need this line
-					end
-					-- init detourDir decided
-					local rot = dirRotationBetween(targetDir, detourDir)
-					local detourDirs = {targetDir, detourDir, rot(detourDir), rot(rot(detourDir))}
-					-- detourDirs (i.e. detour plane) decided
-					log.verb("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
-					-- begin detouring loop
-					local detourRotateCount = 1
-					local detourBeginDis = vec.manhat(destPos - detourBeginPos)
+				end
+				if not detourDir then
+					detourDir = lateralSide(targetDir)
+					-- turn.to(detourDir) --TODO: not sure whether need this line
+				end
+				-- init detourDir decided
+				local rot = dirRotationBetween(targetDir, detourDir)
+				local detourDirs = {targetDir, detourDir, rot(detourDir), rot(rot(detourDir))}
+				-- detourDirs (i.e. detour plane) decided
+				log.verb("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
+				-- begin detouring loop
+				local detourBeginDis = vec.manhat(destPos - detourBeginPos)
+				local detourRotateCount = 1
+				repeat
+					-- go to next same-distance pos
 					repeat
-						repeat
-							for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
-								candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
-								local ok = (turn.to(candidateDir) * move)()
-								if ok then
-									detourRotateCount = detourRotateCount + i
-									detourCost = detourCost + 1
-									break
-								end
+						local moved = false
+						for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
+							candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
+							moved = (turn.to(candidateDir) * move)()
+							if moved then
+								detourRotateCount = detourRotateCount + i
+								detourCost = detourCost + 1
+								break
 							end
-						until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
-					until (move.toward(destPos)())
-					log.verb("cost "..detourCost.." from "..show(detourBeginPos).." to "..show(workState.pos))
-					-- finish detouring
-					latestDetourPos = detourBeginPos
-					workState.detouring = false
-				end)
+						end
+						if not moved then return false, "no direction to move, seems map have changed after detour plane choosed" end
+					until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
+					-- arrived next same-distance pos
+					--TODO: if workState.pos == detourBeginPos then return false, "dead loop detected" end
+				until (move.toward(destPos)()) -- approach one step
+				-- finish detouring
+				log.verb("cost "..detourCost.." from "..show(detourBeginPos).." to "..show(workState.pos))
+				workState.detouring = false
 			end
 		end)
 	end)
