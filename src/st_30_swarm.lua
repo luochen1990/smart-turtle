@@ -63,6 +63,7 @@ swarm._state = {
 	stationPool = {},
 	workerPool = {},
 	jobPool = {},
+	vars = {},
 }
 
 --------------------------------- swarm service --------------------------------
@@ -156,6 +157,36 @@ swarm._startService = (function()
 end)()
 
 swarm.services = {}
+
+swarm.services.setVar = function(k, v, id, label)
+	local varInfo = swarm._state.vars[k]
+	if not varInfo then -- create new var
+		swarm._state.vars[k] = {value = v, setterId = id, setterLabel = label, creatTime = os.date()}
+		return true, "var created"
+	else -- already exist
+		if v == varInfo.value then
+			return true, "var already exist before"
+		elseif v == nil then -- set to nil, i.e. delete
+			swarm._state.vars[k] = nil
+			return true, "var deleted"
+		else
+			return false, "cannot change existing var"
+		end
+	end
+end
+
+swarm.services.inspectVar = function(k)
+	return swarm._state.vars[k]
+end
+
+swarm.services.getVar = function(k)
+	local varInfo = swarm._state.vars[k]
+	if varInfo then
+		return true, varInfo.value
+	else
+		return false, "variable not found"
+	end
+end
 
 swarm.services.registerStation = function(opts)
 	if not opts.pos then
@@ -544,8 +575,21 @@ serveAsCarrier = mkIO(function()
 	serviceCo()
 end)
 
-foldSuccFlag = function(ok, res)
-	if ok then return unpack(res) else return false, res end
+--foldSuccFlag = function(reqSucc, resp)
+--	if reqSucc then return unpack(resp) else return false, resp end
+--end
+
+foldSuccFlag = function(reqSucc, resp)
+	if reqSucc then
+		local ok, res = unpack(resp)
+		if ok then
+			return ok, res
+		else
+			return false, {title = "logic error", msg = res}
+		end
+	else
+		return false, {title = "network error", msg = resp}
+	end
 end
 
 requestStation = mkIOfn(function(itemName, itemCount, startPos, fuelLeft)
@@ -707,6 +751,30 @@ list.stations.filterItem = function(itemFilter)
 	io.display = _displayIO({field("state", "stationDef", "itemType"), "label", field("state", "itemCount"), "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(io)
 	return io
 end
+
+swarm.vars = {}
+swarm.vars.inspect = function(k)
+	return foldSuccFlag(swarm.client.request("swarm.services.inspectVar("..literal(k)..")")())
+end
+setmetatable(swarm.vars, {
+	__index = function(d, k)
+		local ok, res = foldSuccFlag(swarm.client.request("swarm.services.getVar("..literal(k)..")")())
+		if ok then
+			return res
+		else
+			printC(colors.yellow)("failed to get variable "..showLit(k)..": "..showLit(res))
+			return nil
+		end
+	end,
+	__newindex = function(d, k, v)
+		local ok, res = foldSuccFlag(swarm.client.request("swarm.services.setVar("..literal(k, v, os.getComputerID(), os.getComputerLabel())..")")())
+		if ok then
+			printC(colors.green)(res)
+		else
+			printC(colors.yellow)("failed to set variable"..showLit(k)..": "..showLit(res))
+		end
+	end,
+})
 
 ---------------------------------- swarm roles ---------------------------------
 
