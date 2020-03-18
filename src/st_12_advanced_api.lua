@@ -74,15 +74,14 @@ if turtle then
 				end
 				if not detourDir then
 					detourDir = lateralSide(targetDir)
-					-- turn.to(detourDir) --TODO: not sure whether need this line
 				end
 				-- init detourDir decided
 				local rot = dirRotationBetween(targetDir, detourDir)
 				local detourDirs = {targetDir, detourDir, rot(detourDir), rot(rot(detourDir))}
-				-- detourDirs (i.e. detour plane) decided
-				log.verb("detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
-				-- begin detouring loop
+				-- detourDirs (i.e. detour plane) decided here
 				local detourBeginDis = vec.manhat(destPos - detourBeginPos)
+				log.verb("[move.to] (dist = "..detourBeginDis..", pos = "..show(workState.pos)..") detouring via "..showDir(targetDir)..","..showDir(detourDir).." to "..tostring(destPos))
+				-- begin detouring loop
 				local detourRotateCount = 1
 				repeat
 					-- go to next same-distance pos
@@ -110,7 +109,7 @@ if turtle then
 					-- arrived next same-distance pos
 				until (move.toward(destPos)()) -- approach one step
 				-- finish detouring
-				log.verb("cost "..detourCost.." from "..show(detourBeginPos).." to "..show(workState.pos))
+				log.verb("[move.to] (dist = "..(detourBeginDis-1)..", pos = "..show(workState.pos)..") cost "..detourCost.." from "..show(detourBeginPos))
 				workState.detouring = false
 			end
 		end)
