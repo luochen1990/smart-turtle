@@ -65,11 +65,11 @@ if turtle then
 					if destVec:dot(d) > 0 then targetDir = d; break end
 				end
 				-- targetDir decided
-				local detourDir
+				local detourDir, firstMove
 				for _, d in ipairs(workState:preferDirections()) do
 					if d ~= 'D' and targetDir:dot(d) == 0 then --NOTE: prefer not to go down
 						local ok = (turn.to(d) * move)()
-						if ok then detourDir = d; detourCost = detourCost + 1; break end
+						if ok then detourDir = d; firstMove = d; detourCost = detourCost + 1; break end
 					end
 				end
 				if not detourDir then
@@ -89,18 +89,25 @@ if turtle then
 					repeat
 						local moved = false
 						for i = -1, 2 do --NOTE: from detourDir-1 to detourDir+2
-							candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
+							local candidateDir = detourDirs[(detourRotateCount + i) % 4 + 1]
 							moved = (turn.to(candidateDir) * move)()
-							if moved then
+							if moved then -- moved one step here
 								detourRotateCount = detourRotateCount + i
 								detourCost = detourCost + 1
+								local latestMove = candidateDir
+								if not firstMove then
+									firstMove = latestMove
+								else
+									if workState.pos == detourBeginPos + firstMove and latestMove == firstMove then
+										return false, "dead loop detected"
+									end
+								end
 								break
 							end
 						end
 						if not moved then return false, "no direction to move, seems map have changed after detour plane choosed" end
 					until (vec.manhat(destPos - workState.pos) <= detourBeginDis) --NOTE: this condition is very important
 					-- arrived next same-distance pos
-					--TODO: if workState.pos == detourBeginPos then return false, "dead loop detected" end
 				until (move.toward(destPos)()) -- approach one step
 				-- finish detouring
 				log.verb("cost "..detourCost.." from "..show(detourBeginPos).." to "..show(workState.pos))
