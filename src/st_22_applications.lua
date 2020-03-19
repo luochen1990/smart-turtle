@@ -101,8 +101,10 @@ help.app.mine = doc({
 	desc = "mine an area to get ore, dig 1/3 layers",
 })
 app.mine = markIOfn("app.mine")(mkIOfn(function(area)
-	area = toArea(area) --TODO: more precise area boundary
-	return savePosp( with({destroy = true})( scan(area, D, 3)(try(turn.U * dig) * (turn.D * dig)) ) )()
+	area = toArea(area)
+	local a1 = area:shift(D) --TODO: more precise area downside boundary
+	local digOre = isNamed("*:*_ore") * dig
+	return savePosp( with({destroy = true})( scan(a1, D, 3)(try(turn.U * digOre) * (turn.D * digOre)) ) )()
 end))
 
 help.app.clearBlock = doc({
@@ -111,7 +113,8 @@ help.app.clearBlock = doc({
 	desc = "clear an area, dig all blocks and discard not-valuable items",
 })
 app.clearBlock = markIOfn("app.clearBlock")(mkIOfn(function(area)
-	area = toArea(area) --TODO: more precise area boundary
-	return savePosp( with({destroy = true})( scan(area, D, 3)(try(turn.U * dig) * (turn.D * dig)) ) )()
+	area = toArea(area)
+	local a1 = area:shift(D) --TODO: more precise area downside boundary
+	return savePosp( with({destroy = true})( scan(a1, D, 3)(try(turn.U * dig) * (turn.D * dig)) ) )()
 end))
 
