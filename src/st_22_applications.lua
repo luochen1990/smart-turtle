@@ -39,12 +39,10 @@ end))
 help.app.buildFrame = doc({
 	signature = "app.buildFrame : Area -> IO Bool",
 	usage = "app.buildFrame(p1 .. p2)()",
-	desc = "build a frame wrapping the target area",
+	desc = "build a frame inside the target area",
 })
 app.buildFrame = markIOfn("app.buildFrame(area)")(mkIOfn(function(area)
-	area = toArea(area)
-
-	local frame = (area.low - vec.one + U) .. (area.high + vec.one + U)
+	local frame = toArea(area)
 	local lines = {}
 	for _, v in ipairs(vec.components(frame.diag)) do
 		table.insert(lines, frame.low .. (frame.low + v))
@@ -57,9 +55,11 @@ app.buildFrame = markIOfn("app.buildFrame(area)")(mkIOfn(function(area)
 	end
 	local old_posp = getPosp()
 	while #lines > 0 do
-		table.sort(lines, comparator(field("low", "y"), field("high", "y"), distance()))
+		local pos = currentPos()
+		local dis = function(line) return vec.manhat(line:vertexNear(pos) - pos) end
+		table.sort(lines, comparator(field("low", "y"), field("high", "y"), dis))
 		local line = table.remove(lines, 1)
-		scan(line, U)(turn.D * place)()
+		scan(line:shift(U), U)(turn.D * place)()
 	end
 	recoverPosp(old_posp)()
 	return true

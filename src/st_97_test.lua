@@ -43,8 +43,12 @@ if turtle then
 		return savePosp(scan(O .. O)(turn.U * try(dig) * place))()
 	end))
 
-	_test.clearBlock1 = markIO("_test.clearBlock1")(mkIO(function()
-		return _test.clearBlock((O+U*2)..(O+(U+F+R)*2))()
+	_test.clearBlock = markIO("_test.clearBlock")(mkIO(function()
+		return app.clearBlock((O+U*2)..(O+(U+F+R)*2))()
+	end))
+
+	_test.buildFrame = markIO("_test.buildFrame")(mkIO(function()
+		return app.buildFrame((O+U..O+U):expand(1))()
 	end))
 
 	_test.transportLine = markIO("_test.transportLine")(mkIO(function()
