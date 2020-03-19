@@ -695,12 +695,6 @@ _displayIO = function(ioFs)
 	end)
 end
 
--- | distance : IO (Pos -> Int)
-distance = mkIO(function()
-	local pos = gpsPos()
-	return function(p) return vec.manhat(pos - p) end
-end)
-
 list = {}
 list.turtles = mkIO(function()
 	local resps = _stTurtles.broadcast("gpsPos(), swarm.myRole or '~', os.getComputerLabel(), swarm.myState")()
@@ -710,10 +704,10 @@ list.turtles = mkIO(function()
 			table.insert(rs, {id = r[1], pos = r[3][1], role = r[3][2], label = r[3][3], state = r[3][4]})
 		end
 	end
-	table.sort(rs, comparator(pipe(field("pos"), distance())))
+	table.sort(rs, comparator(pipe(field("pos"), distance(myPos()))))
 	return rs
 end)
-list.turtles.display = _displayIO({"label", "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(list.turtles)
+list.turtles.display = _displayIO({"label", "pos", myPos:pipe(function(p) return pure(combine(distance(p))(field("pos"))) end)})(list.turtles)
 
 list.turtles.filterRole = function(roleFilter)
 	local io = mkIO(function()
@@ -726,12 +720,12 @@ list.turtles.filterRole = function(roleFilter)
 		end
 		return rs
 	end)
-	io.display = _displayIO({"label", "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(io)
+	io.display = _displayIO({"label", "pos", myPos:pipe(function(p) return pure(combine(distance(p))(field("pos"))) end)})(io)
 	return io
 end
 
 list.stations = list.turtles.filterRole(glob({"provider", "requester", "storage", "unloader"}))
-list.stations.display = _displayIO({field("state", "stationDef", "itemType"), "label", field("state", "itemCount"), "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(list.stations)
+list.stations.display = _displayIO({field("state", "stationDef", "itemType"), "label", field("state", "itemCount"), "pos", myPos:pipe(function(p) return pure(combine(distance(p))(field("pos"))) end)})(list.stations)
 
 list.stations.filterItem = function(itemFilter)
 	if type(itemFilter) == "string" or type(itemFilter) == "table" then
@@ -748,7 +742,7 @@ list.stations.filterItem = function(itemFilter)
 		end
 		return rs
 	end)
-	io.display = _displayIO({field("state", "stationDef", "itemType"), "label", field("state", "itemCount"), "pos", distance:pipe(function(dis) return pure(combine(dis)(field("pos"))) end)})(io)
+	io.display = _displayIO({field("state", "stationDef", "itemType"), "label", field("state", "itemCount"), "pos", myPos:pipe(function(p) return pure(combine(distance(p))(field("pos"))) end)})(io)
 	return io
 end
 
@@ -775,20 +769,6 @@ setmetatable(swarm.vars, {
 		end
 	end,
 })
-
-myPos = mkIO(function()
-	if turtle then
-		if workState.gpsCorrected and not workState.moveNotCommitted then
-			return workState.pos
-		else
-			return gpsPos()
-		end
-	elseif pocket then
-		return gpsPos() + D
-	else
-		return gpsPos()
-	end
-end)
 
 ---------------------------------- swarm roles ---------------------------------
 

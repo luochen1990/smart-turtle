@@ -1,6 +1,24 @@
 --------------------------------- Monadic API ----------------------------------
 
 if turtle then
+	myPos = mkIO(function()
+		if workState.gpsCorrected and not workState.moveNotCommitted then
+			return workState.pos
+		else
+			return gpsPos()
+		end
+	end)
+elseif pocket then
+	myPos = mkIO(function()
+		return gpsPos() + D
+	end)
+else
+	myPos = mkIO(function()
+		return gpsPos()
+	end)
+end
+
+if turtle then
 
 	help.turn = doc("sub-commands of 'turn' reference to facing and aiming of turtle and call turtle.turnLeft() and turtle.turnRight().")
 	turn = {

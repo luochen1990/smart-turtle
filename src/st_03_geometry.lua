@@ -82,6 +82,9 @@ gpsPos = function(...)
 	return v and vec.floor(v)
 end
 
+-- | distance : Pos -> (Pos -> Int)
+distance = function(pos) return function(p) return vec.manhat(pos - p) end end
+
 -- left side of a horizontal direction
 leftSide = function(d)
 	assert(d and d.y == 0, "[leftSide(d)] d should be a horizontal direction")
