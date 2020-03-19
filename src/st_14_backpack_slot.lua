@@ -81,10 +81,10 @@ if turtle then
 		-- | a polymorphic wrapper of _countVia
 		slot.count = function(slotCounter)
 			if type(slotCounter) == "string" then
-				local name = slotCounter
+				local nameGlob = glob(slotCounter)
 				return slot._countVia(function(sn)
 					local det = turtle.getItemDetail(sn)
-					if det and det.name == name then return det.count else return 0 end
+					if det and nameGlob(det.name) then return det.count else return 0 end
 				end)
 			elseif type(slotCounter) == "function" then
 				return slot._countVia(slotCounter)

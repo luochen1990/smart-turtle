@@ -110,7 +110,8 @@ if turtle then
 		local cutLeaf = currentPos:pipe(function(p)
 			return with({destroy = true})(scan(p+(D+F+L)*2 .. p+(D+B+R)*2, D, 3)(try(turn.U * dig) * turn.D * dig))
 		end)
-		return savePosd((isNamed("*:*_log") + (isNamed("*:*_sapling") + use("*:*_sapling")) * ripen) * cutTrunk * cutLeaf)()
+		local needSapling = mkIO(function() return slot.count("*:*_sapling") < 10 end)
+		return savePosd((isNamed("*:*_log") + (isNamed("*:*_sapling") + use("*:*_sapling")) * ripen) * cutTrunk * try(needSapling * cutLeaf))()
 	end))
 
 	_test.miner = markIOfn("_test.miner")(mkIOfn(function(n)
