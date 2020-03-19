@@ -120,10 +120,12 @@ mkArea, isArea = (function()
 	local _area_mt = {
 		__eq = function(a, b) return a.low == b.low and a.high == b.high end,
 		__le = function(a, b) return a.low >= b.low and a.high <= b.high end,
-		__add = function(a, b) return _mkArea(lowPoint(a.low, b.low), highPoint(a.high, b.high)) end,
 		__tostring = function(a) return tostring(a.low)..".."..tostring(a.high) end,
 		__literal = function(a) return "mkArea("..literal(a.low)..","..literal(a.high)..")" end,
 	}
+	local isArea = function(a)
+		return type(a) == "table" and getmetatable(a) == _area_mt
+	end
 	local _mkArea
 	_mkArea = function(low, high) -- including
 		local a = {
@@ -151,6 +153,27 @@ mkArea, isArea = (function()
 					return _mkArea(a.low, (a.high - dir * projLen))
 				end
 			end,
+			expandToInclude = function(a, target)
+				if vec.isVec(target) then
+					return _mkArea(lowPoint(a.low, target), highPoint(a.high, target))
+				elseif isArea(target) then
+					return _mkArea(lowPoint(a.low, target.low), highPoint(a.high, target.high))
+				else
+					error("[area:expandToInclude] target should be pos or area")
+				end
+			end,
+			expand = function(a, v)
+				if type(v) == "number" then
+					return _mkArea(a.low - vec.one * v, a.high + vec.one * v)
+				elseif vec.isVec(v) then
+					return a:expandToInclude(a:shift(v))
+				else
+					error("[area:expand] v should be vector or number")
+				end
+			end,
+			shift = function(a, v)
+				return _mkArea(a.low + v, a.high + v)
+			end,
 		}
 		setmetatable(a, _area_mt)
 		return a
@@ -158,9 +181,6 @@ mkArea, isArea = (function()
 	local mkArea = function(p, q)
 		assert(p and p.x and q and q.x, "[mkArea(p, q)] p and q should be vector")
 		return _mkArea(lowPoint(p, q), highPoint(p, q))
-	end
-	local isArea = function(a)
-		return type(a) == "table" and getmetatable(a) == _area_mt
 	end
 	return mkArea, isArea
 end)()
