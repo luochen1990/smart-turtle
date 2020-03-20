@@ -51,6 +51,18 @@ if turtle then
 		return app.buildFrame((O+U..O+U):expand(1))()
 	end))
 
+	_test.pinnedSlot = markIO("_test.pinnedSlot")(mkIO(function()
+		local det = retry(mkIO(turtle.getItemDetail, 1))()
+		local pinnedSlot = {
+			[1] = {
+				itemType = det.name,
+				stackLimit = slot.stackLimit(1),
+				depot = {pos = O, dir = B},
+			}
+		}
+		return with({pinnedSlot = pinnedSlot})(_test.scan)()
+	end))
+
 	_test.transportLine = markIO("_test.transportLine")(mkIO(function()
 		local s = {pos = O + L * 2 + F * 2 + U * 3, dir = R}
 		local t = {pos = O + R * 4 + U, dir = L}

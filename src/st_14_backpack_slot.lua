@@ -15,6 +15,15 @@ if turtle then
 			local det = turtle.getItemDetail(sn)
 			return (det and _item.fuelHeatContent(det.name) or 0) * (det and det.count or 0)
 		end
+		slot.itemName = function(sn)
+			local det = turtle.getItemDetail(sn)
+			return det and det.name
+		end
+		slot.stackLimit = function(sn)
+			local n = turtle.getItemCount(sn)
+			local s = turtle.getItemSpace(sn)
+			return n ~= 0 and n + s
+		end
 		slot.nameSat = function(judge)
 			return function(sn)
 				local det = turtle.getItemDetail(sn)
@@ -123,45 +132,31 @@ if turtle then
 		return slot
 	end)()
 
-	select = mkIOfn(function(selector)
+	select = markIOfn("select(selector,beginSlot)")(mkIOfn(function(selector, beginSlot)
 		if type(selector) == "number" then
 			return turtle.select(selector)
-		elseif type(selector) == "string" then
-			local sn = slot.find(selector)
-			return sn ~= nil and turtle.select(sn)
-		elseif type(selector) == "function" then
-			local sn = slot._findThat(selector)
-			return sn ~= nil and turtle.select(sn)
 		else
-			error("[select(selector)] type of selector cannot be "..tostring(selector))
+			local sn = slot.find(selector, beginSlot)
+			return sn and turtle.select(sn)
 		end
-	end)
+	end))
 
-	selectLast = mkIOfn(function(selector)
-		if type(selector) == "string" then
-			local sn = slot.findLast(selector)
-			return sn ~= nil and turtle.select(sn)
-		elseif type(selector) == "function" then
-			local sn = slot._findLastThat(selector)
-			return sn ~= nil and turtle.select(sn)
-		else
-			error("[selectLast(selector)] type of selector cannot be "..tostring(selector))
-		end
-	end)
+	selectLast = markIOfn("selectLast(selector)")(mkIOfn(function(selector)
+		local sn = slot.findLast(selector)
+		return sn and turtle.select(sn)
+	end))
 
 	discard = markIO("discard")(fmap(slot.isFuel)(selected) * mkIO(turtle.refuel) * fmap(slot.isEmpty)(selected) + saveDir(turn.lateral * -isContainer * drop()) + -isContainer * drop())
 
-	backpackEmpty = -mkIO(slot._findThat, slot.isNonEmpty)
-
-	cryForHelpUnloading = function()
+	cryForHelpUnloading = markIO("cryForHelpUnloading")(mkIO(function()
 		workState.cryingFor = "unloading"
-		log.cry("Help me! I need to unload backpack at "..show(workState.pos))
-		retry(backpackEmpty)
+		log.cry("Help me! I need to unload backpack at "..show(workState.pos).." (first "..#workMode.pinnedSlot.."slots pinned)")
+		retry(-mkIO(slot._findThat, slot.isNonEmpty, #workMode.pinnedSlot + 1))()
 		workState.cryingFor = false
-	end
+	end))
 
 	-- | the unload interrput: back to unload station and clear the backpack
-	unloadBackpack = function()
+	unloadBackpack = markIO("unloadBackpack")(mkIO(function()
 		workState.isUnloading = true
 		workState.back = workState.back or getPosp() --NOTE: in case we are already in another interruption
 
@@ -187,7 +182,7 @@ if turtle then
 
 		-- drop items into station
 		log.verb("Begin unloading...")
-		;( isStation * rep( select(slot.isNonEmpty) * drop() ) )()
+		;( isStation * rep( select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop() ) )()
 
 		if not slot.find(slot.isEmpty) then
 			cryForHelpUnloading()
@@ -197,9 +192,9 @@ if turtle then
 		workState.back = nil
 		workState.isUnloading = false
 		return true
-	end
+	end))
 
-	selectDroppable = function(keepLevel)
+	selectDroppable = markIOfn("selectDroppable")(function(keepLevel)
 		local sel = pure(false)
 		if keepLevel == true then keepLevel = 3 end
 		if keepLevel == false then keepLevel = 0 end
@@ -213,11 +208,11 @@ if turtle then
 			end
 		end
 		return sel
-	end
+	end)
 
 	-- | tidy backpack to reserve 1 empty slot
 	-- , when success, return the sn of the reserved empty slot
-	reserveOneSlot = mkIO(function() -- tidy backpack to reserve 1 empty slot
+	reserveOneSlot = markIO("reserveOneSlot")(mkIO(function() -- tidy backpack to reserve 1 empty slot
 		local sn = slot._findLastThat(slot.isEmpty)
 		if sn then return sn end
 		-- tidy backpack
@@ -236,7 +231,85 @@ if turtle then
 		else
 			return saveSelected(selectDroppable(1) * discard * selected)()
 		end
-	end)
+	end))
 
+	-- | if specified item count is less than lowBar, then restock it to highBar
+	ensureItemFromBackpack = markIOfn("ensureItemFromBackpack(itemType,lowBar)")(mkIOfn(function(itemType, lowBar)
+		lowBar = default(2)(lowBar)
+		local sn = turtle.getSelectedSlot()
+		local det = turtle.getItemDetail(sn)
+		if det and det.name ~= itemType then
+			turtle.transferTo(reserveOneSlot())
+			det = nil
+		end
+		if not det then
+			local sn2 = slot.find(itemType)
+			if sn2 then
+				turtle.select(sn2); turtle.transferTo(sn); turtle.select(sn)
+				det = turtle.getItemDetail(sn)
+			end
+		end
+		assert(not det or det.name == itemType)
+		local got
+		if det then
+			if det.count >= lowBar then
+				return true
+			else
+				local totalCount = slot.count(itemType)
+				if totalCount >= lowBar then
+					slot.fill(sn)
+					return true
+				else
+					got = totalCount
+				end
+			end
+		else -- no such item in backpack
+			got = 0
+		end
+		return false, got
+	end))
+
+	callForRestocking = markIOfn("callForRestocking(itemType,count)")(mkIOfn(function(itemType, count)
+		log.cry("I need "..count.." "..itemType.." at "..show(myPos()))
+		return retry(suckExact(count, itemType) * ensureItemFromBackpack(itemType, count))()
+	end))
+
+	waitForHelpRestocking = markIOfn("waitForHelpRestocking(itemType,count,sn)")(mkIOfn(function(itemType, count)
+		log.cry("I need "..count.." "..itemType.." at "..show(myPos()))
+		return retry(ensureItemFromBackpack(itemType, count))()
+	end))
+
+	ensureItem = markIOfn("ensureItem(itemType,lowBar,highBar)")(mkIOfn(function(itemType, lowBar, highBar)
+		lowBar = default(2)(lowBar)
+		local ok, got = ensureItemFromBackpack(itemType, lowBar)()
+		if ok then return true end
+		-- need restock here
+		local sn = turtle.getSelectedSlot()
+		local pinned = workMode.pinnedSlot[sn]
+		local stackLimit = (pinned and pinned.stackLimit) or slot.stackLimit(sn) or 1
+		highBar = math.max(lowBar, default(math.max(stackLimit, lowBar * 2))(highBar))
+		local need = highBar - got
+		local depot = (pinned and pinned.depot)
+		if depot then
+			return (savePosp(visitStation(depot) * (suckExact(need, itemType) + callForRestocking(itemType, need))))()
+		else
+			return (savePosp(visitStation({pos = workState.beginPos, dir = F}) * waitForHelpRestocking(itemType, need)))()
+		end
+	end))
+
+	ensureSlot = markIO("ensureSlot")(mkIO(function()
+		local sn = turtle.getSelectedSlot()
+		local pinned = workMode.pinnedSlot[sn]
+		if pinned then
+			return ensureItem(pinned.itemType, pinned.lowBar or 2, pinned.highBar)()
+		else -- not pinned
+			local det = turtle.getItemDetail(sn)
+			if det then
+				return ensureItem(det.name, 2)()
+			else
+				return false
+			end
+		end
+	end))
 end
 

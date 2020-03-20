@@ -12,9 +12,9 @@ if turtle then
 		asFuel = false, -- when false, use every possible thing as fuel
 		keepItems = 2, -- 0:always drop, 1:only keep valuable items, 2:keep non-cheap items, 3:keep all
 		allowInterruption = true, -- whether allow turtle interrupt current task to refuel or unload or fetch
+		pinnedSlot = {}, -- local stations, like {itemType = "minecraft:coal", stackLimit = 64, lowBar = 2, highBar = 64, depot = {pos, dir}}
 		--backpackWhiteList = {}, -- not used yet
 		--backpackBlackList = {}, -- not used yet
-		--backpackPinnedSlots = {}, -- not used yet
 	}
 
 	workState = {

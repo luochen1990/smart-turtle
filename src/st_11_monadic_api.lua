@@ -281,10 +281,7 @@ if turtle then
 		}
 	})
 	place = markIO("place")(mkIO(function()
-		local c = turtle.getItemCount()
-		local s = turtle.getItemSpace()
-		if c == 1 and s > 0 then slot.fill(); c = turtle.getItemCount() end
-		return c > 1 and _aiming.place()
+		return (ensureSlot * _aiming.place)()
 	end))
 
 	help.use = doc({
