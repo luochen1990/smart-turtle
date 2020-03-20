@@ -47,6 +47,17 @@ if turtle then
 		else return true end
 	end))
 
+	_setNamedDirection = function(name, dir)
+		_ST[name] = dir
+		turn[name] = turn.to(dir)
+	end
+	_setNamedDirection("U", const.dir.U)
+	_setNamedDirection("D", const.dir.D)
+	_setNamedDirection("F", const.dir.E)
+	_setNamedDirection("B", -const.dir.E)
+	_setNamedDirection("L", leftSide(const.dir.E))
+	_setNamedDirection("R", rightSide(const.dir.E))
+
 	help.turn.lateral = doc({
 		signature = "turn.lateral : IO Bool",
 		usage = "local succ = turn.lateral()",
@@ -56,7 +67,6 @@ if turtle then
 		},
 	})
 	turn.lateral = markIO("turn.lateral")(mkIO(function() return turn.to(workState:lateralDir())() end))
-	for k, v in pairs(const.dir) do turn[k] = turn.to(v) end
 
 	currentPos = mkIO(function() return workState.pos end)
 	currentDir = mkIO(function() return workState:aimingDir() end)

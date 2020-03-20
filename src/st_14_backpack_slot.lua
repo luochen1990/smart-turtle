@@ -293,7 +293,7 @@ if turtle then
 		if depot then
 			return (savePosp(visitStation(depot) * (suckExact(need, itemType) + callForRestocking(itemType, need))))()
 		else
-			return (savePosp(visitStation({pos = workState.beginPos, dir = F}) * waitForHelpRestocking(itemType, need)))()
+			return (savePosp(visitStation({pos = O, dir = F}) * waitForHelpRestocking(itemType, need)))()
 		end
 	end))
 

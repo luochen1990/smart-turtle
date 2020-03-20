@@ -9,12 +9,21 @@ if turtle then
 		local old_pos, old_facing = workState.pos, workState.facing
 		local offset = pos - old_pos -- use this to correct all locally maintained positions
 		local rot = dirRotationBetween(facing, old_facing)
-		workState.beginPos = rot(workState.beginPos) + offset
-		O = workState.beginPos
-		workState.pos = pos
-		workState.facing = facing
-		F, B, L, R = facing, -facing, leftSide(facing), rightSide(facing)
-		for _, d in ipairs({"F", "B", "L", "R"}) do turn[d] = turn.to(_ST[d]) end
+		local trans = function(p) return rot(p) + offset end
+		O = trans(O)
+		for _, pinned in ipairs(workMode.pinnedSlot) do
+			if pinned.depot then
+				pinned.depot = trans(pinned.depot)
+			end
+		end
+		_setNamedDirection("F", facing)
+		_setNamedDirection("B", -facing)
+		_setNamedDirection("L", leftSide(facing))
+		_setNamedDirection("R", rightSide(facing))
+		for _, dirName in ipairs(const.absoluteDirectionNames) do
+			_setNamedDirection(dirName, const.dir[dirName])
+		end
+		workState.pos, workState.facing = pos, facing
 		workState.gpsCorrected = true
 		return true
 	end)

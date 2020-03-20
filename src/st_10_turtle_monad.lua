@@ -22,7 +22,6 @@ if turtle then
 		pos = vec.zero, -- current pos
 		facing = const.dir.E, -- current facing direction, const.dir.N/S/W/E
 		aiming = 0, -- 0:front, 1:up, -1:down
-		beginPos = vec.zero, -- pos when the program start
 		fuelStation = false,
 		unloadStation = false,
 		isRefueling = false,
@@ -33,6 +32,7 @@ if turtle then
 		moveNotCommitted = false,
 		back = false, -- save pos, facing and aiming here before interrupt
 	}
+	O = vec.zero -- pos when process begin, this init value is used before gps corrected
 
 	setmetatable(workState, {__index = {
 		aimingDir = function()
