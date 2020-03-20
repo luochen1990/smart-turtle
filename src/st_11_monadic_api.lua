@@ -167,7 +167,7 @@ if turtle then
 		},
 	})
 	suckExact = markIOfn("suckExact(n,itemName)")(mkIOfn(function(n, itemName)
-		local old_sn = selected()
+		local old_sn = turtle.getSelectedSlot()
 		local got = 0
 		while got < n do
 			local ok = suckHold(math.min(64, n - got))()
@@ -182,7 +182,7 @@ if turtle then
 				break
 			end
 		end
-		selected(old_sn)
+		turtle.select(old_sn)
 		return got == n, got
 	end))
 
