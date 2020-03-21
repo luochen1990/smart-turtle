@@ -311,5 +311,42 @@ if turtle then
 			end
 		end
 	end))
+
+	-- | slotConfig is like {[1] = {desc, itemFilter, lowBar, highBar, depot}}
+	askForPinnedSlot = function(slotConfig)
+		local pinnedSlot = {}
+		for i, cfg in ipairs(slotConfig) do
+			printC(colors.blue)("slot ["..i.."] need "..cfg.desc)
+		end
+		for i, cfg in ipairs(slotConfig) do
+			turtle.select(i)
+			local det = retry(mkIO(function()
+				local det = turtle.getItemDetail(i)
+				if det then
+					if (not cfg.itemFilter or cfg.itemFilter(det.name)) then
+						printC(colors.green)("slot ["..i.."] got item "..showLit(det.name))
+						det.stackLimit = slot.stackLimit(i)
+						return det
+					else
+						printC(colors.yellow)("slot ["..i.."] got invalid item "..showLit(det.name)..", please try other type of item")
+						sleep(1)
+						turtle.transferTo(reserveOneSlot())
+						return false
+					end
+				else
+					return false
+				end
+			end))()
+			pinnedSlot[i] = {
+				itemType = det.name,
+				stackLimit = det.stackLimit,
+				lowBar = 2,
+				highBar = det.stackLimit,
+				depot = cfg.depot,
+			}
+			--TODO: support edit default value
+		end
+		return pinnedSlot
+	end
 end
 

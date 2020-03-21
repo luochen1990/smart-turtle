@@ -86,13 +86,18 @@ help.app.plant = doc({
 	desc = "plant a tree and cut it to get wood, need bone_meal to ripen the tree",
 })
 app.plant = markIO("app.plant")(mkIO(function()
+	local pinnedSlot = askForPinnedSlot({
+		[1] = {desc = "sapling", itemFilter = glob("*:*_sapling"), depot = {pos = O+R, dir = B}},
+		[2] = {desc = "bone_meal", itemFilter = glob("minecraft:bone_meal"), depot = {pos = O+R*2, dir = B}},
+	})
 	local ripen = retryUntil(isNamed("*:*_log"))(use("minecraft:bone_meal"))
 	local cutTrunk = dig * move * turn.U * rep(dig * move)
 	local cutLeaf = currentPos:pipe(function(p)
 		return with({destroy = true})(scan(p+(D+F+L)*2 .. p+(D+B+R)*2, D, 3)(try(turn.U * dig) * turn.D * dig))
 	end)
 	local needSapling = mkIO(function() return slot.count("*:*_sapling") < 10 end)
-	return savePosd((isNamed("*:*_log") + (isNamed("*:*_sapling") + use("*:*_sapling")) * ripen) * cutTrunk * try(needSapling * cutLeaf))()
+	local plant = (isNamed("*:*_log") + (isNamed("*:*_sapling") + use("*:*_sapling")) * ripen) * cutTrunk * try(needSapling * cutLeaf)
+	return rep(savePosd(with({pinnedSlot = pinnedSlot})(plant)))()
 end))
 
 help.app.mine = doc({
