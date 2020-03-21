@@ -97,7 +97,9 @@ app.plant = markIO("app.plant")(mkIO(function()
 	end)
 	local needSapling = mkIO(function() return slot.count("*:*_sapling") < 10 end)
 	local plant = (isNamed("*:*_log") + (isNamed("*:*_sapling") + use(1)) * ripen) * cutTrunk * try(needSapling * cutLeaf)
-	return rep(savePosd(with({pinnedSlot = pinnedSlot})(plant)))()
+	workState.aiming = 0
+	local originPosp = getPosp()
+	return rep(with({pinnedSlot = pinnedSlot})(plant * with({destroy = true})(recoverPosp(originPosp))))()
 end))
 
 help.app.mine = doc({

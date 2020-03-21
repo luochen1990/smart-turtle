@@ -152,6 +152,7 @@ if turtle then
 		move.to(back.pos)()
 		turn.to(back.facing)()
 		workState.aiming = back.aiming
+		return true
 	end))
 
 	help.scan = doc({
