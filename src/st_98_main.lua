@@ -256,7 +256,7 @@ _main = function(...)
 		end
 
 		local _replCo = function()
-			os.pullEvent("system-ready")
+			race_(function() os.pullEvent("turtle-posd-ready") end, function() sleep(2) end)()
 			_repl.start()
 		end
 
