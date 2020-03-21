@@ -87,8 +87,8 @@ help.app.plant = doc({
 })
 app.plant = markIO("app.plant")(mkIO(function()
 	local pinnedSlot = askForPinnedSlot({
-		[1] = {desc = "sapling", itemFilter = glob("*:*_sapling"), depot = {pos = O+R, dir = B}},
-		[2] = {desc = "bone_meal", itemFilter = glob("minecraft:bone_meal"), depot = {pos = O+R*2, dir = B}},
+		[1] = {desc = "sapling", itemFilter = glob("*:*_sapling"), depot = {pos = O+B*2+R, dir = D}},
+		[2] = {desc = "bone_meal", itemFilter = glob("minecraft:bone_meal"), depot = {pos = O+B*2+R*2, dir = D}},
 	})
 	local ripen = retryUntil(isNamed("*:*_log"))(use(2))
 	local cutTrunk = dig * move * turn.U * rep(dig * move)
