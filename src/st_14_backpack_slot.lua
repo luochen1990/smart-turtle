@@ -270,8 +270,8 @@ if turtle then
 	end))
 
 	callForRestocking = markIOfn("callForRestocking(itemType,count)")(mkIOfn(function(itemType, count)
-		log.cry("I need "..count.." "..itemType.." at "..show(myPos()))
-		return retry(suckExact(count, itemType) * ensureItemFromBackpack(itemType, count))()
+		log.cry("I need "..count.." "..itemType.." at "..show(myPos())) --TODO: create swarm task
+		return retry(try(suckExactTo(count, itemType)) * ensureItemFromBackpack(itemType, count))()
 	end))
 
 	waitForHelpRestocking = markIOfn("waitForHelpRestocking(itemType,count,sn)")(mkIOfn(function(itemType, count)

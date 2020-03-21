@@ -196,6 +196,11 @@ if turtle then
 		return got == n, got
 	end))
 
+	suckExactTo = markIOfn("suckExactTo(n,itemName)")(mkIOfn(function(n, itemName)
+		local got = slot.count(itemName)
+		return suckExact(n - got, itemName)()
+	end))
+
 	help.dropExact = doc({
 		signature = "dropExact : IO (Bool, Number)",
 		usage = "local succ, dropped = dropExact(n, name)",
