@@ -288,7 +288,7 @@ if turtle then
 		usage = "local succ = place()",
 		desc = {
 			"place a block toward aiming dir, keep current slot not empty after place"
-		}
+		},
 	})
 	place = markIO("place")(mkIO(function()
 		return (ensureSlot * _aiming.place)()
@@ -301,18 +301,8 @@ if turtle then
 			"use item, another use case of turtle.place",
 		},
 	})
-	use = markIOfn("use(itemName)")(mkIOfn(function(itemName)
-		local det = turtle.getItemDetail()
-		if det and det.name == itemName then return _aiming.place() end
-
-		local sn = slot.find(itemName)
-		if not sn then return false end
-
-		local saved_sn = turtle.getSelectedSlot()
-		turtle.select(sn)
-		local r = _aiming.place()
-		turtle.select(saved_sn)
-		return r
+	use = markIOfn("use(selector)")(mkIOfn(function(selector)
+		return saveSelected((select(selector) * ensureSlot + select(slot.isEmpty) * ensureItem(selector)) * _aiming.place)()
 	end))
 
 	help.move = doc({

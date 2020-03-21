@@ -134,10 +134,10 @@ if turtle then
 
 	select = markIOfn("select(selector,beginSlot)")(mkIOfn(function(selector, beginSlot)
 		if type(selector) == "number" then
-			return turtle.select(selector)
+			return turtle.getSelectedSlot() == selector or turtle.select(selector)
 		else
 			local sn = slot.find(selector, beginSlot)
-			return sn and turtle.select(sn)
+			return sn and (turtle.getSelectedSlot() == sn or turtle.select(sn))
 		end
 	end))
 
@@ -340,7 +340,7 @@ if turtle then
 			pinnedSlot[i] = {
 				itemType = det.name,
 				stackLimit = det.stackLimit,
-				lowBar = 2,
+				lowBar = 1,
 				highBar = det.stackLimit,
 				depot = cfg.depot,
 			}
