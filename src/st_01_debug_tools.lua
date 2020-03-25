@@ -3,14 +3,15 @@
 DEBUG = true
 __assert = assert
 if DEBUG then
-	assert = function(cond, msg)
-		if not msg and type(cond) == "string" then -- cons is expr
-			local ok, res = eval(cond)
-			assert(ok and res[1], "assertion `"..cond.."` failed")
-		else -- cons is bool
-			__assert(cond, msg)
-		end
-	end
+	assert = __assert
+	--assert = function(cond, msg)
+	--	if not msg and type(cond) == "string" then -- cons is expr
+	--		local ok, res = eval(cond)
+	--		assert(ok and res[1], "assertion `"..cond.."` failed")
+	--	else -- cons is bool
+	--		__assert(cond, msg)
+	--	end
+	--end
 else
 	assert = function() end
 end
