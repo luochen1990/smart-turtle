@@ -139,54 +139,64 @@ if turtle then
 	detect = _aiming.detect
 	compare = _aiming.compare
 	attack = _aiming.attack
-	drop = _aiming.drop
 
 	details = mkIOfn(turtle.getItemDetail)
 	selected = mkIO(turtle.getSelectedSlot)
 
-	help.suck = doc({
-		signature = "suck : Number -> IO Bool",
-		usage = "local succ = suck(n)()",
+	help.drop = doc({
+		signature = "drop : IO Bool",
+		usage = "local succ = drop()",
 		desc = {
-			"suck items from the aiming dir",
-			"fails when reserveSlot fails or suck fails",
+			"drop selected items to the aiming dir",
+			"sub-commands of drop provide more precise control",
 		},
 	})
-	suck = markIOfn("suck(n)")(mkIOfn(function(n)
-		return ( reserveSlot * _aiming.suck(n) )()
+	drop = markIO("drop")(_aiming.drop())
+
+	help.suck = doc({
+		signature = "suck : IO Bool",
+		usage = "local succ = suck()",
+		desc = {
+			"suck items from the aiming dir, into the selected slot",
+			"fails when reserveSlot fails or nothing to suck",
+			"sub-commands of suck provide more precise control",
+		},
+	})
+	suck = markIO("suck")(mkIO(function()
+		return ( reserveSlot * _aiming.suck() )()
 	end))
 
-	help.suckHold = doc({
-		signature = "suckHold : Number -> IO Bool",
-		usage = "local succ = suckHold(n)()",
+	help.suck.hold = doc({
+		signature = "suck.hold : Number -> IO Bool",
+		usage = "local succ = suck.hold(n)()",
 		desc = {
 			"suck into an isolate slot, this will change selected slot",
 			"fails when reserveSlot fails or suck fails",
 		},
 	})
-	suckHold = markIOfn("suckHold(n)")(mkIOfn(function(n)
+	suck.hold = markIOfn("suck.hold(n)")(mkIOfn(function(n)
 		return ( reserveSlot * select(slot.isEmpty) * _aiming.suck(n) )()
 	end))
 
-	help.suckExact = doc({
-		signature = "suckExact : (Number, ItemName) -> IO (Bool, Number)",
-		usage = "local succ, sucked = suckExact(n, name)()",
+	help.suck.exact = doc({
+		signature = "suck.exact : (Number, ItemName) -> IO (Bool, Number)",
+		usage = "local succ, sucked = suck.exact(n, name)()",
 		desc = {
 			"suck exact n specified items, discard unrelated things",
 			"fails when sucked items less than n",
 		},
 	})
-	suckExact = markIOfn("suckExact(n,itemName)")(mkIOfn(function(n, itemName)
+	suck.exact = markIOfn("suck.exact(n,itemName)")(mkIOfn(function(n, itemName)
 		local old_sn = turtle.getSelectedSlot()
 		local got = 0
 		while got < n do
-			local ok = suckHold(math.min(64, n - got))()
+			local ok = suck.hold(math.min(64, n - got))()
 			if ok then
 				local det = details()()
 				if not itemName or det.name == itemName then
 					got = got + det.count
 				else
-					saveDir( turn.lateral * drop() )()
+					saveDir(turn.lateral * drop)()
 				end
 			else
 				break
@@ -196,26 +206,26 @@ if turtle then
 		return got == n, got
 	end))
 
-	suckExactTo = markIOfn("suckExactTo(n,itemName)")(mkIOfn(function(n, itemName)
+	suck.exactTo = markIOfn("suck.exactTo(n,itemName)")(mkIOfn(function(n, itemName)
 		local got = slot.count(itemName)
-		return suckExact(n - got, itemName)()
+		return suck.exact(n - got, itemName)()
 	end))
 
-	help.dropExact = doc({
-		signature = "dropExact : IO (Bool, Number)",
-		usage = "local succ, dropped = dropExact(n, name)",
+	help.drop.exact = doc({
+		signature = "drop.exact : IO (Bool, Number)",
+		usage = "local succ, dropped = drop.exact(n, name)",
 		desc = {
 			"drop exact n specified items",
 			"fails when dropped items less than n",
 		},
 	})
-	dropExact = markIOfn("dropExact(n,itemName)")(mkIOfn(function(n, itemName)
+	drop.exact = markIOfn("drop.exact(n,itemName)")(mkIOfn(function(n, itemName)
 		local old_sn = turtle.getSelectedSlot()
 		local dropped = 0
 		while dropped < n do
 			if select(itemName)() then
 				local got = math.min(n - dropped, turtle.getItemCount())
-				local ok = drop(got)()
+				local ok = _aiming.drop(got)()
 				if ok then
 					local left = turtle.getItemCount()
 					dropped = dropped + (got - left)

@@ -80,9 +80,9 @@ if turtle then
 		log.verb("Cost "..singleTripCost.." to reach this fuel station, now refueling ("..nStep.." + "..extra()..")...")
 		local enoughRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(nStep + extra()))
 		local greedyRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(math.min(math.max(nStep*10 + extra()*2, 2000), turtle.getFuelLimit() - 1000)))
-		rep(retry(suck()) * -enoughRefuel)() -- repeat until enough
+		rep(retry(suck) * -enoughRefuel)() -- repeat until enough
 		if os.getComputerLabel() then
-			rep(suck() * -greedyRefuel)() -- try to full the tank
+			rep(suck * -greedyRefuel)() -- try to full the tank
 		end
 		-- refuel done
 		log.verb("Finished refueling, now back to work pos "..show(workState.back.pos))

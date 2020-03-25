@@ -166,7 +166,7 @@ if turtle then
 		return sn and turtle.select(sn)
 	end))
 
-	discard = markIO("discard")(fmap(slot.isFuel)(selected) * mkIO(turtle.refuel) * fmap(slot.isEmpty)(selected) + saveDir(turn.lateral * -isContainer * drop()) + -isContainer * drop())
+	discard = markIO("discard")(fmap(slot.isFuel)(selected) * mkIO(turtle.refuel) * fmap(slot.isEmpty)(selected) + saveDir(turn.lateral * -isContainer * drop) + -isContainer * drop)
 
 	cryForHelpUnloading = markIO("cryForHelpUnloading")(mkIO(function()
 		workState.cryingFor = "unloading"
@@ -190,7 +190,7 @@ if turtle then
 	unloadToDepot = markIO("unloadToDepot")(mkIO(function()
 		if not workMode.depot then return false, "workMode.depot is not provided" end
 
-		return saveSelected(savePosp(visitStation(workMode.depot) * isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop())))()
+		return saveSelected(savePosp(visitStation(workMode.depot) * isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop)))()
 	end))
 
 	-- | the unload interrput: back to unload station and clear the backpack
@@ -222,7 +222,7 @@ if turtle then
 
 		-- drop items into station
 		log.verb("Begin unloading...")
-		saveSelected(isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop()))()
+		saveSelected(isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop))()
 
 		if not slot.find(slot.isEmpty) then
 			cryForHelpUnloading()
@@ -297,7 +297,7 @@ if turtle then
 
 	callForRestocking = markIOfn("callForRestocking(itemType,count)")(mkIOfn(function(itemType, count)
 		log.cry("I need "..count.." "..itemType.." at "..show(myPos())) --TODO: create swarm task
-		return retry(try(suckExactTo(count, itemType)) * ensureItemFromBackpack(itemType, count))()
+		return retry(try(suck.exactTo(count, itemType)) * ensureItemFromBackpack(itemType, count))()
 	end))
 
 	waitForHelpRestocking = markIOfn("waitForHelpRestocking(itemType,count,sn)")(mkIOfn(function(itemType, count)
@@ -317,7 +317,7 @@ if turtle then
 		local need = highBar - got
 		local depot = (pinned and pinned.depot)
 		if depot then
-			return (savePosp(visitStation(depot) * (suckExact(need, itemType) + callForRestocking(itemType, need))))()
+			return (savePosp(visitStation(depot) * (suck.exact(need, itemType) + callForRestocking(itemType, need))))()
 		else
 			return (savePosp(visitStation({pos = O, dir = F}) * waitForHelpRestocking(itemType, need)))()
 		end

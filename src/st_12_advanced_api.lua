@@ -223,7 +223,7 @@ if turtle then
 	carry = markIOfn("carry(from,to,count,name)")(mkIOfn(function(from, to, count, name)
 		local got = slot.count(name)
 		local visit = function(st) return visitStation(st) * (isStation + -try(unregisterStation(st) / (turn.U * move ^ 3))) end
-		return (visit(from) * try(suckExact(count - got, name)) * visit(to) * dropExact(count, name) / (turn.U * move ^ 3))()
+		return (visit(from) * try(suck.exact(count - got, name)) * visit(to) * drop.exact(count, name) / (turn.U * move ^ 3))()
 	end))
 
 	transportLine = markIOfn("transportLine(from, to)")(mkIOfn(function(from, to)
@@ -232,14 +232,14 @@ if turtle then
 		local cnt = 0
 		while true do
 			refuel(fuelReservation)()
-			;(cryingVisitStation(from) * rep(suck()) * cryingVisitStation(to) * rep(select(slot.isNonEmpty) * drop()))()
+			;(cryingVisitStation(from) * rep(suck) * cryingVisitStation(to) * rep(select(slot.isNonEmpty) * drop))()
 			cnt = cnt + 1
 			if not slot._findThat(slot.isNonEmpty) then
 				log.verb("[transportLine] finished "..cnt.." trips, now have a rest for 20 seconds...")
 				sleep(20)
 			else
 				log.verb("[transportLine] the dest chest is full, waiting for space...")
-				;(retry(select(slot.isNonEmpty) * drop()) * rep(select(slot.isNonEmpty) * drop()))()
+				;(retry(select(slot.isNonEmpty) * drop) * rep(select(slot.isNonEmpty) * drop))()
 			end
 		end
 	end))

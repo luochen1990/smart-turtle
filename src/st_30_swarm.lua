@@ -359,9 +359,9 @@ end
 serveAsProvider = mkIO(function()
 	local getAndHold
 	if isContainer() then -- suck items from chest
-		getAndHold = function(n) return suckHold(n) end
+		getAndHold = function(n) return suck.hold(n) end
 	else -- dig or attack --TODO: check tool
-		getAndHold = function(n) return (isContainer * suckHold(n) + -isContainer * (digHold + try(attack) * suckHold(n))) end
+		getAndHold = function(n) return (isContainer * suck.hold(n) + -isContainer * (digHold + try(attack) * suck.hold(n))) end
 	end
 
 	local stationDef = {
@@ -409,7 +409,7 @@ serveAsProvider = mkIO(function()
 				if det.name == stationDef.itemType then -- got target item
 					print("inventory +"..det.count)
 				else -- got unconcerned item
-					saveDir(turn.lateral * drop())()
+					saveDir(turn.lateral * drop)()
 				end
 				sleep(0.01)
 			end
@@ -451,7 +451,7 @@ serveAsUnloader = mkIO(function()
 		retry(_reg)()
 	end
 
-	local keepDroppingCo = rep(retry(isChest * select(slot.isNonEmpty) * drop()))
+	local keepDroppingCo = rep(retry(isChest * select(slot.isNonEmpty) * drop))
 
 	registerCo()
 	para_(keepDroppingCo, _updateInventoryCo(stationDef))()
@@ -472,7 +472,7 @@ serveAsRequester = mkIO(function()
 
 	local registerCo = function()
 		printC(colors.gray)("[requester] detecting item")
-		local det = retry((select(slot.isNonEmpty) + suckHold(1)) * details())()
+		local det = retry((select(slot.isNonEmpty) + suck.hold(1)) * details())()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
 		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.5
@@ -495,7 +495,7 @@ serveAsRequester = mkIO(function()
 		retry(_reg)()
 	end
 
-	local keepDroppingCo = rep(retry(isChest * select(slot.isNonEmpty) * drop()))
+	local keepDroppingCo = rep(retry(isChest * select(slot.isNonEmpty) * drop))
 
 	registerCo()
 	para_(keepDroppingCo, _updateInventoryCo(stationDef))()
@@ -517,7 +517,7 @@ serveAsStorage = mkIO(function()
 
 	local registerCo = function()
 		printC(colors.gray)("[storage] detecting item")
-		local det = retry((select(slot.isNonEmpty) + suckHold(1)) * details())()
+		local det = retry((select(slot.isNonEmpty) + suck.hold(1)) * details())()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
 		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.25
@@ -545,11 +545,11 @@ serveAsStorage = mkIO(function()
 		local target = (stationDef.restockBar - 1)
 		local intent = target - new_cnt
 		if intent > 0 then
-			local ok, sucked = (isChest * suckExact(intent, stationDef.itemType))()
+			local ok, sucked = (isChest * suck.exact(intent, stationDef.itemType))()
 			--log.verb(literal({ok = ok, sucked = sucked, intent = intent, item = stationDef.itemType}))
 			new_cnt = new_cnt + (sucked or 0)
 		elseif intent < 0 then
-			local ok, dropped = (isChest * dropExact(-intent, stationDef.itemType))()
+			local ok, dropped = (isChest * drop.exact(-intent, stationDef.itemType))()
 			--log.verb(literal({ok = ok, dropped = dropped, intent = intent, item = stationDef.itemType}))
 			new_cnt = new_cnt - (dropped or 0)
 		end
