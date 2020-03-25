@@ -149,11 +149,11 @@ if turtle then
 		usage = "local succ = suck(n)()",
 		desc = {
 			"suck items from the aiming dir",
-			"fails when reserveOneSlot fails or suck fails",
+			"fails when reserveSlot fails or suck fails",
 		},
 	})
 	suck = markIOfn("suck(n)")(mkIOfn(function(n)
-		return ( reserveOneSlot * _aiming.suck(n) )()
+		return ( reserveSlot * _aiming.suck(n) )()
 	end))
 
 	help.suckHold = doc({
@@ -161,11 +161,11 @@ if turtle then
 		usage = "local succ = suckHold(n)()",
 		desc = {
 			"suck into an isolate slot, this will change selected slot",
-			"fails when reserveOneSlot fails or suck fails",
+			"fails when reserveSlot fails or suck fails",
 		},
 	})
 	suckHold = markIOfn("suckHold(n)")(mkIOfn(function(n)
-		return ( reserveOneSlot * select(slot.isEmpty) * _aiming.suck(n) )()
+		return ( reserveSlot * select(slot.isEmpty) * _aiming.suck(n) )()
 	end))
 
 	help.suckExact = doc({
@@ -269,11 +269,11 @@ if turtle then
 		usage = "local succ = dig()",
 		desc = {
 			"dig a block toward the aiming dir",
-			"fails when reserveOneSlot fails or dig fails",
+			"fails when reserveSlot fails or dig fails",
 		},
 	})
 	dig = markIO("dig")(mkIO(function()
-		return ( reserveOneSlot * _aiming.dig )()
+		return ( reserveSlot * _aiming.dig )()
 	end))
 
 	help.digHold = doc({
@@ -281,11 +281,11 @@ if turtle then
 		usage = "local succ = digHold()",
 		desc = {
 			"dig into an isolate slot, this will change selected slot",
-			"fails when reserveOneSlot fails or dig fails",
+			"fails when reserveSlot fails or dig fails",
 		},
 	})
 	digHold = markIO("digHold")(mkIO(function()
-		return ( reserveOneSlot * select(slot.isEmpty) * _aiming.dig )()
+		return ( reserveSlot * select(slot.isEmpty) * _aiming.dig )()
 	end))
 
 	help.place = doc({

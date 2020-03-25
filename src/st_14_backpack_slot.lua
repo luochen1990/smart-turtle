@@ -55,7 +55,7 @@ if turtle then
 				local name = slotFilter
 				return slot._findThat(slot.isNamed(name), beginSlot)
 			elseif type(slotFilter) == "function" then
-				return slot._findThat(slotFilter)
+				return slot._findThat(slotFilter, beginSlot)
 			else
 				error("[slot.find(slotFilter)] slotFilter should be string or function")
 			end
@@ -67,36 +67,54 @@ if turtle then
 				local name = slotFilter
 				return slot._findLastThat(slot.isNamed(name), beginSlot)
 			elseif type(slotFilter) == "function" then
-				return slot._findLastThat(slotFilter)
+				return slot._findLastThat(slotFilter, beginSlot)
 			else
 				error("[slot.findLast(slotFilter)] slotFilter should be string or function")
 			end
 		end
 
+		slot.findDroppable = function(keepLevel)
+			if keepLevel == true then keepLevel = 3 end
+			if keepLevel == false then keepLevel = 0 end
+			local sn
+			if keepLevel < 3 then
+				sn = slot._findLastThat(slot.isCheap, #workMode.pinnedSlot + 1)
+				if not sn and keepLevel < 2 then
+					sn = slot._findLastThat(slot.isNotValuable, #workMode.pinnedSlot + 1)
+					if not sn and keepLevel < 1 then
+						sn = slot._findLastThat(slot.isValuable, #workMode.pinnedSlot + 1)
+					end
+				end
+			end
+			return sn ~= nil and sn
+		end
+
 		-- | count item number in the backpack
 		-- , countSingleSlot(sn) = c  where c is either number or boolean
-		slot._countVia = function(countSingleSlot)
+		slot._countVia = function(countSingleSlot, beginSlot, limit)
 			local cnt = 0
-			for sn = 1, const.turtle.backpackSlotsNum do
+			for sn = default(1)(beginSlot), const.turtle.backpackSlotsNum do
 				local n = countSingleSlot(sn)
 				if type(n) == "boolean" then
 					if n == true then n = 1 else n = 0 end
+				elseif type(n) == "number" then
+					cnt = cnt + n
 				end
-				if n then cnt = cnt + n end
+				if limit and cnt >= limit then break end
 			end
 			return cnt
 		end
 
 		-- | a polymorphic wrapper of _countVia
-		slot.count = function(slotCounter)
+		slot.count = function(slotCounter, beginSlot, limit)
 			if type(slotCounter) == "string" then
 				local nameGlob = glob(slotCounter)
 				return slot._countVia(function(sn)
 					local det = turtle.getItemDetail(sn)
 					if det and nameGlob(det.name) then return det.count else return 0 end
-				end)
+				end, beginSlot, limit)
 			elseif type(slotCounter) == "function" then
-				return slot._countVia(slotCounter)
+				return slot._countVia(slotCounter, beginSlot, limit)
 			else
 				error("[slot.count(slotCounter)] slotCounter should be string or function")
 			end
@@ -135,9 +153,11 @@ if turtle then
 	select = markIOfn("select(selector,beginSlot)")(mkIOfn(function(selector, beginSlot)
 		if type(selector) == "number" then
 			return turtle.getSelectedSlot() == selector or turtle.select(selector)
-		else
+		elseif type(selector) == "string" or type(selector) == "function" then
 			local sn = slot.find(selector, beginSlot)
 			return sn and (turtle.getSelectedSlot() == sn or turtle.select(sn))
+		else
+			error("[select(selector)] selector should be number or string or function")
 		end
 	end))
 
@@ -155,8 +175,28 @@ if turtle then
 		workState.cryingFor = false
 	end))
 
+	-- | unload turtle's backpack to depot or station
+	unload = markIO("unload")(mkIO(function()
+		if not workMode.allowInterruption then return false end
+		local succ = false
+		if workMode.preferLocal then
+			succ = (unloadToDepot + unloadToStation)()
+		else -- prefer swarm
+			succ = (unloadToStation + unloadToDepot)()
+		end
+		return succ or (try(move.to(workMode.depot or O)) * cryForHelpUnloading)()
+	end))
+
+	unloadToDepot = markIO("unloadToDepot")(mkIO(function()
+		if not workMode.depot then return false, "workMode.depot is not provided" end
+
+		return saveSelected(savePosp(visitStation(workMode.depot) * isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop())))()
+	end))
+
 	-- | the unload interrput: back to unload station and clear the backpack
-	unloadBackpack = markIO("unloadBackpack")(mkIO(function()
+	unloadToStation = markIO("unloadToStation")(mkIO(function()
+		if not workState:isOnline() then return false, "workState:isOnline() is false" end
+
 		workState.isUnloading = true
 		workState.back = workState.back or getPosp() --NOTE: in case we are already in another interruption
 
@@ -182,7 +222,7 @@ if turtle then
 
 		-- drop items into station
 		log.verb("Begin unloading...")
-		;( isStation * rep( select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop() ) )()
+		saveSelected(isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop()))()
 
 		if not slot.find(slot.isEmpty) then
 			cryForHelpUnloading()
@@ -194,43 +234,28 @@ if turtle then
 		return true
 	end))
 
-	selectDroppable = markIOfn("selectDroppable")(function(keepLevel)
-		local sel = pure(false)
-		if keepLevel == true then keepLevel = 3 end
-		if keepLevel == false then keepLevel = 0 end
-		if keepLevel < 3 then
-			sel = select(slot.isCheap)
-			if keepLevel < 2 then
-				sel = sel + select(slot.isNotValuable)
-				if keepLevel < 1 then
-					sel = sel + select(slot.isValuable)
-				end
-			end
-		end
-		return sel
-	end)
-
-	-- | tidy backpack to reserve 1 empty slot
-	-- , when success, return the sn of the reserved empty slot
-	reserveOneSlot = markIO("reserveOneSlot")(mkIO(function() -- tidy backpack to reserve 1 empty slot
-		local sn = slot._findLastThat(slot.isEmpty)
-		if sn then return sn end
+	-- | tidy backpack to reserve at least 1 empty slot
+	-- , when success, return the sn of one reserved empty slot
+	-- , there will be at least 3 empty unpinned slots if tidied/dropped/unloaded
+	reserveSlot = markIO("reserveSlot")(mkIO(function()
+		local sn = slot._findLastThat(slot.isEmpty, #workMode.pinnedSlot + 1)
+		if sn then return true end -- have at least 1 empty slot
 		-- tidy backpack
 		slot.tidy()
-		sn = slot._findLastThat(slot.isEmpty)
-		if sn then return sn end
+		local empty_cnt = slot.count(slot.isEmpty, #workMode.pinnedSlot + 1, 3)
+		if empty_cnt >= 3 then return true end -- have at least 3 empty slot after tidy
+
+		local keepLevel = (workState.isUnloading and 1) or workMode.keepItems
+		local discarded = saveSelected(replicate(3 - empty_cnt)(mkIO(slot.findDroppable, keepLevel):pipe(select) * discard))()
+		empty_cnt = empty_cnt + discarded
+
+		if empty_cnt >= 3 then return true end -- have at least 3 empty slot after discarded
 
 		if not workState.isUnloading then -- avoid recursion
-			sn = saveSelected(selectDroppable(workMode.keepItems) * discard * selected)()
-			if sn then return sn end
-
-			if workMode.allowInterruption then
-				local ok = unloadBackpack()
-				if ok then return slot._findLastThat(slot.isEmpty) end
-			end
-		else
-			return saveSelected(selectDroppable(1) * discard * selected)()
+			local ok = unload()
+			if ok then return true end
 		end
+		return false
 	end))
 
 	-- | if specified item count is less than lowBar, then restock it to highBar
@@ -239,7 +264,8 @@ if turtle then
 		local sn = turtle.getSelectedSlot()
 		local det = turtle.getItemDetail(sn)
 		if det and det.name ~= itemType then
-			turtle.transferTo(reserveOneSlot())
+			reserveSlot()
+			turtle.transferTo(slot.find(slot.isEmpty))
 			det = nil
 		end
 		if not det then
@@ -330,7 +356,8 @@ if turtle then
 					else
 						printC(colors.yellow)("slot ["..i.."] got invalid item "..showLit(det.name)..", please try other type of item")
 						sleep(1)
-						turtle.transferTo(reserveOneSlot())
+						reserveSlot()
+						turtle.transferTo(slot.find(slot.isEmpty))
 						return false
 					end
 				else
@@ -342,7 +369,7 @@ if turtle then
 				stackLimit = det.stackLimit,
 				lowBar = 1,
 				highBar = det.stackLimit,
-				depot = cfg.depot,
+				depot = cfg.depot or {pos = O + R * i, dir = B},
 			}
 			--TODO: support edit default value
 		end

@@ -12,7 +12,9 @@ if turtle then
 		asFuel = false, -- when false, use every possible thing as fuel
 		keepItems = 2, -- 0:always drop, 1:only keep valuable items, 2:keep non-cheap items, 3:keep all
 		allowInterruption = true, -- whether allow turtle interrupt current task to refuel or unload or fetch
-		pinnedSlot = {}, -- local stations, like {itemType = "minecraft:coal", stackLimit = 64, lowBar = 2, highBar = 64, depot = {pos, dir}}
+		pinnedSlot = {}, -- pinned slots, element like {itemType = "minecraft:coal", stackLimit = 64, lowBar = 2, highBar = 64, depot = {pos, dir}}
+		depot = {pos = O, dir = B}, -- local depot to unload items
+		preferLocal = true, -- prefer to visit local depot or swarm station
 		--backpackWhiteList = {}, -- not used yet
 		--backpackBlackList = {}, -- not used yet
 	}
@@ -31,6 +33,7 @@ if turtle then
 		isRunningSwarmTask = false,
 		moveNotCommitted = false,
 		back = false, -- save pos, facing and aiming here before interrupt
+		hasModem = false,
 	}
 	O = vec.zero -- pos when process begin, this init value is used before gps corrected
 
@@ -47,6 +50,12 @@ if turtle then
 			local d0 = workState.facing
 			local d1 = leftSide(d0)
 			return {U, d0, d1, leftSide(d1), rightSide(d0), D}
+		end,
+		isOnline = function()
+			if not workState.hasModem then return false, "wireless modem not available" end
+			if not workState.gpsCorrected then return false, "gps not available" end
+			--if not workState.fuelStation or workState.unloadStation then return false, "swarm server not available" end
+			return true
 		end,
 	}})
 

@@ -8,7 +8,10 @@ mkIO, mkIOfn, isIO = (function()
 		local args = {...}
 		local io = {
 			run = function() return f(unpack(args)) end,
-			pipe = function(io1, f2) return _mkIO(function() return f2(io1.run()).run() end) end, -- similar to `bind` or `>>=` in haskell
+			pipe = function(io1, f2) return _mkIO(function()
+				local r1 = io1.run()
+				return r1 and f2(r1).run()
+			end) end, -- similar to `bind` or `>>=` in haskell
 		}
 		setmetatable(io, _ioMetatable)
 		return io

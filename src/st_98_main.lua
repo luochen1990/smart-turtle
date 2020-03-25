@@ -11,6 +11,9 @@ if turtle then
 		local rot = dirRotationBetween(facing, old_facing)
 		local trans = function(p) return rot(p) + offset end
 		O = trans(O)
+		if workMode.depot and workMode.depot.pos then
+			workMode.depot.pos = trans(workMode.depot.pos)
+		end
 		for _, pinned in ipairs(workMode.pinnedSlot) do
 			if pinned.depot then
 				pinned.depot = trans(pinned.depot)
@@ -75,6 +78,8 @@ if turtle then
 	end)
 
 	_initTurtleCo = markFn("_initTurtleCo")(function()
+		if not workState.hasModem then return false end
+
 		local ok1 = _correctCoordinateSystemWithGps()
 		if not ok1 then
 			printC(colors.yellow)("WARN: failed to get gps pos and dir!")
@@ -135,13 +140,14 @@ _initComputerCo = function()
 			succ = openWirelessModem()
 		end
 	end
-	if not succ then
+	if succ then
+		if turtle then workState.hasModem = true end
+		os.queueEvent("computer-modem-ready")
+	else
 		printC(colors.yellow)("WARN: wireless modem not found!")
-		return false
 	end
-	os.queueEvent("computer-modem-ready")
 	os.queueEvent("computer-ready")
-	return true
+	return succ
 end
 
 -- | init system state
