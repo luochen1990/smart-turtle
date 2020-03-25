@@ -39,7 +39,7 @@ if turtle then
 		end
 		printC(colors.gray)("turtle pos = "..tostring(p0))
 		-- got p0 (i.e. pos) here
-		if not refuelFromBackpack(2)() then
+		if not with({asFuel = true})(refuel.fromBackpack.to(2))() then
 			printC(colors.orange)("[_correctCoordinateSystemWithGps] I need some fuel")
 			return false
 		end

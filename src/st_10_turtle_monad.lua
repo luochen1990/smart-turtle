@@ -9,7 +9,7 @@ if turtle then
 		detour = true, -- whether to detour when move.to or move.go blocked
 		retrySeconds = 2, -- seconds to retry before fail back when move blocked by other turtles
 		workArea = false, -- an electric fence
-		asFuel = false, -- when false, use every possible thing as fuel
+		asFuel = true, -- use what as fuel in backpack, when negative never refuel from backpack, when true use everything possible
 		keepItems = 2, -- 0:always drop, 1:only keep valuable items, 2:keep non-cheap items, 3:keep all
 		allowInterruption = true, -- whether allow turtle interrupt current task to refuel or unload or fetch
 		pinnedSlot = {}, -- pinned slots, element like {itemType = "minecraft:coal", stackLimit = 64, lowBar = 2, highBar = 64, depot = {pos, dir}}
@@ -18,6 +18,26 @@ if turtle then
 		--backpackWhiteList = {}, -- not used yet
 		--backpackBlackList = {}, -- not used yet
 	}
+
+	setmetatable(workMode, {__index = {
+		useAsFuel = (function()
+			local latest_asFuel = nil
+			local latest_glob = nil
+			return function(itemName)
+				if not workMode.asFuel then
+					return false
+				elseif workMode.asFuel == true then
+					return true
+				elseif workMode.asFuel == latest_asFuel then
+					return latest_glob(itemName)
+				else
+					latest_asFuel = workMode.asFuel
+					latest_glob = glob(latest_asFuel)
+					return latest_glob(itemName)
+				end
+			end
+		end)(),
+	}})
 
 	workState = {
 		gpsCorrected = false,

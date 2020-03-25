@@ -342,7 +342,7 @@ if turtle then
 	move = markIO("move")(mkIO(function()
 		-- auto refuel
 		if not workState.isRefueling then
-			savePosd(refuelTo(workState.pos + workState:aimingDir()))() -- refuel may change our pos
+			savePosd(refuel.prepareMoveTo(workState.pos + workState:aimingDir()))() -- refuel may change our pos
 		else
 			if turtle.getFuelLevel() < 1 then
 				cryForHelpRefueling(const.activeRadius * 2)()

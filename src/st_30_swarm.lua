@@ -646,8 +646,9 @@ function _robustVisitStation(opts)
 	if not succ then
 		opts.beforeWait(triedTimes, singleTripCost, station)
 		race_(retry(delay(gotoStation, triedTimes + 1, singleTripCost)), delay(opts.waitForUserHelp, triedTimes, singleTripCost, station))()
-		return true
 	end
+	opts.afterArrive(triedTimes, singleTripCost, station)
+	return true
 end
 
 -- | turtle is idle means: repl is not running command and workState.isRunningSwarmTask = false

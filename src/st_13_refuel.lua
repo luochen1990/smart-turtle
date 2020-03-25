@@ -3,30 +3,41 @@
 if turtle then
 
 	fuelGot = mkIO(turtle.getFuelLevel)
+	--fuelGot.available = mkIO()
+	--fuelGot.reserved = mkIO()
+	--fuelGot.reserveRatio = mkIO()
 
-	refuelFromBackpack = markIOfn("refuelFromBackpack(nStep)")(mkIOfn(function(nStep)
-		nStep = math.max(1 , nStep)
-		local saved_sn = turtle.getSelectedSlot()
-		while turtle.getFuelLevel() < nStep do
-			local fuelSn = slot._findThat(slot.isFuel)
-			if fuelSn then
-				turtle.select(fuelSn)
-				local det = turtle.getItemDetail(fuelSn)
-				local heat = _item.fuelHeatContent(det.name)
-				while turtle.getFuelLevel() < nStep and turtle.getItemCount(fuelSn) > 0 do
-					if turtle.getItemCount(fuelSn) < 2 then slot.fill(fuelSn) end
-					turtle.refuel(math.max(1, (nStep - turtle.getFuelLevel()) / heat))
-					local det2 = turtle.getItemDetail()
-					if det2 and det2.name ~= det.name then break end -- in case of lava-bucket
-				end
-			else -- no more fuel in backpack
-				turtle.select(saved_sn)
-				return false
+	refuel = mkIO(function()
+		local det = turtle.getItemDetail()
+		if not det then return false, "no fuel available in selected slot" end
+		local heat = _item.fuelHeatContent(det.name)
+		if not heat then return false, "selected slot cannot be use as fuel" end
+		local limit = turtle.getFuelLimit()
+		local got = turtle.getFuelLevel()
+		if got + heat > limit then return false, "fuel tank almost full" end
+		turtle.refuel(math.floor((limit - got) / heat))
+	end)
+
+	refuel.fromBackpack = mkIO(function()
+		return saveSelected(rep(select(slot.isFuel) * refuel))()
+	end)
+
+	refuel.fromBackpack.to = markIOfn("refuel.fromBackpack.to")(function(lowBar)
+		local limit = turtle.getFuelLimit()
+		return saveSelected(mkIO(function()
+			while true do
+				local got = turtle.getFuelLevel()
+				if got >= lowBar then return true end
+				local sn = slot._findThat(slot.isFuel)
+				if not sn then return false, "no more fuel available" end
+				local det = turtle.getItemDetail(sn)
+				local heat = det and _item.fuelHeatContent(det.name)
+				if got + heat > limit then return false, "fuel tank almost full" end
+				turtle.select(sn)
+				turtle.refuel(math.min(math.floor((limit - got) / heat), math.ceil((lowBar - got) / heat)))
 			end
-		end
-		turtle.select(saved_sn)
-		return true
-	end))
+		end))
+	end)
 
 	cryForHelpRefueling = markIOfn("cryForHelpRefueling(nStep)")(mkIOfn(function(nStep)
 		workState.cryingFor = "refueling"
@@ -35,54 +46,45 @@ if turtle then
 		workState.cryingFor = false
 	end))
 
-	-- | the refuel interruption
-	-- , fails when workMode.allowInterruption is false
-	-- , will wait for refuel help when there is no fuelStation available
-	-- , will wait for manually move when cannot reach a fuelStation
-	refuelFromFuelStation = markIOfn("refuelFromFuelStation(nStep)")(mkIOfn(function(nStep)
-		if not workMode.allowInterruption then return false end
+	-- | the refuel interrput: back to fuel station and refuel
+	refuel.fromStation = markIOfn("refuel.fromStation")(mkIOfn(function(availableLowBar, availableHighBar)
+		if not workState:isOnline() then return false, "workState:isOnline() is false" end
 
 		workState.isRefueling = true
 		workState.back = workState.back or getPosp() --NOTE: in case we are already in another interruption
 
-		local singleTripCost = 0
-		local extra = function() return singleTripCost * (2 + 1) end
-		local gotoFuelStation
-		gotoFuelStation = function(triedTimes)
-			local ok, station = requestFuelStation(nStep + extra())()
-			if ok then
+		local singleTripCost
+		_robustVisitStation({
+			reqStation = function(triedTimes, singleTripCost)
+				local ok, station = requestFuelStation(availableLowBar + singleTripCost * 2)()
+				return ok, station
+			end,
+			beforeLeave = function(triedTimes, singleTripCost, station)
 				workState.fuelStation = station
-			else
-				return false, triedTimes -- will wait for help
-			end
-			-- got fresh fuelStation here
-			log.verb("Visiting fuel station "..show(workState.fuelStation.pos).."...")
-			local leavePos, fuelBeforeLeave = workState.pos, turtle.getFuelLevel()
-			with({workArea = false})(cryingVisitStation(workState.fuelStation))()
-			-- arrived fuelStation here
-			local cost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
-			singleTripCost = singleTripCost + cost
-			if not isStation() then -- the fuelStation is not available
-				log.verb("Cost "..cost.." to reach "..triedTimes.."th unavailable fuel station, now trying next...")
+				log.verb("Visiting fuel station "..show(station.pos).."...")
+			end,
+			beforeRetry = function(triedTimes, singleTripCost, station, cost)
+				log.verb("Cost "..cost.." to reach "..triedTimes.."th fuel station, but still unavailable, trying next...")
+			end,
+			beforeWait = function(triedTimes, singleTripCost, station)
+				log.verb("Cost "..singleTripCost.." and visited "..triedTimes.." fuel stations, but all unavailable, now waiting for help...")
+			end,
+			waitForUserHelp = function(triedTimes, singleTripCost, station)
+				cryForHelpRefueling()
+			end,
+			afterArrive = function(triedTimes, singleTripCost, station)
+				singleTripCost = singleTripCost
+				log.verb("Cost "..singleTripCost.." to reach this fuel station, now refueling (".. availableLowBar + singleTripCost * 2 ..")...")
+			end,
+		})
 
-				unregisterStation(workState.fuelStation)
-				return gotoFuelStation(triedTimes + 1)
-			else
-				return true, triedTimes
-			end
-		end
-		local succ, triedTimes = gotoFuelStation(1)
-		if not succ then
-			race_(retry(delay(gotoFuelStation, triedTimes + 1)), cryForHelpRefueling(nStep + extra()))()
-			return true
-		end
-		-- arrived checked fuelStation here
-		log.verb("Cost "..singleTripCost.." to reach this fuel station, now refueling ("..nStep.." + "..extra()..")...")
-		local enoughRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(nStep + extra()))
-		local greedyRefuel = with({asFuel = workState.fuelStation.itemType})(refuelFromBackpack(math.min(math.max(nStep*10 + extra()*2, 2000), turtle.getFuelLimit() - 1000)))
-		rep(retry(suck) * -enoughRefuel)() -- repeat until enough
+		local lowBar = availableLowBar + singleTripCost * 2
+		local highBar = default(availableLowBar * 10)(availableHighBar) + singleTripCost * 2
+		local enoughRefuel = with({asFuel = workState.fuelStation.itemType})(refuel.fromBackpack.to(lowBar))
+		local greedyRefuel = with({asFuel = workState.fuelStation.itemType})(refuel.fromBackpack.to(math.max(highBar, 2000)))
+		rep(retry(suck) * -enoughRefuel)() -- repeat until enough --TODO: suck.hold(?)
 		if os.getComputerLabel() then
-			rep(suck * -greedyRefuel)() -- try to full the tank
+			rep(suck * -greedyRefuel)() -- try to greedy refuel
 		end
 		-- refuel done
 		log.verb("Finished refueling, now back to work pos "..show(workState.back.pos))
@@ -93,20 +95,17 @@ if turtle then
 		return true
 	end))
 
-	refuel = markIOfn("refuel(nStep)")(mkIOfn(function(nStep)
-		nStep = math.max(1 , nStep or 1)
-		if nStep <= turtle.getFuelLevel() then return true end
-		if nStep > turtle.getFuelLimit() then return false end
-		local saved_sn = turtle.getSelectedSlot()
-		local ok = refuelFromBackpack(nStep)()
+	refuel.to = mkIOfn(function(availableLowBar, availableHighBar)
+		if availableLowBar <= turtle.getFuelLevel() then return true end
+		if availableLowBar > turtle.getFuelLimit() then return false end
+		local ok = refuel.fromBackpack.to(availableLowBar)()
 		if not ok and workMode.allowInterruption then -- no fuel in backpack, go to fuelStation
-			ok = with({destroy = 1})(refuelFromFuelStation(nStep))()
+			ok = with({destroy = 1})(refuel.fromFuelStation(availableLowBar, availableHighBar))()
 		end
-		turtle.select(saved_sn)
 		return ok
-	end))
+	end)
 
-	refuelTo = markIOfn("refuelTo(destPos)")(mkIOfn(function(destPos)
+	refuel.prepareMoveTo = mkIOfn(function(destPos)
 		if not workState.isRefueling then
 			local beginPos = workState.pos
 			local refuel_pos = workState.fuelStation and workState.fuelStation.pos
@@ -114,10 +113,12 @@ if turtle then
 			local unload_pos = workState.unloadStation and workState.unloadStation.pos
 			local unload_dis = (unload_pos and math.max(vec.manhat(beginPos - unload_pos), vec.manhat(destPos - unload_pos))) or const.activeRadius
 			local required_fuel = vec.manhat(beginPos - destPos) + math.max(refuel_dis, unload_dis) * 2
-			local ok = refuel(required_fuel * 2)()
+			local ok = refuel.to(required_fuel * 2)()
 			if not ok then
-				cryForHelpRefueling(required_fuel * 2)()
+				(try(move.to(O) * turn.to(F)) * cryForHelpRefueling(required_fuel * 2))()
 			end
 		end
-	end))
+	end)
+
 end
+

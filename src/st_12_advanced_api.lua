@@ -43,7 +43,7 @@ if turtle then
 
 			-- auto refuel
 			if not workState.isRefueling then
-				refuelTo(destPos)()
+				refuel.prepareMoveTo(destPos)()
 			end
 			-- refuel may change our pos
 
@@ -231,7 +231,7 @@ if turtle then
 		local fuelReservation = 2 * vec.manhat(to.pos - from.pos) + vec.manhat(to.pos - workState.fuelStation.pos) + vec.manhat(from.pos - workState.fuelStation.pos)
 		local cnt = 0
 		while true do
-			refuel(fuelReservation)()
+			refuel.to(fuelReservation)()
 			;(cryingVisitStation(from) * rep(suck) * cryingVisitStation(to) * rep(select(slot.isNonEmpty) * drop))()
 			cnt = cnt + 1
 			if not slot._findThat(slot.isNonEmpty) then

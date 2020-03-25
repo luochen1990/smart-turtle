@@ -9,7 +9,7 @@ if turtle then
 		slot.isNonEmpty = function(sn) return turtle.getItemCount(sn) > 0 end
 		slot.isFuel = function(sn)
 			local det = turtle.getItemDetail(sn)
-			return det and (not workMode.asFuel or det.name == workMode.asFuel) and not not _item.fuelHeatContent(det.name)
+			return det and (workMode:useAsFuel(det.name)) and not not _item.fuelHeatContent(det.name)
 		end
 		slot.fuelHeatContent = function(sn)
 			local det = turtle.getItemDetail(sn)
