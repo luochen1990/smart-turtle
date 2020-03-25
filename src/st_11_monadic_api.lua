@@ -140,8 +140,19 @@ if turtle then
 	compare = _aiming.compare
 	attack = _aiming.attack
 
-	details = mkIOfn(turtle.getItemDetail)
+	help.selected = doc({
+		signature = "selected : IO Int",
+		usage = "local sn = selected()",
+		desc = {
+			"get current selected slot number",
+			"sub-commands of selected provide other info about current selected slot",
+		}
+	})
 	selected = mkIO(turtle.getSelectedSlot)
+	selected.name = mkIO(function() local det = turtle.getItemDetail(); return det and det.name end)
+	selected.count = mkIO(turtle.getItemCount)
+	selected.detail = mkIO(turtle.getItemDetail)
+	selected.stackLimit = mkIO(function() local n = turtle.getItemCount(); return n > 0 and n + turtle.getItemSpace() end)
 
 	help.drop = doc({
 		signature = "drop : IO Bool",
@@ -192,7 +203,7 @@ if turtle then
 		while got < n do
 			local ok = suck.hold(math.min(64, n - got))()
 			if ok then
-				local det = details()()
+				local det = selected.detail()
 				if not itemName or det.name == itemName then
 					got = got + det.count
 				else

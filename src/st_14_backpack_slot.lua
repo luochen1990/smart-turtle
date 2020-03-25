@@ -15,15 +15,10 @@ if turtle then
 			local det = turtle.getItemDetail(sn)
 			return (det and _item.fuelHeatContent(det.name) or 0) * (det and det.count or 0)
 		end
-		slot.itemName = function(sn)
-			local det = turtle.getItemDetail(sn)
-			return det and det.name
-		end
-		slot.stackLimit = function(sn)
-			local n = turtle.getItemCount(sn)
-			local s = turtle.getItemSpace(sn)
-			return n ~= 0 and n + s
-		end
+		slot.name = function(sn) local det = turtle.getItemDetail(sn); return det and det.name end
+		slot.count = turtle.getItemCount
+		slot.detail = turtle.getItemDetail
+		slot.stackLimit = function(sn) local n = turtle.getItemCount(sn); return n > 0 and n + turtle.getItemSpace(sn) end
 		slot.nameSat = function(judge)
 			return function(sn)
 				local det = turtle.getItemDetail(sn)

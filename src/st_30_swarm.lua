@@ -378,7 +378,7 @@ serveAsProvider = mkIO(function()
 
 	local registerCo = function()
 		printC(colors.gray)("[provider] detecting item")
-		local det = retry((select(slot.isNonEmpty) + getAndHold(1)) * details())()
+		local det = retry((select(slot.isNonEmpty) + getAndHold(1)) * selected.detail)()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
 		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.25
@@ -405,7 +405,7 @@ serveAsProvider = mkIO(function()
 		with({allowInterruption = false})(function()
 			while true do
 				-- retry to get items
-				local det = retry(getAndHold() * details())()
+				local det = retry(getAndHold() * selected.detail)()
 				if det.name == stationDef.itemType then -- got target item
 					print("inventory +"..det.count)
 				else -- got unconcerned item
@@ -472,7 +472,7 @@ serveAsRequester = mkIO(function()
 
 	local registerCo = function()
 		printC(colors.gray)("[requester] detecting item")
-		local det = retry((select(slot.isNonEmpty) + suck.hold(1)) * details())()
+		local det = retry((select(slot.isNonEmpty) + suck.hold(1)) * selected.detail)()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
 		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.5
@@ -517,7 +517,7 @@ serveAsStorage = mkIO(function()
 
 	local registerCo = function()
 		printC(colors.gray)("[storage] detecting item")
-		local det = retry((select(slot.isNonEmpty) + suck.hold(1)) * details())()
+		local det = retry((select(slot.isNonEmpty) + suck.hold(1)) * selected.detail)()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
 		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.25
