@@ -7,9 +7,9 @@ _hackVector = function()
 	mt.__eq = function(a, b) return a.x == b.x and a.y == b.y and a.z == b.z end
 	mt.__lt = function(a, b) return a.x < b.x and a.y < b.y and a.z < b.z end
 	mt.__le = function(a, b) return a.x <= b.x and a.y <= b.y and a.z <= b.z end
-	mt.__mod = function(a, b) return a:cross(b) end -- use `a % b` as `a:cross(b)`
+	--mt.__mod = function(a, b) return a:cross(b) end -- use `a % b` as `a:cross(b)`
 	mt.__concat = function(a, b) return mkArea(a, b) end -- use `a .. b` as `mkArea(a, b)`
-	mt.__pow = function(a, b) return b - a end -- use `a ^ b` as `b - a`
+	--mt.__pow = function(a, b) return b - a end -- use `a ^ b` as `b - a`
 end
 _hackVector()
 
@@ -88,13 +88,13 @@ distance = function(pos) return function(p) return vec.manhat(pos - p) end end
 -- left side of a horizontal direction
 leftSide = function(d)
 	assert(d and d.y == 0, "[leftSide(d)] d should be a horizontal direction")
-	return d % const.rotate.left
+	return d:cross(const.rotate.left)
 end
 
 -- right side of a horizontal direction
 rightSide = function(d)
 	assert(d and d.y == 0, "[rightSide(d)] d should be a horizontal direction")
-	return d % const.rotate.right
+	return d:cross(const.rotate.right)
 end
 
 lateralSide = function(d) -- a direction which is perpendicular to dir `d`
@@ -106,7 +106,7 @@ dirRotationBetween = function(va, vb)
 	if va == vb then return identity
 	elseif va == -vb then return negate end
 	local rotAxis = -va:cross(vb):normalize()
-	return function(v) return v % rotAxis end
+	return function(v) return v:cross(rotAxis) end
 end
 
 lowPoint = function(p, q)
