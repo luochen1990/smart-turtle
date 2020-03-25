@@ -44,7 +44,7 @@ if turtle then
 	end))
 
 	_test.clearBlock = markIO("_test.clearBlock")(mkIO(function()
-		return app.clearBlock((O+U*2)..(O+(U+F+R)*2))()
+		return app.clearBlock((O+U*3)..(O+U+(F+R)*2))()
 	end))
 
 	_test.buildFrame = markIO("_test.buildFrame")(mkIO(function()
