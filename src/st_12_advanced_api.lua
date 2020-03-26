@@ -42,10 +42,7 @@ if turtle then
 			local beginPos = workState.pos
 
 			-- auto refuel
-			if not workState.isRefueling then
-				refuel.prepareMoveTo(destPos)()
-			end
-			-- refuel may change our pos
+			refuel.prepareMoveTo(destPos)() --NOTE: refuel.prepareMoveTo() may change our pos
 
 			while true do
 				-- attempt to approach destPos
@@ -150,8 +147,12 @@ if turtle then
 	-- recover saved pos and posture
 	recoverPosp = markIOfn("recoverPosp(back)")(mkIOfn(function(back)
 		move.to(back.pos)()
-		turn.to(back.facing)()
-		workState.aiming = back.aiming
+		if back.facing and back.aiming then
+			turn.to(back.facing)()
+			workState.aiming = back.aiming
+		elseif back.dir then
+			turn.to(back.dir)()
+		end
 		return true
 	end))
 
@@ -188,6 +189,9 @@ if turtle then
 				mainDir = candidates[1]
 			end
 			local projLen = diag:dot(mainDir)
+
+			-- auto refuel
+			refuel.prepareMoveTo(near, area:volume())() --NOTE: refuel.prepareMoveTo() may change our pos
 
 			log.verb("[scan] "..show(near)..".."..show(far)..", "..rank.."d "..(projLen+1).." layers toward " .. showDir(mainDir))
 			assert((near..far) == area, "(near..far) should eq area")
@@ -231,7 +235,7 @@ if turtle then
 		local fuelReservation = 2 * vec.manhat(to.pos - from.pos) + vec.manhat(to.pos - workState.fuelStation.pos) + vec.manhat(from.pos - workState.fuelStation.pos)
 		local cnt = 0
 		while true do
-			refuel.to(fuelReservation)()
+			refuel.prepare(fuelReservation)()
 			;(cryingVisitStation(from) * rep(suck) * cryingVisitStation(to) * rep(select(slot.isNonEmpty) * drop))()
 			cnt = cnt + 1
 			if not slot._findThat(slot.isNonEmpty) then

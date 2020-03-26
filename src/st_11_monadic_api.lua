@@ -340,12 +340,13 @@ if turtle then
 		},
 	})
 	move = markIO("move")(mkIO(function()
+		local dir = workState:aimingDir()
 		-- auto refuel
 		if not workState.isRefueling then
-			savePosd(refuel.prepareMoveTo(workState.pos + workState:aimingDir()))() -- refuel may change our pos
+			refuel.prepareMoveStep(dir, 0, const.activeRadius * const.fuelReserveRatio)()
 		else
 			if turtle.getFuelLevel() < 1 then
-				cryForHelpRefueling(const.activeRadius * 2)()
+				cryForHelpRefueling(workState.pos + dir, const.activeRadius * const.fuelReserveRatio)()
 			end
 		end
 
@@ -363,7 +364,7 @@ if turtle then
 		end
 		workState.moveNotCommitted = true
 		local r = (isWorkArea * mov)()
-		if r then workState.pos = workState.pos + workState:aimingDir() end
+		if r then workState.pos = workState.pos + dir end
 		workState.moveNotCommitted = false
 		return r
 	end))

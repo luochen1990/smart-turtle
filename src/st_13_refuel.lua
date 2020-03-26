@@ -60,19 +60,25 @@ if turtle then
 		end))
 	end)
 
-	cryForHelpRefueling = markIOfn("cryForHelpRefueling(nStep)")(mkIOfn(function(nStep)
+	cryForHelpRefueling = markIOfn("cryForHelpRefueling(destPos,availableLowBar)")(mkIOfn(function(destPos, availableLowBar)
 		workState.cryingFor = "refueling"
-		log.cry("Help me! I need "..nStep.." fuel at "..show(workState.pos))
-		with({asFuel = false})(retry(refuelFromBackpack(nStep)))()
+
+		local reserveForMove = vec.manhat(workState.pos - destPos) * const.fuelReserveRatio
+		local reserveForRefuel = _fuelToReserve({O, (workState.fuelStation and workState.fuelStation.pos or nil)}, {workState.pos, destPos})
+		local lowBar = availableLowBar + reserveForMove + reserveForRefuel
+
+		log.cry("Help me! I want move to "..show(destPos).." and need "..lowBar.." fuel at "..show(workState.pos))
+		with({asFuel = true})(retry(refuelFromBackpack(lowBar)))()
 		workState.cryingFor = false
 	end))
 
 	-- | the refuel interrput: back to fuel station and refuel
-	refuel.fromStation = markIOfn("refuel.fromStation(availableLowBar,availableHighBar)")(mkIOfn(function(availableLowBar, availableHighBar)
+	refuel.fromStation = markIOfn("refuel.fromStation(availableLowBar,availableHighBar)")(mkIOfn(function(availableLowBar, availableHighBar, backPosp)
+		if workState.isRefueling then return false, "already interrputing to refuel" end
 		if not workState:isOnline() then return false, "turtle is offline" end
 
 		workState.isRefueling = true
-		workState.back = workState.back or getPosp() --NOTE: in case we are already in another interruption
+		workState.back = workState.back or backPosp or getPosp() --NOTE: in case we are already in another interruption
 
 		local singleTripCost
 		_robustVisitStation({
@@ -91,7 +97,7 @@ if turtle then
 				log.verb("Cost "..singleTripCost.." and visited "..triedTimes.." fuel stations, but all unavailable, now waiting for help...")
 			end,
 			waitForUserHelp = function(triedTimes, singleTripCost, station)
-				cryForHelpRefueling()
+				cryForHelpRefueling(workState.back.pos, availableLowBar)
 			end,
 			afterArrive = function(triedTimes, singleTripCost, station)
 				singleTripCost = singleTripCost
@@ -99,9 +105,9 @@ if turtle then
 		})
 
 		local reserveForBack = singleTripCost * const.fuelReserveRatio
-		local reserved = reserveForBack + _fuelToReserve1({workState.pos, O}, workState.back.pos)
-		local lowBar = availableLowBar + reserved
-		local highBar = default(availableLowBar * const.greedyRefuelRatio)(availableHighBar) + reserved
+		local reserveForRefuel = _fuelToReserve1({workState.pos, O}, workState.back.pos)
+		local lowBar = availableLowBar + reserveForBack + reserveForRefuel
+		local highBar = default(availableLowBar * const.greedyRefuelRatio)(availableHighBar) + reserveForBack + reserveForRefuel
 		log.verb("Cost "..singleTripCost.." to reach this fuel station, now refueling (".. lowBar ..")...")
 		-- begin refuel
 		local enoughRefuel = with({asFuel = workState.fuelStation.itemType})(refuel.fromBackpack.to(lowBar))
@@ -119,29 +125,46 @@ if turtle then
 		return true
 	end))
 
-	refuel.to = mkIOfn(function(availableLowBar, availableHighBar)
-		if availableLowBar <= turtle.getFuelLevel() then return true end
-		if availableLowBar > turtle.getFuelLimit() then return false end
-		local ok = refuel.fromBackpack.to(availableLowBar)()
-		if not ok and workMode.allowInterruption then -- no fuel in backpack, go to fuelStation
-			ok = with({destroy = 1})(refuel.fromFuelStation(availableLowBar, availableHighBar))()
+	refuel._prepare = mkIOfn(function(opts)
+		local availableLowBar = default(0)(opts.availableLowBar)
+		local destPos = default(workState.pos)(destPos)
+
+		local reserveForMove = vec.manhat(workState.pos - destPos) * const.fuelReserveRatio
+		local reserveForRefuel = _fuelToReserve({O, (workState.fuelStation and workState.fuelStation.pos or nil)}, {workState.pos, destPos})
+		local lowBar = availableLowBar + reserveForMove + reserveForRefuel
+		if turtle.getFuelLevel() >= lowBar then return true end
+
+		local ok = refuel.fromBackpack.to(lowBar)()
+		if not ok then -- no enough fuel in backpack
+			if workMode.allowInterruption and not workState.isRefueling then -- go to fuel station
+				ok = with({destroy = 1})(refuel.fromStation(availableLowBar, opts.availableHighBar, opts.backPosp))()
+			end
 		end
 		return ok
 	end)
 
-	refuel.prepareMoveTo = mkIOfn(function(destPos)
-		if not workState.isRefueling then
-			local beginPos = workState.pos
-			local refuel_pos = workState.fuelStation and workState.fuelStation.pos
-			local refuel_dis = (refuel_pos and math.max(vec.manhat(beginPos - refuel_pos), vec.manhat(destPos - refuel_pos))) or const.activeRadius
-			local unload_pos = workState.unloadStation and workState.unloadStation.pos
-			local unload_dis = (unload_pos and math.max(vec.manhat(beginPos - unload_pos), vec.manhat(destPos - unload_pos))) or const.activeRadius
-			local required_fuel = vec.manhat(beginPos - destPos) + math.max(refuel_dis, unload_dis) * 2
-			local ok = refuel.to(required_fuel * 2)()
-			if not ok then
-				(try(move.to(O) * turn.to(F)) * cryForHelpRefueling(required_fuel * 2))()
-			end
-		end
+	refuel.prepare = markIOfn("refuel.prepare()")(function(availableLowBar, availableHighBar)
+		return refuel._prepare({
+			availableLowBar = availableLowBar,
+			availableHighBar = availableHighBar,
+		})
+	end)
+
+	refuel.prepareMoveStep = markIOfn("refuel.prepareMoveStep()")(function(dir, availableLowBar, availableHighBar)
+		return refuel._prepare({
+			destPos = workState.pos + dir,
+			availableLowBar = availableLowBar,
+			availableHighBar = availableHighBar,
+		})
+	end)
+
+	refuel.prepareMoveTo = markIOfn("refuel.prepareMoveTo()")(function(destPos, availableLowBar, availableHighBar)
+		return refuel._prepare({
+			destPos = destPos,
+			availableLowBar = availableLowBar,
+			availableHighBar = availableHighBar,
+			backPosp = {pos = destPos},
+		})
 	end)
 
 end

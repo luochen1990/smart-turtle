@@ -619,7 +619,7 @@ end
 -- , will unregister bad stations and try to get next
 -- , will wait for user help when there is no more station available
 -- , will wait for manually move when cannot reach a station
--- , argument: { reqStation, beforeLeave, beforeRetry, beforeWait, waitForUserHelp }
+-- , argument: { reqStation, beforeLeave, beforeRetry, beforeWait, waitForUserHelp, afterArrive}
 function _robustVisitStation(opts)
 	local gotoStation
 	gotoStation = function(triedTimes, singleTripCost)
@@ -643,9 +643,9 @@ function _robustVisitStation(opts)
 		end
 	end
 	local succ, triedTimes, singleTripCost = gotoStation(1, 0)
-	if not succ then
+	if not succ then -- tried all station arrivable, but still failed
 		opts.beforeWait(triedTimes, singleTripCost, station)
-		race_(retry(delay(gotoStation, triedTimes + 1, singleTripCost)), delay(opts.waitForUserHelp, triedTimes, singleTripCost, station))()
+		race_(retry(delay(gotoStation, triedTimes, singleTripCost)), delay(opts.waitForUserHelp, triedTimes, singleTripCost, station))()
 	end
 	opts.afterArrive(triedTimes, singleTripCost, station)
 	return true
