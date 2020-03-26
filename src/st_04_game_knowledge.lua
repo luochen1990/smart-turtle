@@ -2,6 +2,8 @@
 
 const = {
 	activeRadius = 100, -- this will decide default refuel level 
+	fuelReserveRatio = 2, -- reserve some extra fuel for detouring
+	greedyRefuelRatio = 10, -- greedy refuel ratio
 	turtle = {
 		needfuel = true,
 		backpackSlotsNum = 16,
