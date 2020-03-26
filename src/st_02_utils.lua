@@ -472,7 +472,7 @@ function openWirelessModem()
 	for _, mSide in ipairs( peripheral.getNames() ) do
 		if peripheral.getType( mSide ) == "modem" then
 			local modem = peripheral.wrap( mSide )
-			if modem.isWireless() then
+			if (not modem.isWireless) or modem.isWireless() then
 				rednet.open(mSide)
 				return true
 			end

@@ -76,7 +76,7 @@ end
 
 _item = {
 	isTurtle = glob("computercraft:turtle_*"),
-	isModem = glob("computercraft:wireless_modem*"),
+	isModem = glob("computercraft:*modem*"),
 	isChest = glob(const.chestBlocks),
 	isContainer = (function()
 		local p = glob(const.otherContainerBlocks)
