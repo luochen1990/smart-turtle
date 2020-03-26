@@ -214,8 +214,14 @@ _deviceDaemonCo = function()
 		return safeEval(msg) --TODO: set proper env
 	end, rpc._nopeLogger)
 
+	local pocketDaemon = function()
+		_logPrintCo({verb = false, info = false, warn = false, bug = false, cry = true})
+	end
+
 	if turtle then
 		para_(turtleDaemon, computerDaemon)()
+	elseif pocket then
+		para_(pocketDaemon, computerDaemon)()
 	else
 		computerDaemon()
 	end
