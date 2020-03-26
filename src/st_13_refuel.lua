@@ -68,7 +68,7 @@ if turtle then
 		local lowBar = availableLowBar + reserveForMove + reserveForRefuel
 
 		log.cry("Help me! I want move to "..show(destPos).." and need "..lowBar.." fuel at "..show(workState.pos))
-		with({asFuel = true})(retry(refuelFromBackpack(lowBar)))()
+		with({asFuel = true})(retry(refuel.fromBackpack.to(lowBar)))()
 		workState.cryingFor = false
 	end))
 
@@ -80,14 +80,12 @@ if turtle then
 		workState.isRefueling = true
 		workState.back = workState.back or backPosp or getPosp() --NOTE: in case we are already in another interruption
 
-		local singleTripCost
-		_robustVisitStation({
+		local _, _, singleTripCost, station = _robustVisitStation({
 			reqStation = function(triedTimes, singleTripCost)
 				local ok, station = requestFuelStation(availableLowBar + singleTripCost * 2)()
 				return ok, station
 			end,
 			beforeLeave = function(triedTimes, singleTripCost, station)
-				workState.fuelStation = station
 				log.verb("Visiting fuel station "..show(station.pos).."...")
 			end,
 			beforeRetry = function(triedTimes, singleTripCost, station, cost)
@@ -97,12 +95,14 @@ if turtle then
 				log.verb("Cost "..singleTripCost.." and visited "..triedTimes.." fuel stations, but all unavailable, now waiting for help...")
 			end,
 			waitForUserHelp = function(triedTimes, singleTripCost, station)
-				cryForHelpRefueling(workState.back.pos, availableLowBar)
-			end,
-			afterArrive = function(triedTimes, singleTripCost, station)
-				singleTripCost = singleTripCost
+				cryForHelpRefueling(workState.back.pos, availableLowBar)()
 			end,
 		})
+		if station then
+			workState.fuelStation = station
+		else --NOTE: implies user helped
+			return true
+		end
 
 		local reserveForBack = singleTripCost * const.fuelReserveRatio
 		local reserveForRefuel = _fuelToReserve1({workState.pos, O}, workState.back.pos)
@@ -110,8 +110,8 @@ if turtle then
 		local highBar = default(availableLowBar * const.greedyRefuelRatio)(availableHighBar) + reserveForBack + reserveForRefuel
 		log.verb("Cost "..singleTripCost.." to reach this fuel station, now refueling (".. lowBar ..")...")
 		-- begin refuel
-		local enoughRefuel = with({asFuel = workState.fuelStation.itemType})(refuel.fromBackpack.to(lowBar))
-		local greedyRefuel = with({asFuel = workState.fuelStation.itemType})(refuel.fromBackpack.to(math.max(const.activeRadius * const.greedyRefuelRatio, highBar)))
+		local enoughRefuel = with({asFuel = station.itemType})(refuel.fromBackpack.to(lowBar))
+		local greedyRefuel = with({asFuel = station.itemType})(refuel.fromBackpack.to(math.max(const.activeRadius * const.greedyRefuelRatio, highBar)))
 		rep(retry(suck) * -enoughRefuel)() -- repeat until enough --TODO: suck.exact(?)
 		if os.getComputerLabel() then
 			rep(suck * -greedyRefuel)() -- try to greedy refuel, stop when suck fail

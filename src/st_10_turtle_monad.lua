@@ -23,15 +23,16 @@ if turtle then
 		useAsFuel = (function()
 			local latest_asFuel = nil
 			local latest_glob = nil
-			return function(itemName)
-				if not workMode.asFuel then
+			return function(wm, itemName)
+				if not wm.asFuel then
 					return false
-				elseif workMode.asFuel == true then
+				elseif wm.asFuel == true then
 					return true
-				elseif workMode.asFuel == latest_asFuel then
+				elseif wm.asFuel == latest_asFuel then
 					return latest_glob(itemName)
 				else
-					latest_asFuel = workMode.asFuel
+					print(latest_asFuel, itemName)
+					latest_asFuel = wm.asFuel
 					latest_glob = glob(latest_asFuel)
 					return latest_glob(itemName)
 				end

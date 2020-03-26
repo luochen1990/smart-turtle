@@ -619,14 +619,15 @@ end
 -- , will unregister bad stations and try to get next
 -- , will wait for user help when there is no more station available
 -- , will wait for manually move when cannot reach a station
--- , argument: { reqStation, beforeLeave, beforeRetry, beforeWait, waitForUserHelp, afterArrive}
+-- , argument: { reqStation, beforeLeave, beforeRetry, beforeWait, waitForUserHelp }
 function _robustVisitStation(opts)
-	local gotoStation
+	local gotoStation, station
 	gotoStation = function(triedTimes, singleTripCost)
-		local ok, station = opts.reqStation(triedTimes, singleTripCost)
+		local ok, res = opts.reqStation(triedTimes, singleTripCost)
 		if not ok then
 			return false, triedTimes, singleTripCost
 		end
+		station = res
 		-- got fresh station here
 		opts.beforeLeave(triedTimes, singleTripCost, station)
 		local leavePos, fuelBeforeLeave = workState.pos, turtle.getFuelLevel()
@@ -642,13 +643,12 @@ function _robustVisitStation(opts)
 			return true, triedTimes, singleTripCost_
 		end
 	end
-	local succ, triedTimes, singleTripCost = gotoStation(1, 0)
+	local succ, triedTimes, singleTripCost = gotoStation(0, 0)
 	if not succ then -- tried all station arrivable, but still failed
 		opts.beforeWait(triedTimes, singleTripCost, station)
 		race_(retry(delay(gotoStation, triedTimes, singleTripCost)), delay(opts.waitForUserHelp, triedTimes, singleTripCost, station))()
 	end
-	opts.afterArrive(triedTimes, singleTripCost, station)
-	return true
+	return true, triedTimes, singleTripCost, station
 end
 
 -- | turtle is idle means: repl is not running command and workState.isRunningSwarmTask = false

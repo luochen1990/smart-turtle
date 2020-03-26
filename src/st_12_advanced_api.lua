@@ -191,7 +191,8 @@ if turtle then
 			local projLen = diag:dot(mainDir)
 
 			-- auto refuel
-			refuel.prepareMoveTo(near, area:volume())() --NOTE: refuel.prepareMoveTo() may change our pos
+			refuel.prepareMoveTo(near, area:volume() + vec.manhat(far - workState.pos) * const.fuelReserveRatio)()
+			--NOTE: refuel.prepareMoveTo() may change our pos
 
 			log.verb("[scan] "..show(near)..".."..show(far)..", "..rank.."d "..(projLen+1).." layers toward " .. showDir(mainDir))
 			assert((near..far) == area, "(near..far) should eq area")
