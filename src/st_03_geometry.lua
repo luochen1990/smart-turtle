@@ -136,8 +136,8 @@ mkArea, isArea = (function()
 			volume = function(a) return (a.diag.x + 1) * (a.diag.y + 1) * (a.diag.z + 1) end,
 			contains = function(a, p) return p >= a.low and p <= a.high end,
 			vertexes = function(a) return {
-				a.low, a.low + E * E:dot(a.diag), a.low + S * S:dot(a.diag), a.low + U * U:dot(a.diag),
-				a.high + D * D:dot(a.diag), a.high + N * N:dot(a.diag), a.high + W * W:dot(a.diag), a.high,
+				a.low, a.low + const.dir.E * const.dir.E:dot(a.diag), a.low + const.dir.S * const.dir.S:dot(a.diag), a.low + U * U:dot(a.diag),
+				a.high + D * D:dot(a.diag), a.high + const.dir.N * const.dir.N:dot(a.diag), a.high + const.dir.W * const.dir.W:dot(a.diag), a.high,
 			} end,
 			-- find a vertex nearest to a specific pos
 			-- NOTE: far = a.low + a.high - near
