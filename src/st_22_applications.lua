@@ -99,7 +99,7 @@ app.plant = markIO("app.plant")(mkIO(function()
 	local plant = (isNamed("*:*_log") + (isNamed("*:*_sapling") + use(1)) * ripen) * cutTrunk * try(needSapling * cutLeaf)
 	workState.aiming = 0
 	local originPosp = getPosp()
-	return rep(with({pinnedSlot = pinnedSlot})(plant * with({destroy = true})(recoverPosp(originPosp))))()
+	return rep(with({pinnedSlot = pinnedSlot, asFuel = {"minecraft:stick", "*:*coal"}})(plant * with({destroy = true})(recoverPosp(originPosp))))()
 end))
 
 help.app.mine = doc({
@@ -111,7 +111,7 @@ app.mine = markIOfn("app.mine")(mkIOfn(function(area)
 	area = toArea(area)
 	local a1 = area:shift(D) --TODO: more precise area downside boundary
 	local digOre = isNamed("*:*_ore") * dig
-	return savePosp( with({destroy = true})( scan(a1, D, 3)(try(turn.U * digOre) * (turn.D * digOre)) ) )()
+	return savePosp(with({destroy = true, asFuel = true})(scan(a1, D, 3)(try(turn.U * digOre) * (turn.D * digOre))))()
 end))
 
 help.app.clearBlock = doc({
