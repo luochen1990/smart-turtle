@@ -56,7 +56,7 @@ end
 swarm = {}
 
 swarm.config = {
-	asFuel = {"minecraft:charcoal", "minecraft:white_carpet"},
+	asFuel = {"minecraft:charcoal", "minecraft:coal", "minecraft:white_carpet"},
 }
 
 swarm._state = {

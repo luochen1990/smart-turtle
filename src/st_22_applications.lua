@@ -80,23 +80,23 @@ app.flatGround = markIOfn("app.flatGround(area,thickness)")(mkIOfn(function(area
 	return savePosp(with({destroy = true})(scan(area)(buildFloor * turn.U * rep(dig * move))))()
 end))
 
-help.app.plant = doc({
-	signature = "app.plant : IO Bool",
-	usage = "app.plant()",
+help.app.plantTree = doc({
+	signature = "app.plantTree : IO Bool",
+	usage = "app.plantTree()",
 	desc = "plant a tree and cut it to get wood, need bone_meal to ripen the tree",
 })
-app.plant = markIO("app.plant")(mkIO(function()
+app.plantTree = markIO("app.plantTree")(mkIO(function()
 	local pinnedSlot = askForPinnedSlot({
-		[1] = {desc = "sapling", itemFilter = glob("*:*_sapling"), depot = {pos = O+B*2+R, dir = D}},
-		[2] = {desc = "bone_meal", itemFilter = glob("minecraft:bone_meal"), depot = {pos = O+B*2+R*2, dir = D}},
+		[1] = {desc = "sapling", itemFilter = glob("*:*sapling"), depot = {pos = O+B*2+R, dir = D}},
+		[2] = {desc = "bone meal", itemFilter = glob({"minecraft:bone_meal", "minecraft:dye"}), depot = {pos = O+B*2+R*2, dir = D}},
 	})
-	local ripen = retryUntil(isNamed("*:*_log"))(use(2))
+	local ripen = retryUntil(isNamed("*:*log"))(use(2))
 	local cutTrunk = dig * move * turn.U * rep(dig * move)
 	local cutLeaf = currentPos:pipe(function(p)
 		return with({destroy = true})(scan(p+(D+F+L)*2 .. p+(D+B+R)*2, D, 3)(try(turn.U * dig) * turn.D * dig))
 	end)
-	local needSapling = mkIO(function() return slot.count("*:*_sapling") < 10 end)
-	local plant = (isNamed("*:*_log") + (isNamed("*:*_sapling") + use(1)) * ripen) * cutTrunk * try(needSapling * cutLeaf)
+	local needSapling = mkIO(function() return slot.count("*:*sapling") < 10 end)
+	local plant = (isNamed("*:*log") + (isNamed("*:*sapling") + use(1)) * ripen) * cutTrunk * try(needSapling * cutLeaf)
 	workState.aiming = 0
 	local originPosp = getPosp()
 	return rep(with({pinnedSlot = pinnedSlot, asFuel = {"minecraft:stick", "*:*coal"}})(plant * with({destroy = true})(recoverPosp(originPosp))))()
