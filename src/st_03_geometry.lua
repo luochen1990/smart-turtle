@@ -51,6 +51,30 @@ vec = {
 		if v.z ~= 0 then table.insert(r, vec.axis.Z * sign(v.z)) end
 		return r
 	end,
+	-- newCoordInOldRep is new coord origin pos & dir expressed in old coord system
+	rebaseCoordSystem = function(newCoordInOldRep)
+		local rot = dirRotationBetween(newCoordInOldRep.dir, vec.axis.X)
+		local shift = -rot(newCoordInOldRep.pos)
+		return {
+			transPos = function(p) return p + shift end,
+			transDir = rot,
+			transPosd = function(posd)
+				return {pos = posd.pos + shift, dir = rot(posd.dir)}
+			end,
+		}
+	end,
+	migrateCoordSystem = function(posdOldRep, posdNewRep)
+		local p0, d0, p1, d1 = posdOldRep.pos, posdOldRep.dir, posdNewRep.pos, posdNewRep.dir
+		local rot = dirRotationBetween(d0, d1)
+		local shift = p1 - rot(p0)
+		return {
+			transPos = function(p) return p + shift end,
+			transDir = rot,
+			transPosd = function(posd)
+				return {pos = posd.pos + shift, dir = rot(posd.dir)}
+			end,
+		}
+	end,
 }
 setmetatable(vec, {
 	__call = function(_, ...) return vector.new(...) end,
