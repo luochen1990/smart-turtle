@@ -10,7 +10,7 @@ if turtle then
 	end)
 elseif pocket then
 	myPos = mkIO(function()
-		return gpsPos() + D
+		return gpsPos() + const.dir.D
 	end)
 else
 	myPos = mkIO(function()
