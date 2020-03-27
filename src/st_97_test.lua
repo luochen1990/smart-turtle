@@ -66,9 +66,9 @@ if turtle then
 	_test.transportLine = markIO("_test.transportLine")(mkIO(function()
 		local s = {pos = O + L * 2 + F * 2 + U * 3, dir = R}
 		local t = {pos = O + R * 4 + U, dir = L}
-		;(visitStation(s) * use("minecraft:chest"))()
-		;(visitStation(t) * use("minecraft:chest"))()
-		return transportLine(s, t)()
+		;(recoverPosp(s) * use("minecraft:chest"))()
+		;(recoverPosp(t) * use("minecraft:chest"))()
+		return app.transportLine(s, t)()
 	end))
 
 	_test.requestStation = markIO("_test.requestStation")(mkIO(function()

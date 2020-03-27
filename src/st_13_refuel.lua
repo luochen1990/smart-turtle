@@ -80,7 +80,7 @@ if turtle then
 		workState.isRefueling = true
 		workState.back = workState.back or backPosp or getPosp() --NOTE: in case we are already in another interruption
 
-		local _, _, singleTripCost, station = _robustVisitStation({
+		local _, _, singleTripCost, station = _visitStation({
 			reqStation = function(triedTimes, singleTripCost)
 				local ok, station = requestFuelStation(availableLowBar + singleTripCost * 2)()
 				return ok, station

@@ -615,42 +615,6 @@ unregisterStation = function(st)
 	return foldSuccFlag(swarm.client.request("swarm.services.unregisterStation("..literal({itemType = st.itemType, pos = st.pos})..")")())
 end
 
--- | a tool to visit station robustly
--- , will unregister bad stations and try to get next
--- , will wait for user help when there is no more station available
--- , will wait for manually move when cannot reach a station
--- , argument: { reqStation, beforeLeave, beforeRetry, beforeWait, waitForUserHelp }
-function _robustVisitStation(opts)
-	local gotoStation, station
-	gotoStation = function(triedTimes, singleTripCost)
-		local ok, res = opts.reqStation(triedTimes, singleTripCost)
-		if not ok then
-			return false, triedTimes, singleTripCost
-		end
-		station = res
-		-- got fresh station here
-		opts.beforeLeave(triedTimes, singleTripCost, station)
-		local leavePos, fuelBeforeLeave = workState.pos, turtle.getFuelLevel()
-		with({workArea = false, destroy = 1})(cryingVisitStation(station))()
-		-- arrived station here
-		local cost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
-		local singleTripCost_ = singleTripCost + cost
-		if not isStation() then -- the station is not available
-			opts.beforeRetry(triedTimes, singleTripCost, station, cost)
-			unregisterStation(station)
-			return gotoStation(triedTimes + 1, singleTripCost_)
-		else
-			return true, triedTimes, singleTripCost_
-		end
-	end
-	local succ, triedTimes, singleTripCost = gotoStation(0, 0)
-	if not succ then -- tried all station arrivable, but still failed
-		opts.beforeWait(triedTimes, singleTripCost, station)
-		race_(retry(delay(gotoStation, triedTimes, singleTripCost)), delay(opts.waitForUserHelp, triedTimes, singleTripCost, station))()
-	end
-	return true, triedTimes, singleTripCost, station
-end
-
 -- | turtle is idle means: repl is not running command and workState.isRunningSwarmTask = false
 isIdle = mkIO(function()
 	--return not (_repl.state.isRunningCommand or workState.isRunningSwarmTask)

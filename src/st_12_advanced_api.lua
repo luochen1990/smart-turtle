@@ -214,39 +214,57 @@ if turtle then
 		end)
 	end)
 
-	visitStation = markIOfn("visitStation(station)")(mkIOfn(function(station)
-		assert(station.pos and station.dir, "[visitStation] station.pos and station.dir is required!")
-		return (move.to(station.pos) * turn.to(station.dir))()
+	visitDepot = markIOfn("visitDepot(depot)")(mkIOfn(function(depot)
+		assert(depot.pos and depot.dir, "[visitDepot] depot.pos and depot.dir is required!")
+		return (move.to(depot.pos) * turn.to(depot.dir))()
 	end))
 
-	cryingVisitStation = markIOfn("cryingVisitStation(station)")(function(station)
-		assert(station.pos and station.dir, "[cryingVisitStation] station.pos and station.dir is required!")
+	cryingVisitDepot = markIOfn("cryingVisitDepot(depot)")(function(depot)
+		assert(depot.pos and depot.dir, "[cryingVisitDepot] depot.pos and depot.dir is required!")
 		local leavePos = workState.pos
-		return visitStation(station) + cryForHelpMoving(leavePos, station.pos) * turn.to(station.dir)
+		return visitDepot(depot) + cryForHelpMoving(leavePos, depot.pos) * turn.to(depot.dir)
 	end)
+
+	-- | a tool to visit station robustly
+	-- , will unregister bad stations and try to get next
+	-- , will wait for user help when there is no more station available
+	-- , will wait for manually move when cannot reach a station
+	-- , argument: { reqStation, beforeLeave, beforeRetry, beforeWait, waitForUserHelp }
+	_visitStation = function(opts)
+		local gotoStation, station
+		gotoStation = function(triedTimes, singleTripCost)
+			local ok, res = opts.reqStation(triedTimes, singleTripCost)
+			if not ok then
+				return false, triedTimes, singleTripCost
+			end
+			station = res
+			-- got fresh station here
+			opts.beforeLeave(triedTimes, singleTripCost, station)
+			local leavePos, fuelBeforeLeave = workState.pos, turtle.getFuelLevel()
+			with({workArea = false, destroy = 1})(cryingVisitDepot(station))()
+			-- arrived station here
+			local cost = math.max(0, fuelBeforeLeave - turtle.getFuelLevel())
+			local singleTripCost_ = singleTripCost + cost
+			if not isStation() then -- the station is not available
+				opts.beforeRetry(triedTimes, singleTripCost, station, cost)
+				unregisterStation(station)
+				return gotoStation(triedTimes + 1, singleTripCost_)
+			else
+				return true, triedTimes, singleTripCost_
+			end
+		end
+		local succ, triedTimes, singleTripCost = gotoStation(0, 0)
+		if not succ then -- tried all station arrivable, but still failed
+			opts.beforeWait(triedTimes, singleTripCost, station)
+			race_(retry(delay(gotoStation, triedTimes, singleTripCost)), delay(opts.waitForUserHelp, triedTimes, singleTripCost, station))()
+		end
+		return true, triedTimes, singleTripCost, station
+	end
 
 	carry = markIOfn("carry(from,to,count,name)")(mkIOfn(function(from, to, count, name)
 		local got = slot.count(name)
-		local visit = function(st) return visitStation(st) * (isStation + -try(unregisterStation(st) / (turn.U * move ^ 3))) end
+		local visit = function(st) return visitDepot(st) * (isStation + -try(unregisterStation(st) / (turn.U * move ^ 3))) end
 		return (visit(from) * try(suck.exact(count - got, name)) * visit(to) * drop.exact(count, name) / (turn.U * move ^ 3))()
-	end))
-
-	transportLine = markIOfn("transportLine(from, to)")(mkIOfn(function(from, to)
-		if not workState.fuelStation then error("[transportLine] please set a fuel provider") end
-		local fuelReservation = 2 * vec.manhat(to.pos - from.pos) + vec.manhat(to.pos - workState.fuelStation.pos) + vec.manhat(from.pos - workState.fuelStation.pos)
-		local cnt = 0
-		while true do
-			refuel.prepare(fuelReservation)()
-			;(cryingVisitStation(from) * rep(suck) * cryingVisitStation(to) * rep(select(slot.isNonEmpty) * drop))()
-			cnt = cnt + 1
-			if not slot._findThat(slot.isNonEmpty) then
-				log.verb("[transportLine] finished "..cnt.." trips, now have a rest for 20 seconds...")
-				sleep(20)
-			else
-				log.verb("[transportLine] the dest chest is full, waiting for space...")
-				;(retry(select(slot.isNonEmpty) * drop) * rep(select(slot.isNonEmpty) * drop))()
-			end
-		end
 	end))
 
 end

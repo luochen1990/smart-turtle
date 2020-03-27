@@ -125,3 +125,27 @@ app.clearBlock = markIOfn("app.clearBlock")(mkIOfn(function(area)
 	return savePosp( with({destroy = true})( scan(a1, D, 3)(try(turn.U * dig) * (turn.D * dig)) ) )()
 end))
 
+help.app.transportLine = doc({
+	signature = "app.transportLine : {pos = Pos, dir = Dir} -> {pos = Pos, dir = Dir} -> IO Bool",
+	usage = "app.transportLine(from, to)()",
+	desc = "keep transporting items from one depot to another",
+})
+app.transportLine = markIOfn("app.transportLine(from, to)")(mkIOfn(function(from, to)
+	if not workState.fuelStation then error("[app.transportLine] please set a fuel provider") end
+
+	local fuelReservation = 2 * vec.manhat(to.pos - from.pos) + vec.manhat(to.pos - workState.fuelStation.pos) + vec.manhat(from.pos - workState.fuelStation.pos)
+	local cnt = 0
+	while true do
+		refuel.prepare(fuelReservation)()
+		;(cryingVisitDepot(from) * rep(suck) * cryingVisitDepot(to) * rep(select(slot.isNonEmpty) * drop))()
+		cnt = cnt + 1
+		if not slot._findThat(slot.isNonEmpty) then
+			log.verb("[app.transportLine] finished "..cnt.." trips, now have a rest for 20 seconds...")
+			sleep(20)
+		else
+			log.verb("[app.transportLine] the dest chest is full, waiting for space...")
+			;(retry(select(slot.isNonEmpty) * drop) * rep(select(slot.isNonEmpty) * drop))()
+		end
+	end
+end))
+

@@ -185,7 +185,7 @@ if turtle then
 	unloadToDepot = markIO("unloadToDepot")(mkIO(function()
 		if not workMode.depot then return false, "workMode.depot is not provided" end
 
-		return saveSelected(savePosp(visitStation(workMode.depot) * isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop)))()
+		return saveSelected(savePosp(visitDepot(workMode.depot) * isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop)))()
 	end))
 
 	-- | the unload interrput: back to unload station and clear the backpack
@@ -195,7 +195,7 @@ if turtle then
 		workState.isUnloading = true
 		workState.back = workState.back or getPosp() --NOTE: in case we are already in another interruption
 
-		_robustVisitStation({
+		_visitStation({
 			reqStation = function(triedTimes, singleTripCost)
 				local ok, station = requestUnloadStation(0)()
 				return ok, station
@@ -312,9 +312,9 @@ if turtle then
 		local need = highBar - got
 		local depot = (pinned and pinned.depot)
 		if depot then
-			return (savePosp(visitStation(depot) * (suck.exact(need, itemType) + callForRestocking(itemType, need))))()
+			return (savePosp(visitDepot(depot) * (suck.exact(need, itemType) + callForRestocking(itemType, need))))()
 		else
-			return (savePosp(visitStation({pos = O, dir = F}) * waitForHelpRestocking(itemType, need)))()
+			return (savePosp(visitDepot({pos = O, dir = F}) * waitForHelpRestocking(itemType, need)))()
 		end
 	end))
 
