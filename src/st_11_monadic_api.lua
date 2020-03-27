@@ -53,10 +53,10 @@ if turtle then
 	end
 	_setNamedDirection("U", const.dir.U)
 	_setNamedDirection("D", const.dir.D)
-	_setNamedDirection("F", const.dir.E)
-	_setNamedDirection("B", -const.dir.E)
-	_setNamedDirection("L", leftSide(const.dir.E))
-	_setNamedDirection("R", rightSide(const.dir.E))
+	_setNamedDirection("F", vec.axis.X)
+	_setNamedDirection("B", -vec.axis.X)
+	_setNamedDirection("L", leftSide(vec.axis.X))
+	_setNamedDirection("R", rightSide(vec.axis.X))
 
 	help.turn.lateral = doc({
 		signature = "turn.lateral : IO Bool",

@@ -13,7 +13,7 @@ if turtle then
 		keepItems = 2, -- 0:always drop, 1:only keep valuable items, 2:keep non-cheap items, 3:keep all
 		allowInterruption = true, -- whether allow turtle interrupt current task to refuel or unload or fetch
 		pinnedSlot = {}, -- pinned slots, element like {itemType = "minecraft:coal", stackLimit = 64, lowBar = 2, highBar = 64, depot = {pos, dir}}
-		depot = {pos = O, dir = B}, -- local depot to unload items
+		depot = {pos = vec.zero, dir = -vec.axis.X}, -- local depot to unload items
 		preferLocal = true, -- prefer to visit local depot or swarm station
 		--backpackWhiteList = {}, -- not used yet
 		--backpackBlackList = {}, -- not used yet
@@ -43,7 +43,7 @@ if turtle then
 	workState = {
 		gpsCorrected = false,
 		pos = vec.zero, -- current pos
-		facing = const.dir.E, -- current facing direction, const.dir.N/S/W/E
+		facing = vec.axis.X, -- current facing direction, should be one of E/S/W/N, init is E
 		aiming = 0, -- 0:front, 1:up, -1:down
 		fuelStation = false,
 		unloadStation = false,

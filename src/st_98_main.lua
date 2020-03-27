@@ -6,28 +6,28 @@ if turtle then
 	_correctCoordinateSystem = markFn("_correctCoordinateSystem(pos, facing)")(function(pos, facing)
 		assert(pos and pos.x, "[_correctCoordinateSystem(pos, facing)] pos must be a vector, but got"..tostring(pos))
 		assert(facing and facing.y == 0 and vec.manhat(facing) == 1, "[_correctCoordinateSystem(pos, facing)] facing must be a dir, but got "..tostring(facing))
+		-- define named absolute directions E/S/W/N
+		for _, dirName in ipairs(const.absoluteDirectionNames) do
+			_setNamedDirection(dirName, const.dir[dirName])
+		end
+		-- migrate all locally maintained pos & dir from old system to new system
 		local old_pos, old_facing = workState.pos, workState.facing
-		local offset = pos - old_pos -- use this to correct all locally maintained positions
-		local rot = dirRotationBetween(facing, old_facing)
-		local trans = function(p) return rot(p) + offset end
-		O = trans(O)
-		if workMode.depot and workMode.depot.pos then
-			workMode.depot.pos = trans(workMode.depot.pos)
-		end
-		for _, pinned in ipairs(workMode.pinnedSlot) do
-			if pinned.depot then
-				pinned.depot = trans(pinned.depot)
-			end
-		end
+		local migrate = vec.migrateCoordSystem({pos = old_pos, dir = old_facing}, {pos = pos, dir = facing})
+		O = migrate.transPos(O)
 		_setNamedDirection("F", facing)
 		_setNamedDirection("B", -facing)
 		_setNamedDirection("L", leftSide(facing))
 		_setNamedDirection("R", rightSide(facing))
-		for _, dirName in ipairs(const.absoluteDirectionNames) do
-			_setNamedDirection(dirName, const.dir[dirName])
+		if workMode.depot then
+			workMode.depot = migrate.transPosd(workMode.depot)
+		end
+		for _, pinned in ipairs(workMode.pinnedSlot) do
+			if pinned.depot then
+				pinned.depot = migrate.transPosd(pinned.depot)
+			end
 		end
 		workState.pos, workState.facing = pos, facing
-		workState.gpsCorrected = true
+		workState.gpsCorrected = true --NOTE: this function should be atomic
 		return true
 	end)
 

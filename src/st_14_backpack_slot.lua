@@ -179,7 +179,7 @@ if turtle then
 		else -- prefer swarm
 			succ = (unloadToStation + unloadToDepot)()
 		end
-		return succ or (try(move.to(workMode.depot or O)) * cryForHelpUnloading)()
+		return succ or (try(visitDepot(workMode.depot)) * cryForHelpUnloading)()
 	end))
 
 	unloadToDepot = markIO("unloadToDepot")(mkIO(function()
