@@ -2,7 +2,7 @@
 
 _test = {}
 
-if turtle then
+if true then
 	_test.move = markIO("_test.move")(mkIO(function()
 		return savePosp(move.go(L * 2))()
 	end))
@@ -74,5 +74,43 @@ if turtle then
 	_test.requestStation = markIO("_test.requestStation")(mkIO(function()
 		return _requestSwarm("swarm.services.requestStation("..literal("minecraft:charcoal", 0, workState.pos, turtle.getFuelLevel())..")")
 	end))
+
+	_test.race = mkIO(function()
+		print("this perf test is for comparing turtle move speed between raw api and st api")
+		print("Usage:")
+		print(" _test.race.raw -- use the raw api to move 10 steps and return back")
+		print(" _test.race.st -- use the st api to move 10 steps and return back")
+		print(" _test.race.begin -- begin racing, you can use a pocket computer to execute it")
+	end)
+
+	_test.race.begin = mkIO(function()
+		rednet.broadcast("begin", "_test.race")
+	end)
+
+	_test.race._wrap = mkIOfn(function(label, coreProc)
+		local old_label = os.getComputerLabel()
+		os.setComputerLabel(label)
+		print("[race] waiting for begin signal")
+		local senderId, msg = rednet.receive("_test.race")
+		print("[race] got msg from "..senderId..": "..msg)
+		local beginTime = os.clock()
+		coreProc()
+		print("[race] finished in "..(os.clock() - beginTime).." seconds")
+		os.setComputerLabel(old_label)
+	end)
+
+	if turtle then
+		_test.race.st = _test.race._wrap("st-turtle", savePosd(move ^ 10))
+		_test.race.raw = _test.race._wrap("raw-turtle", function()
+			for trip = 1, 2 do
+				for step = 1, 10 do
+					turtle.forward()
+				end
+				turtle.turnLeft()
+				turtle.turnLeft()
+			end
+		end)
+	end
+
 end
 
