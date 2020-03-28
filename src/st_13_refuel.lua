@@ -36,7 +36,7 @@ if turtle then
 		local limit = turtle.getFuelLimit()
 		local got = turtle.getFuelLevel()
 		if got + heat > limit then return false, "fuel tank almost full" end
-		turtle.refuel(math.floor((limit - got) / heat))
+		return turtle.refuel(math.floor((limit - got) / heat))
 	end)
 
 	refuel.fromBackpack = mkIO(function()
