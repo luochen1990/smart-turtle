@@ -290,12 +290,13 @@ if turtle then
 		return false, got
 	end))
 
-	callForRestocking = markIOfn("callForRestocking(itemType,count)")(mkIOfn(function(itemType, count, wait)
-		log.cry("I need "..count.." "..itemType.." at "..show(myPos())) --TODO: create swarm task
-		if wait == true then
-			return retry(try(suck.exactTo(count, itemType)) * ensureItemFromBackpack(itemType, count))()
+	callForRestocking = markIOfn("callForRestocking(itemType,count)")(mkIOfn(function(itemType, count, async)
+		if async then
+			log.info("I need "..count.." "..itemType.." at "..show(myPos())) --TODO: create swarm task
+			return true
 		else
-			return false
+			log.cry("I need "..count.." "..itemType.." at "..show(myPos())) --TODO: create swarm task
+			return retry(try(suck.exactTo(count, itemType)) * ensureItemFromBackpack(itemType, count))()
 		end
 	end))
 
@@ -304,8 +305,9 @@ if turtle then
 		return retry(ensureItemFromBackpack(itemType, count))()
 	end))
 
-	ensureItem = markIOfn("ensureItem(itemType,lowBar,highBar)")(mkIOfn(function(itemType, lowBar, highBar)
+	ensureItem = markIOfn("ensureItem(itemType,lowBar,highBar)")(mkIOfn(function(itemType, lowBar, highBar, requiredBar)
 		lowBar = default(2)(lowBar)
+		requiredBar = default(2)(requiredBar)
 		local ok, got = ensureItemFromBackpack(itemType, lowBar)()
 		if ok then return true end
 		-- need restock here
@@ -313,10 +315,13 @@ if turtle then
 		local pinned = workMode.pinnedSlot[sn]
 		local stackLimit = (pinned and pinned.stackLimit) or slot.stackLimit(sn) or 1
 		highBar = math.max(lowBar, default(math.max(stackLimit, lowBar * 2))(highBar))
+		local required = math.max(0, requiredBar - got)
 		local need = highBar - got
 		local depot = (pinned and pinned.depot)
 		if depot then
-			return (savePosp(visitDepot(depot) * (suck.exact(need, itemType) + callForRestocking(itemType, need, not pinned.optional))))()
+			local fetch = suck.exact(required, itemType) * try(suck.exact(need - required, itemType))
+			local mayCall = (ensureItemFromBackpack(itemType, lowBar) + callForRestocking(itemType, need, slot.count(itemType) >= requiredBar))
+			return (savePosp(visitDepot(depot) * (fetch / mayCall)))()
 		else
 			return (savePosp(visitDepot({pos = O, dir = F}) * waitForHelpRestocking(itemType, need)))()
 		end
@@ -326,7 +331,7 @@ if turtle then
 		local sn = turtle.getSelectedSlot()
 		local pinned = workMode.pinnedSlot[sn]
 		if pinned then
-			return ensureItem(pinned.itemType, pinned.lowBar or 2, pinned.highBar)()
+			return ensureItem(pinned.itemType, pinned.lowBar or 2, pinned.highBar or pinned.stackLimit or 4, pinned.requiredBar)()
 		else -- not pinned
 			local det = turtle.getItemDetail(sn)
 			if det then
@@ -337,7 +342,7 @@ if turtle then
 		end
 	end))
 
-	-- | slotConfig is like {[1] = {desc, itemFilter, lowBar, highBar, optional, depot}}
+	-- | slotConfig is like {[1] = {desc, itemFilter, lowBar, highBar, requiredBar, depot}}
 	askForPinnedSlot = function(slotConfig)
 		local pinnedSlot = {}
 		for i, cfg in ipairs(slotConfig) do
@@ -366,9 +371,9 @@ if turtle then
 			pinnedSlot[i] = {
 				itemType = det.name,
 				stackLimit = det.stackLimit,
-				lowBar = 2,
-				highBar = det.stackLimit,
-				optional = cfg.optional,
+				lowBar = cfg.lowBar or 2,
+				highBar = cfg.highBar or det.stackLimit,
+				requiredBar = cfg.requiredBar or 2,
 				depot = cfg.depot or {pos = O + R * i, dir = B},
 			}
 			--TODO: support edit default value

@@ -88,15 +88,27 @@ help.app.plantTree = doc({
 app.plantTree = markIO("app.plantTree")(mkIO(function()
 	local P0, F0 = workState.pos, workState.facing
 	local pinnedSlot = askForPinnedSlot({
-		[1] = {desc = "sapling", itemFilter = glob("*:*sapling"), depot = {pos = P0-F0*2+rightSide(F0), dir = D}},
-		[2] = {desc = "bone meal", itemFilter = glob({"minecraft:bone_meal", "minecraft:dye"}), depot = {pos = P0-F0*2+rightSide(F0)*2, dir = D}, optional = true},
+		[1] = {
+			desc = "sapling",
+			itemFilter = glob("*:*sapling"),
+			depot = {pos = P0 - F0 * 2 + rightSide(F0), dir = D},
+			lowBar = 16,
+			requiredBar = 2,
+		},
+		[2] = {
+			desc = "bone meal",
+			itemFilter = glob({"minecraft:bone_meal", "minecraft:dye"}),
+			depot = {pos = P0 - F0 * 2 + rightSide(F0) * 2, dir = D},
+			highBar = 128,
+			requiredBar = 0,
+		},
 	})
 	local ripen = rep(use(2) * -isNamed("*:*log")) * retry(isNamed("*:*log"))
 	local cutTrunk = dig * move * turn.U * rep(dig * move)
 	local cutLeaf = currentPos:pipe(function(p)
 		return with({destroy = true})(scan(p+(D+F0+leftSide(F0))*2 .. p+(D-F0+rightSide(F0))*2, D, 3)(try(turn.U * dig) * turn.D * dig))
 	end)
-	local needSapling = mkIO(function() return slot.count("*:*sapling") < 10 end)
+	local needSapling = mkIO(function() return slot.count("*:*sapling") < 16 end)
 	local plant = (isNamed("*:*log") + (isNamed("*:*sapling") + use(1)) * ripen) * cutTrunk * try(needSapling * cutLeaf)
 	workState.aiming = 0
 	local originPosp = getPosp()
