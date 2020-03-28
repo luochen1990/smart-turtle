@@ -99,7 +99,7 @@ app.plantTree = markIO("app.plantTree")(mkIO(function()
 			desc = "bone meal",
 			itemFilter = glob({"minecraft:bone_meal", "minecraft:dye"}),
 			depot = {pos = P0 - F0 * 2 + rightSide(F0) * 2, dir = D},
-			highBar = 128,
+			--highBar = 128, --TODO: protect other slot not been unloaded
 			requiredBar = 0,
 		},
 	})
