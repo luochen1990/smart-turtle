@@ -30,6 +30,7 @@ const = {
 		"*:emerald*",
 		"*:lapis*",
 		"*:*_ore",
+		"*:resource", -- for ic2
 	},
 	afterDig = {
 		["minecraft:stone"] = "minecraft:cobblestone",
