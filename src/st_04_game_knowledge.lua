@@ -34,10 +34,12 @@ const = {
 	afterDig = {
 		["minecraft:stone"] = "minecraft:cobblestone",
 		["minecraft:grass_block"] = "minecraft:dirt",
+		["minecraft:grass"] = "minecraft:dirt",
 	},
 	groundBlocks = {
 		"minecraft:dirt",
-		"minecraft:grass_block",
+		"minecraft:grass_block", -- 1.15
+		"minecraft:grass", -- 1.12
 		"minecraft:stone",
 		"minecraft:cobblestone",
 		"minecraft:sand",
