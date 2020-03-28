@@ -247,7 +247,7 @@ swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft
 	end
 	-- [[
 	-- There is three dimention to compare station choices:
-	--	1. distance:    |--->
+	--	1. distance:    |-#-->
 	--	2. item count:   --->|
 	--	3. queue time:  |--->#
 	--
@@ -257,7 +257,7 @@ swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft
 	--	 * `#` is a significant bar, which means this dimention good enough to this point will make significant difference
 	--	 )
 	--
-	--	the distance dimention has one bar, which means if farer than this distance, then fuelLeft is not enough
+	--	the distance dimention has two bar, first means the station is too far, second means the station is near enough to have confidence to visit
 	--	the item count dimention has one bar, which means the item count is enough for the request
 	--	the queue time dimention has two bar, first means the queue is full, second means the queue is empty
 	--
@@ -266,40 +266,47 @@ swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft
 	--	 * if not, return fail;
 	-- ]]
 	-- boolean conditions
-	local nearer = function(pos1, pos2) return vec.manhat(pos1 - startPos) < vec.manhat(pos2 - startPos) end
-	local nearEnough = function(st) return vec.manhat(st.pos - startPos) * 2 <= fuelLeft end
+	local tooFar = function(st) return vec.manhat(st.pos - startPos) > fuelLeft end
 	local itemEnough = function(st) return st.itemCount and st.itemCount >= itemCount end
 	local queueNotFull = function(st) return st.currentQueueLength < st.maxQueueLength end
 	-- number conditions
-	local dist = function(st) return vec.manhat(st.pos - startPos) end
 	local queEmpty = function(st) if st.currentQueueLength == 0 and st.isVisiting == false then return 0 else return 1 end end
+	local dist = function(st) return vec.manhat(st.pos - startPos) end
+	local nearEnough = function(st) if vec.manhat(st.pos - startPos) * const.fuelReserveRatio <= fuelLeft then return 0 else return dist(st) end end
 	local que = function(st) if st.isVisiting == false then return st.currentQueueLength else return st.currentQueueLength + 1 end end
 	--
 
-	local better = comparator(queEmpty, dist, que)
+	local better = comparator(nearEnough, queEmpty, dist, que)
 	local best
 	for _, st in pairs(swarm._state.stationPool[itemType]) do
-		if nearEnough(st) and itemEnough(st) and queueNotFull(st) then
+		if itemEnough(st) and queueNotFull(st) then
 			if best == nil or better(st, best) then
 				best = st
 			end
 		end
 	end
 	if best then
-		return true, best
+		if tooFar(best) then
+			return false, "nearest station is too far away"
+		else
+			return true, best
+		end
 	end
 	return false, "no proper station now, please try latter"
 end
 
 swarm.services.requestFuelStation = function(nStep, startPos, fuelLeft)
+	local ok, res
 	for _, name in ipairs(swarm.config.asFuel) do
-		local count = math.ceil(nStep / _item.fuelHeatContent(name))
-		local ok, res = swarm.services.requestStation(name, count, startPos, fuelLeft)
-		if ok then
-			return true, res
+		if swarm._state.stationPool[name] then
+			local count = math.ceil(nStep / _item.fuelHeatContent(name))
+			ok, res = swarm.services.requestStation(name, count, startPos, fuelLeft)
+			if ok then
+				return true, res
+			end
 		end
 	end
-	return false, "no fuel station available, swarm.config.asFuel = "..literal(swarm.config.asFuel)
+	return false, "no fuel station available: "..showLit(res)
 end
 
 --------------------------------- swarm client ---------------------------------
@@ -585,7 +592,7 @@ foldSuccFlag = function(reqSucc, resp)
 		if ok then
 			return ok, res
 		else
-			return false, {title = "logic error", msg = res}
+			return false, {title = "logic failure", msg = res}
 		end
 	else
 		return false, {title = "network error", msg = resp}
