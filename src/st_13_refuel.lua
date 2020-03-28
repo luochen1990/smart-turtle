@@ -28,6 +28,13 @@ if turtle then
 		return r
 	end
 
+	_fuelCount = (function(limit)
+		return function(heat, target, got)
+			got = got or turtle.getFuelLevel()
+			return math.min(math.floor((limit - got) / heat), math.ceil((target - got) / heat))
+		end
+	end)(turtle.getFuelLimit())
+
 	refuel = mkIO(function()
 		local det = turtle.getItemDetail()
 		if not det then return false, "no fuel available in selected slot" end
@@ -55,7 +62,7 @@ if turtle then
 				local heat = det and _item.fuelHeatContent(det.name)
 				if got + heat > limit then return false, "fuel tank almost full" end
 				turtle.select(sn)
-				turtle.refuel(math.min(math.floor((limit - got) / heat), math.ceil((target - got) / heat)))
+				turtle.refuel(_fuelCount(heat, target, got))
 			end
 		end))
 	end)
@@ -109,12 +116,18 @@ if turtle then
 		local lowBar = availableLowBar + reserveForBack + reserveForRefuel
 		local highBar = default(availableLowBar * const.greedyRefuelRatio)(availableHighBar) + reserveForBack + reserveForRefuel
 		log.verb("Cost "..singleTripCost.." to reach this fuel station, now refueling (".. lowBar ..")...")
+
 		-- begin refuel
+		local greedyTarget = math.max(const.activeRadius * const.greedyRefuelRatio, highBar)
 		local enoughRefuel = with({asFuel = station.itemType})(refuel.fromBackpack.to(lowBar))
-		local greedyRefuel = with({asFuel = station.itemType})(refuel.fromBackpack.to(math.max(const.activeRadius * const.greedyRefuelRatio, highBar)))
-		rep(retry(suck) * -enoughRefuel)() -- repeat until enough --TODO: suck.exact(?)
+		local greedyRefuel = with({asFuel = station.itemType})(refuel.fromBackpack.to(greedyTarget))
+		local heat = _item.fuelHeatContent(station.itemType)
+		local suckFuelTo = function(target)
+			return suck.exact(math.min(station.itemStackLimit, _fuelCount(heat, target)))
+		end
+		rep(retry(suckFuelTo(lowBar)) * -enoughRefuel)() -- repeat until fuel enough
 		if os.getComputerLabel() then
-			rep(suck * -greedyRefuel)() -- try to greedy refuel, stop when suck fail
+			rep(suckFuelTo(greedyTarget) * -greedyRefuel)() -- try to greedy refuel, stop when suck failed
 		end
 		-- refuel done
 		log.verb("Finished refueling, now back to work pos "..show(workState.back.pos))
