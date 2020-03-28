@@ -31,7 +31,6 @@ if turtle then
 				elseif wm.asFuel == latest_asFuel then
 					return latest_glob(itemName)
 				else
-					print(latest_asFuel, itemName)
 					latest_asFuel = wm.asFuel
 					latest_glob = glob(latest_asFuel)
 					return latest_glob(itemName)

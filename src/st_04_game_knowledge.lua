@@ -56,9 +56,9 @@ const = {
 		["minecraft:charcoal"] = 80,
 		["minecraft:coal"] = 80,
 		["minecraft:stick"] = 5,
-		--["minecraft:*_log"] = 15,
-		["minecraft:*_planks"] = 15,
-		["minecraft:*_carpet"] = 3,
+		--["minecraft:*log"] = 15,
+		["minecraft:*planks"] = 15,
+		["minecraft:*carpet"] = 3,
 	},
 }
 
