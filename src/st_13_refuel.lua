@@ -64,7 +64,7 @@ if turtle then
 		workState.cryingFor = "refueling"
 
 		local reserveForMove = vec.manhat(workState.pos - destPos) * const.fuelReserveRatio
-		local reserveForRefuel = _fuelToReserve({O, (workState.fuelStation and workState.fuelStation.pos or nil)}, {workState.pos, destPos})
+		local reserveForRefuel = _fuelToReserve({O, (workState.fuelStation and workState.fuelStation.pos or nil)}, {workState.pos, destPos}) * const.fuelReserveRatio
 		local lowBar = availableLowBar + reserveForMove + reserveForRefuel
 
 		log.cry("Help me! I want move to "..show(destPos).." and need "..lowBar.." fuel at "..show(workState.pos))
@@ -82,7 +82,7 @@ if turtle then
 
 		local _, _, singleTripCost, station = _visitStation({
 			reqStation = function(triedTimes, singleTripCost)
-				local ok, station = requestFuelStation(availableLowBar + singleTripCost * 2)()
+				local ok, station = requestFuelStation(0)() --TODO: more precise calc
 				return ok, station
 			end,
 			beforeLeave = function(triedTimes, singleTripCost, station)
@@ -105,7 +105,7 @@ if turtle then
 		end
 
 		local reserveForBack = singleTripCost * const.fuelReserveRatio
-		local reserveForRefuel = _fuelToReserve1({workState.pos, O}, workState.back.pos)
+		local reserveForRefuel = _fuelToReserve1({workState.pos, O}, workState.back.pos) * const.fuelReserveRatio
 		local lowBar = availableLowBar + reserveForBack + reserveForRefuel
 		local highBar = default(availableLowBar * const.greedyRefuelRatio)(availableHighBar) + reserveForBack + reserveForRefuel
 		log.verb("Cost "..singleTripCost.." to reach this fuel station, now refueling (".. lowBar ..")...")
@@ -127,10 +127,10 @@ if turtle then
 
 	refuel._prepare = mkIOfn(function(opts)
 		local availableLowBar = default(0)(opts.availableLowBar)
-		local destPos = default(workState.pos)(destPos)
+		local destPos = default(workState.pos)(opts.destPos)
 
 		local reserveForMove = vec.manhat(workState.pos - destPos) * const.fuelReserveRatio
-		local reserveForRefuel = _fuelToReserve({O, (workState.fuelStation and workState.fuelStation.pos or nil)}, {workState.pos, destPos})
+		local reserveForRefuel = _fuelToReserve({O, (workState.fuelStation and workState.fuelStation.pos or nil)}, {workState.pos, destPos}) * const.fuelReserveRatio
 		local lowBar = availableLowBar + reserveForMove + reserveForRefuel
 		if turtle.getFuelLevel() >= lowBar then return true end
 

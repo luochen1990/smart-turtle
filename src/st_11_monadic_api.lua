@@ -343,7 +343,13 @@ if turtle then
 		local dir = workState:aimingDir()
 		-- auto refuel
 		if not workState.isRefueling then
-			refuel.prepareMoveStep(dir, 0, const.activeRadius * const.fuelReserveRatio)()
+			local ok = refuel.prepareMoveStep(dir, 0, const.activeRadius * const.fuelReserveRatio)()
+			if not ok then
+				workState.isRefueling = true
+				(move.to(O) * turn.to(F))()
+				workState.isRefueling = false
+				cryForHelpRefueling(workState.pos + dir, const.activeRadius * const.fuelReserveRatio)()
+			end
 		else
 			if turtle.getFuelLevel() < 1 then
 				cryForHelpRefueling(workState.pos + dir, const.activeRadius * const.fuelReserveRatio)()
