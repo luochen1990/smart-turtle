@@ -290,9 +290,13 @@ if turtle then
 		return false, got
 	end))
 
-	callForRestocking = markIOfn("callForRestocking(itemType,count)")(mkIOfn(function(itemType, count)
+	callForRestocking = markIOfn("callForRestocking(itemType,count)")(mkIOfn(function(itemType, count, wait)
 		log.cry("I need "..count.." "..itemType.." at "..show(myPos())) --TODO: create swarm task
-		return retry(try(suck.exactTo(count, itemType)) * ensureItemFromBackpack(itemType, count))()
+		if wait == true then
+			return retry(try(suck.exactTo(count, itemType)) * ensureItemFromBackpack(itemType, count))()
+		else
+			return false
+		end
 	end))
 
 	waitForHelpRestocking = markIOfn("waitForHelpRestocking(itemType,count,sn)")(mkIOfn(function(itemType, count)
@@ -312,7 +316,7 @@ if turtle then
 		local need = highBar - got
 		local depot = (pinned and pinned.depot)
 		if depot then
-			return (savePosp(visitDepot(depot) * (suck.exact(need, itemType) + callForRestocking(itemType, need))))()
+			return (savePosp(visitDepot(depot) * (suck.exact(need, itemType) + callForRestocking(itemType, need, not pinned.optional))))()
 		else
 			return (savePosp(visitDepot({pos = O, dir = F}) * waitForHelpRestocking(itemType, need)))()
 		end
@@ -333,7 +337,7 @@ if turtle then
 		end
 	end))
 
-	-- | slotConfig is like {[1] = {desc, itemFilter, lowBar, highBar, depot}}
+	-- | slotConfig is like {[1] = {desc, itemFilter, lowBar, highBar, optional, depot}}
 	askForPinnedSlot = function(slotConfig)
 		local pinnedSlot = {}
 		for i, cfg in ipairs(slotConfig) do
@@ -362,8 +366,9 @@ if turtle then
 			pinnedSlot[i] = {
 				itemType = det.name,
 				stackLimit = det.stackLimit,
-				lowBar = 1,
+				lowBar = 2,
 				highBar = det.stackLimit,
+				optional = cfg.optional,
 				depot = cfg.depot or {pos = O + R * i, dir = B},
 			}
 			--TODO: support edit default value

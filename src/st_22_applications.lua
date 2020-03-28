@@ -86,14 +86,15 @@ help.app.plantTree = doc({
 	desc = "plant a tree and cut it to get wood, need bone_meal to ripen the tree",
 })
 app.plantTree = markIO("app.plantTree")(mkIO(function()
+	local P0, F0 = workState.pos, workState.facing
 	local pinnedSlot = askForPinnedSlot({
-		[1] = {desc = "sapling", itemFilter = glob("*:*sapling"), depot = {pos = O+B*2+R, dir = D}},
-		[2] = {desc = "bone meal", itemFilter = glob({"minecraft:bone_meal", "minecraft:dye"}), depot = {pos = O+B*2+R*2, dir = D}},
+		[1] = {desc = "sapling", itemFilter = glob("*:*sapling"), depot = {pos = P0-F0*2+rightSide(F0), dir = D}},
+		[2] = {desc = "bone meal", itemFilter = glob({"minecraft:bone_meal", "minecraft:dye"}), depot = {pos = P0-F0*2+rightSide(F0)*2, dir = D}, optional = true},
 	})
-	local ripen = retryUntil(isNamed("*:*log"))(use(2))
+	local ripen = rep(use(2) * -isNamed("*:*log")) * retry(isNamed("*:*log"))
 	local cutTrunk = dig * move * turn.U * rep(dig * move)
 	local cutLeaf = currentPos:pipe(function(p)
-		return with({destroy = true})(scan(p+(D+F+L)*2 .. p+(D+B+R)*2, D, 3)(try(turn.U * dig) * turn.D * dig))
+		return with({destroy = true})(scan(p+(D+F0+leftSide(F0))*2 .. p+(D-F0+rightSide(F0))*2, D, 3)(try(turn.U * dig) * turn.D * dig))
 	end)
 	local needSapling = mkIO(function() return slot.count("*:*sapling") < 10 end)
 	local plant = (isNamed("*:*log") + (isNamed("*:*sapling") + use(1)) * ripen) * cutTrunk * try(needSapling * cutLeaf)

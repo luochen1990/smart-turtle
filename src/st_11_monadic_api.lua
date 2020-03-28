@@ -321,14 +321,14 @@ if turtle then
 	end))
 
 	help.use = doc({
-		signature = "use : ItemName -> IO Bool",
-		usage = "local succ = use(itemName)()",
+		signature = "use : ItemSelector -> IO Bool",
+		usage = "local succ = use(selector)()",
 		desc = {
-			"use item, another use case of turtle.place",
+			"use item, similar to `select(selector) * place`, but keep selected slot unchanged",
 		},
 	})
 	use = markIOfn("use(selector)")(mkIOfn(function(selector)
-		return saveSelected((select(selector) * ensureSlot + select(slot.isEmpty) * ensureItem(selector)) * _aiming.place)()
+		return saveSelected(select(selector) * ensureSlot * _aiming.place)()
 	end))
 
 	help.move = doc({
