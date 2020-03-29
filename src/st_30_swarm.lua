@@ -165,7 +165,7 @@ swarm.services.setVar = function(k, v, id, label)
 		return true, "var created"
 	else -- already exist
 		if v == varInfo.value then
-			return true, "var already exist before"
+			return true, "var already exist"
 		elseif v == nil then -- set to nil, i.e. delete
 			swarm._state.vars[k] = nil
 			return true, "var deleted"
