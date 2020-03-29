@@ -81,12 +81,12 @@ app.flatGround = markIOfn("app.flatGround(area,thickness)")(mkIOfn(function(area
 		}
 	})
 	area = toArea(area)
-	thickness = default(area.diag.y + 1)(thickness)
+	thickness = default(1)(thickness)
 	buildFloor = currentPos:pipe(function(p)
 		local goDown = try(turn.D * (-compare * try(dig) * move) ^ (thickness - 1))
 		return (goDown * currentPos):pipe(function(q) return scan(q .. p, U)(turn.D * place) end)
 	end)
-	return savePosp(with({destroy = true})(scan(area:face(const.dir.U))(try(buildFloor) * turn.U * rep(dig * move))))()
+	return savePosp(with({destroy = true})(scan(area:face(D))(try(buildFloor) * turn.U * rep(dig * move))))()
 end))
 
 help.app.plantTree = doc({
