@@ -202,6 +202,7 @@ if turtle then
 
 			log.verb("[scan] "..show(near)..".."..show(far)..", "..rank.."d "..(projLen+1).." layers toward " .. showDir(mainDir))
 			assert((near..far) == area, "(near..far) should eq area")
+			--assert((near..far) == area, "(near..far) should eq area: ".. showLit({near = near, far = far, area = area}))
 			if rank == 1 then
 				local io1, n = try(savePosd(io)), vec.manhat(far - near)
 				return (move.to(near) * turn.toward(far) * io1 * fmap(plus(1))((move * io1) ^ n))()
