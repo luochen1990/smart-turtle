@@ -71,9 +71,17 @@ const.dir = {
 	['S'] = vec.axis.Z, ['N'] = -vec.axis.Z,
 }
 const.relativeDirectionNames = {"F", "B", "L", "R"}
-const.absoluteDirectionNames = {"E", "W", "S", "N"}
+const.absoluteDirectionNames = {"E", "S", "W", "N"}
 const.preferDirections = {const.dir.U, const.dir.E, const.dir.S, const.dir.W, const.dir.N, const.dir.D}
 const.rotate = { left = const.dir.D, right = const.dir.U, }
+U = const.dir.U
+D = const.dir.D
+if not turtle then
+	E = const.dir.E
+	S = const.dir.S
+	W = const.dir.W
+	N = const.dir.N
+end
 
 showDir = function(d)
 	for k, v in pairs(const.dir) do if d == v then return k end end
