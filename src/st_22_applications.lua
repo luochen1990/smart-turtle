@@ -96,18 +96,19 @@ help.app.plantTree = doc({
 })
 app.plantTree = markIO("app.plantTree")(mkIO(function()
 	local P0, F0 = workState.pos, workState.facing
+	local Q, V = P0 - F0 * 2, rightSide(F0)
 	local pinnedSlot = askForPinnedSlot({
 		[1] = {
 			desc = "sapling",
 			itemFilter = glob("*:*sapling"),
-			depot = {pos = P0 - F0 * 2 + rightSide(F0), dir = D},
+			depot = {pos = Q + V, dir = D},
 			lowBar = 16,
 			requiredBar = 2,
 		},
 		[2] = {
 			desc = "bone meal",
 			itemFilter = glob({"minecraft:bone_meal", "minecraft:dye"}),
-			depot = {pos = P0 - F0 * 2 + rightSide(F0) * 2, dir = D},
+			depot = {pos = Q + V * 2, dir = D},
 			--highBar = 128, --TODO: protect other slot not been unloaded
 			requiredBar = 0,
 		},
@@ -121,7 +122,7 @@ app.plantTree = markIO("app.plantTree")(mkIO(function()
 	local plant = (isNamed("*:*log") + (isNamed("*:*sapling") + use(1)) * ripen) * cutTrunk * try(needSapling * cutLeaf)
 	workState.aiming = 0
 	local originPosp = workState:picklePosp()
-	return rep(with({pinnedSlot = pinnedSlot, asFuel = {"minecraft:stick", "*:*coal"}})(plant * with({destroy = true})(recover(originPosp))))()
+	return rep(with({depot = {pos = Q, dir = D}, pinnedSlot = pinnedSlot, asFuel = {"minecraft:stick", "*:*coal"}})(plant * with({destroy = true})(recover(originPosp))))()
 end))
 
 help.app.mine = doc({
