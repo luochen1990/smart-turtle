@@ -172,12 +172,11 @@ if turtle then
 
 	-- | unload turtle's backpack to depot or station
 	unload = markIO("unload")(mkIO(function()
-		if not workMode.allowInterruption then return false end
 		local succ = false
 		if workMode.preferLocal then
-			succ = (unloadToDepot + unloadToStation)()
+			succ = (unloadToDepot + pure(workMode.allowInterruption) * unloadToStation)()
 		else -- prefer swarm
-			succ = (unloadToStation + unloadToDepot)()
+			succ = (pure(workMode.allowInterruption) * unloadToStation + unloadToDepot)()
 		end
 		return succ or (try(visitDepot(workMode.depot)) * cryForHelpUnloading)()
 	end))
