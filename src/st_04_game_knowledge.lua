@@ -65,6 +65,8 @@ const = {
 	},
 }
 
+------------------------------ about mc directions -----------------------------
+
 const.dir = {
 	['E'] = vec.axis.X, ['W'] = -vec.axis.X,
 	['U'] = vec.axis.Y, ['D'] = -vec.axis.Y,
@@ -87,6 +89,8 @@ showDir = function(d)
 	for k, v in pairs(const.dir) do if d == v then return k end end
 end
 
+-------------------------------- about mc items --------------------------------
+
 _item = {
 	isTurtle = glob("computercraft:turtle_*"),
 	isModem = glob("computercraft:*modem*"),
@@ -103,4 +107,20 @@ _item = {
 		return const.afterDig[name] or name
 	end,
 }
+
+-------------------------------- about mc chunk --------------------------------
+
+entireChunkOf = function(p)
+	local p1 = vec(math.floor(p.x / 16) * 16, 0, math.floor(p.z / 16) * 16)
+	return p1 .. p1 + (vec.axis.X + vec.axis.Z) * 15 + U * 256
+end
+
+chunkPartOf = function(p)
+	local p1 = vec(math.floor(p.x / 16) * 16, math.floor(p.y / 16) * 16, math.floor(p.z / 16) * 16)
+	return p1 .. p1 + vec.one * 15
+end
+
+regionIdOf = function(p)
+	return math.floor(p.x / 512), math.floor(p.z / 512)
+end
 
