@@ -74,10 +74,19 @@ help.app.flatGround = doc({
 	desc = "flat an area, dig all connected things above this area, and build a floor",
 })
 app.flatGround = markIOfn("app.flatGround(area,thickness)")(mkIOfn(function(area, thickness)
+	local pinnedSlot = askForPinnedSlot({
+		[1] = {
+			desc = "floor",
+			itemFilter = combine(notb)(_item.fuelHeatContent), --TODO: filter blocks more precisely
+		}
+	})
 	area = toArea(area)
-	thickness = default(1)(thickness)
-	buildFloor = currentPos:pipe(function(p) return scan(p .. p + D * (thickness-1), U)(turn.D * place) end)
-	return savePosp(with({destroy = true})(scan(area)(buildFloor * turn.U * rep(dig * move))))()
+	thickness = default(area.diag.y + 1)(thickness)
+	buildFloor = currentPos:pipe(function(p)
+		local goDown = try(turn.D * (-compare * try(dig) * move) ^ (thickness - 1))
+		return (goDown * currentPos):pipe(function(q) return scan(q .. p, U)(turn.D * place) end)
+	end)
+	return savePosp(with({destroy = true})(scan(area:face(const.dir.U))(try(buildFloor) * turn.U * rep(dig * move))))()
 end))
 
 help.app.plantTree = doc({

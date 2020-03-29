@@ -5,6 +5,8 @@ identity = function(x) return x end
 
 negate = function(x) return -x end
 
+notb = function(b) return not b end
+
 eq = function(x) return function(y) return x == y end end
 
 plus = function(x) return function(y) return x + y end end
