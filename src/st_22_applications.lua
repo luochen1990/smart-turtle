@@ -24,7 +24,7 @@ app.buildBox = markIOfn("app.buildBox(area)")(mkIOfn(function(area)
 		local a = (face.low + d) .. (face.high + d)
 		table.insert(tasks, {area = a, exec = scan(a)(turn.to(-d) * (compare + try(dig) * place))})
 	end
-	local old_posp = getPosp()
+	local old_posp = workState:picklePosp()
 	while #tasks > 0 do
 		local pos = currentPos()
 		local dis = function(t) return vec.manhat(t.area:vertexNear(pos) - pos) end
@@ -32,7 +32,7 @@ app.buildBox = markIOfn("app.buildBox(area)")(mkIOfn(function(area)
 		local task = table.remove(tasks, 1)
 		task.exec()
 	end
-	recoverPosp(old_posp)()
+	recover(old_posp)()
 	return true
 end))
 
@@ -53,7 +53,7 @@ app.buildFrame = markIOfn("app.buildFrame(area)")(mkIOfn(function(area)
 			end
 		end
 	end
-	local old_posp = getPosp()
+	local old_posp = workState:picklePosp()
 	while #lines > 0 do
 		local pos = currentPos()
 		local dis = function(line) return vec.manhat(line:vertexNear(pos) - pos) end
@@ -61,7 +61,7 @@ app.buildFrame = markIOfn("app.buildFrame(area)")(mkIOfn(function(area)
 		local line = table.remove(lines, 1)
 		scan(line:shift(U), U)(turn.D * place)()
 	end
-	recoverPosp(old_posp)()
+	recover(old_posp)()
 	return true
 end))
 
@@ -120,8 +120,8 @@ app.plantTree = markIO("app.plantTree")(mkIO(function()
 	local needSapling = mkIO(function() return slot.count("*:*sapling") < 16 end)
 	local plant = (isNamed("*:*log") + (isNamed("*:*sapling") + use(1)) * ripen) * cutTrunk * try(needSapling * cutLeaf)
 	workState.aiming = 0
-	local originPosp = getPosp()
-	return rep(with({pinnedSlot = pinnedSlot, asFuel = {"minecraft:stick", "*:*coal"}})(plant * with({destroy = true})(recoverPosp(originPosp))))()
+	local originPosp = workState:picklePosp()
+	return rep(with({pinnedSlot = pinnedSlot, asFuel = {"minecraft:stick", "*:*coal"}})(plant * with({destroy = true})(recover(originPosp))))()
 end))
 
 help.app.mine = doc({

@@ -191,8 +191,9 @@ if turtle then
 	unloadToStation = markIO("unloadToStation")(mkIO(function()
 		if not workState:isOnline() then return false, "workState:isOnline() is false" end
 
+		local back_st = workState:pickle()
+		table.insert(workState.interruptionStack, {reason = "unloading", back = back_st})
 		workState.isUnloading = true
-		workState.back = workState.back or getPosp() --NOTE: in case we are already in another interruption
 
 		_visitStation({
 			reqStation = function(triedTimes, singleTripCost)
@@ -222,10 +223,16 @@ if turtle then
 			cryForHelpUnloading()
 		end
 
-		recoverPosp(workState.back)()
-		workState.back = nil
+		local interruption = workState.interruptionStack[#workState.interruptionStack]
+		interruption.recovering = true
 		workState.isUnloading = false
-		return true
+		local recovered = recover(interruption.dest or interruption.back)()
+		if recovered then
+			workState.interruptionStack[#workState.interruptionStack] = nil
+			return true
+		else
+			cryForHelpMoving()
+		end
 	end))
 
 	-- | tidy backpack to reserve at least 1 empty slot
@@ -245,7 +252,7 @@ if turtle then
 
 		if empty_cnt >= 3 then return true end -- have at least 3 empty slot after discarded
 
-		if not workState.isUnloading then -- avoid recursion
+		if not (workState.isUnloading or workState.isRefueling) then -- avoid recursion
 			local ok = unload()
 			if ok then return true end
 		end

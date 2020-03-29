@@ -52,7 +52,7 @@ if turtle then
 		cryingFor = false,
 		isRunningSwarmTask = false,
 		moveNotCommitted = false,
-		back = false, -- save pos, facing and aiming here before interrupt
+		interruptionStack = {}, -- save interruption reason and back state
 		hasModem = false,
 	}
 	O = vec.zero -- pos when process begin, this init value is used before gps corrected
@@ -77,6 +77,30 @@ if turtle then
 			--if not workState.fuelStation or workState.unloadStation then return false, "swarm server not available" end
 			return true
 		end,
+		picklePosd = function()
+			return {
+				gpsCorrected = workState.gpsCorrected,
+				pos = workState.pos,
+				dir = workState:aimingDir(),
+			}
+		end,
+		picklePosp = function()
+			return {
+				gpsCorrected = workState.gpsCorrected,
+				pos = workState.pos,
+				facing = workState.facing,
+				aiming = workState.aiming,
+			}
+		end,
+		pickle = function()
+			return {
+				gpsCorrected = workState.gpsCorrected,
+				pos = workState.pos,
+				facing = workState.facing,
+				aiming = workState.aiming,
+				selected = turtle.getSelectedSlot(),
+			}
+		end,
 	}})
 
 	-- | run io with specified workMode fields
@@ -99,14 +123,5 @@ if turtle then
 			end)
 		end
 	end
-
-	-- get current pos and posture
-	getPosp = mkIO(function()
-		return {
-			pos = workState.pos,
-			facing = workState.facing,
-			aiming = workState.aiming,
-		}
-	end)
 
 end

@@ -66,8 +66,8 @@ if true then
 	_test.transportLine = markIO("_test.transportLine")(mkIO(function()
 		local s = {pos = O + L * 2 + F * 2 + U * 3, dir = R}
 		local t = {pos = O + R * 4 + U, dir = L}
-		;(recoverPosp(s) * use("minecraft:chest"))()
-		;(recoverPosp(t) * use("minecraft:chest"))()
+		;(recover(s) * use("minecraft:chest"))()
+		;(recover(t) * use("minecraft:chest"))()
 		return app.transportLine(s, t)()
 	end))
 

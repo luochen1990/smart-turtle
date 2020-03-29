@@ -144,16 +144,22 @@ if turtle then
 		return savePosture(savePos(io))
 	end
 
-	-- recover saved pos and posture
-	recoverPosp = markIOfn("recoverPosp(back)")(mkIOfn(function(back)
-		move.to(back.pos)()
-		if back.facing and back.aiming then
-			turn.to(back.facing)()
-			workState.aiming = back.aiming
-		elseif back.dir then
-			turn.to(back.dir)()
+	-- | recover saved pos and posture and sn
+	-- , fails when move.to(back.pos) fail
+	recover = markIOfn("recover(back)")(mkIOfn(function(back)
+		local ok = move.to(back.pos)()
+		if ok then
+			if back.facing and back.aiming then
+				turn.to(back.facing)()
+				workState.aiming = back.aiming
+			elseif back.dir then
+				turn.to(back.dir)()
+			end
+			if back.selected then
+				turtle.select(back.selected)
+			end
 		end
-		return true
+		return ok
 	end))
 
 	help.scan = doc({

@@ -80,12 +80,14 @@ if turtle then
 	end))
 
 	-- | the refuel interrput: back to fuel station and refuel
-	refuel.fromStation = markIOfn("refuel.fromStation(availableLowBar,availableHighBar)")(mkIOfn(function(availableLowBar, availableHighBar, backPosp)
+	-- , if destState is provided then go to destState.pos after refuel
+	refuel.fromStation = markIOfn("refuel.fromStation(availableLowBar,availableHighBar)")(mkIOfn(function(availableLowBar, availableHighBar, destState)
 		if workState.isRefueling then return false, "already interrputing to refuel" end
 		if not workState:isOnline() then return false, "turtle is offline" end
 
+		local back_st = workState:pickle()
+		table.insert(workState.interruptionStack, {reason = "refueling", back = back_st, dest = destState})
 		workState.isRefueling = true
-		workState.back = workState.back or backPosp or getPosp() --NOTE: in case we are already in another interruption
 
 		local _, _, singleTripCost, station = _visitStation({
 			reqStation = function(triedTimes, singleTripCost)
@@ -102,7 +104,7 @@ if turtle then
 				log.verb("Cost "..singleTripCost.." and visited "..triedTimes.." fuel stations, but all unavailable, now waiting for help...")
 			end,
 			waitForUserHelp = function(triedTimes, singleTripCost, station)
-				cryForHelpRefueling(workState.back.pos, availableLowBar)()
+				cryForHelpRefueling(back_st.pos, availableLowBar)()
 			end,
 		})
 		if station then
@@ -112,7 +114,7 @@ if turtle then
 		end
 
 		local reserveForBack = singleTripCost * const.fuelReserveRatio
-		local reserveForRefuel = _fuelToReserve1({workState.pos, O}, workState.back.pos) * const.fuelReserveRatio
+		local reserveForRefuel = _fuelToReserve1({workState.pos, O}, back_st.pos) * const.fuelReserveRatio
 		local lowBar = availableLowBar + reserveForBack + reserveForRefuel
 		local highBar = default(availableLowBar * const.greedyRefuelRatio)(availableHighBar) + reserveForBack + reserveForRefuel
 		log.verb("Cost "..singleTripCost.." to reach this fuel station, now refueling (".. lowBar ..")...")
@@ -130,12 +132,18 @@ if turtle then
 			rep(suckFuelTo(greedyTarget) * -greedyRefuel)() -- try to greedy refuel, stop when suck failed
 		end
 		-- refuel done
-		log.verb("Finished refueling, now back to work pos "..show(workState.back.pos))
+		log.verb("Finished refueling, now back to work pos "..show(back_st.pos))
 
-		recoverPosp(workState.back)()
-		workState.back = nil
+		local interruption = workState.interruptionStack[#workState.interruptionStack]
+		interruption.recovering = true
 		workState.isRefueling = false
-		return true
+		local recovered = recover(interruption.dest or interruption.back)()
+		if recovered then
+			workState.interruptionStack[#workState.interruptionStack] = nil
+			return true
+		else
+			cryForHelpMoving()
+		end
 	end))
 
 	refuel._prepare = mkIOfn(function(opts)
@@ -150,7 +158,7 @@ if turtle then
 		local ok = refuel.fromBackpack.to(lowBar)()
 		if not ok then -- no enough fuel in backpack
 			if workMode.allowInterruption and not workState.isRefueling then -- go to fuel station
-				ok = with({destroy = 1})(refuel.fromStation(availableLowBar, opts.availableHighBar, opts.backPosp))()
+				ok = with({destroy = 1})(refuel.fromStation(availableLowBar, opts.availableHighBar, opts.destState))()
 			end
 		end
 		return ok
@@ -176,7 +184,7 @@ if turtle then
 			destPos = destPos,
 			availableLowBar = availableLowBar,
 			availableHighBar = availableHighBar,
-			backPosp = {pos = destPos},
+			destState = {pos = destPos},
 		})
 	end)
 

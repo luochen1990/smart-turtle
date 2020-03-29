@@ -359,9 +359,9 @@ if turtle then
 
 		local mov = _aiming.move
 		if workMode.destroy == 1 then
-			mov = mov + rep(isGround * dig) * mov
+			mov = mov + rep(isGround * try(reserveSlot) * _aiming.dig) * mov
 		elseif workMode.destroy == 2 or workMode.destroy == true then
-			mov = mov + rep(-isStation * dig) * mov
+			mov = mov + rep(-isStation * try(reserveSlot) * _aiming.dig) * mov
 		end
 		if workMode.violence then
 			mov = mov + rep(attack) * mov
