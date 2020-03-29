@@ -137,7 +137,6 @@ if turtle then
 	}
 
 	detect = _aiming.detect
-	compare = _aiming.compare
 	attack = _aiming.attack
 
 	help.selected = doc({
@@ -260,18 +259,20 @@ if turtle then
 		},
 	})
 	inspect = markIO("inspect")(mkIO(function()
-		ok, res = _aiming.inspect()
+		local ok, res = _aiming.inspect()
 		return ok and res.name
+	end))
+
+	compare = markIO("compare")(mkIO(function()
+		local ok, res = _aiming.inspect()
+		local det = turtle.getItemDetail()
+		return ok and det and (res.name == det.name or _item.afterDig(res.name) == det.name)
 	end))
 
 	isEmpty = -detect
 	isNamed = function(namePat)
 		return fmap(glob(namePat))(inspect)
 	end
-	isSame = mkIO(function()
-		local ok, res = _aiming.inspect()
-		return ok and res.name == turtle.getItemDetail().name
-	end)
 	isTurtle = fmap(_item.isTurtle)(inspect)
 	isChest = fmap(_item.isChest)(inspect)
 	isContainer = fmap(_item.isContainer)(inspect)

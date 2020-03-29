@@ -99,5 +99,8 @@ _item = {
 	isValuable = glob(const.valuableItems),
 	isNotValuable = combine(function(b) return not b end)(glob(const.valuableItems)),
 	fuelHeatContent = globDict(const.fuelHeatContent),
+	afterDig = function(name)
+		return const.afterDig[name] or name
+	end,
 }
 
