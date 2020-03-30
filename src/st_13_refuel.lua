@@ -138,12 +138,9 @@ if turtle then
 		interruption.recovering = true
 		workState.isRefueling = false
 		local recovered = recover(interruption.dest or interruption.back)()
-		if recovered then
-			workState.interruptionStack[#workState.interruptionStack] = nil
-			return true
-		else
-			cryForHelpMoving()
-		end
+		assert(recovered)
+		workState.interruptionStack[#workState.interruptionStack] = nil
+		return true
 	end))
 
 	refuel._prepare = mkIOfn(function(opts)

@@ -230,12 +230,9 @@ if turtle then
 		interruption.recovering = true
 		workState.isUnloading = false
 		local recovered = recover(interruption.dest or interruption.back)()
-		if recovered then
-			workState.interruptionStack[#workState.interruptionStack] = nil
-			return true
-		else
-			cryForHelpMoving()
-		end
+		assert(recovered)
+		workState.interruptionStack[#workState.interruptionStack] = nil
+		return true
 	end))
 
 	-- | tidy backpack to reserve at least 1 empty slot
