@@ -430,6 +430,21 @@ writeLines = function(fileHandle, ls, mode)
 	end
 end
 
+pickle = function(fileHandle, obj)
+	writeFile(fileHandle, literal(obj))
+end
+
+unpickle = function(fileHandle, dft)
+	local s = readFile(fileHandle)
+	if s then
+		local ok, res = safeEval(s)
+		if ok then
+			return unpack(res)
+		end
+	end
+	return dft
+end
+
 ------------------------------- peripheral utils -------------------------------
 
 function findPeripheral(deviceType, sides)

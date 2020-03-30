@@ -59,12 +59,12 @@ swarm.config = {
 	asFuel = {"minecraft:charcoal", "minecraft:coal", "minecraft:white_carpet"},
 }
 
-swarm._state = {
+swarm._state = unpickle(".st_swarm_state", {
 	stationPool = {},
 	workerPool = {},
 	jobPool = {},
 	vars = {},
-}
+})
 
 --------------------------------- swarm service --------------------------------
 
@@ -162,12 +162,14 @@ swarm.services.setVar = function(k, v, id, label)
 	local varInfo = swarm._state.vars[k]
 	if not varInfo then -- create new var
 		swarm._state.vars[k] = {value = v, setterId = id, setterLabel = label, creatTime = os.date()}
+		pickle(".st_swarm_state", swarm._state)
 		return true, "var created"
 	else -- already exist
 		if v == varInfo.value then
 			return true, "var already exist"
 		elseif v == nil then -- set to nil, i.e. delete
 			swarm._state.vars[k] = nil
+			pickle(".st_swarm_state", swarm._state)
 			return true, "var deleted"
 		else
 			return false, "cannot change existing var"
@@ -199,6 +201,7 @@ swarm.services.registerStation = function(opts)
 	end
 	swarm._state.stationPool[itemTy] = default({})(swarm._state.stationPool[itemTy])
 	swarm._state.stationPool[itemTy][show(station.pos)] = station
+	pickle(".st_swarm_state", swarm._state)
 	return true, "station registered"
 end
 
@@ -228,6 +231,7 @@ swarm.services.unregisterStation = function(st)
 	if pool then
 		pool[show(st.pos)] = nil
 	end
+	pickle(".st_swarm_state", swarm._state)
 	return true, "done"
 end
 
