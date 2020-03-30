@@ -184,7 +184,10 @@ if turtle then
 	unloadToDepot = markIO("unloadToDepot")(mkIO(function()
 		if not workMode.depot then return false, "workMode.depot is not provided" end
 
-		return saveSelected(savePosp(visitDepot(workMode.depot) * isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop)))()
+		workState.isUnloading = true
+		local succ = saveSelected(savePosp(visitDepot(workMode.depot) * isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop)))()
+		workState.isUnloading = false
+		return succ
 	end))
 
 	-- | the unload interrput: back to unload station and clear the backpack
