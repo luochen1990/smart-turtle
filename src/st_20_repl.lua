@@ -34,12 +34,12 @@ _repl = replTool.buildRepl({
 		log.verb("repl command `"..cmd.."` aborted ("..msg..")")
 		if turtle and workState.moveNotCommitted then
 			if workState.gpsCorrected then
-				log.verb("move aborted, now correcting gps pos again...")
+				log.verb("[abortHandler] move aborted, now correcting gps pos again...")
 				sleep(1) -- wait for pos stable
 				workState.pos = gpsPos()
-				log.verb("gps pos corrected, now at "..show(workState.pos))
+				log.verb("[abortHandler] current gps pos corrected, now at "..show(workState.pos))
 			else
-				log.cry("move aborted, now trying to approach beginPos and wait for user reboot...")
+				log.cry("[abortHandler] move aborted and beginPos lost, now trying to approach beginPos and wait for user reboot...")
 				move.to(O)()
 				turn.to(F)()
 			end

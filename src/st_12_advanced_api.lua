@@ -4,11 +4,11 @@ if turtle then
 
 	cryForHelpMoving = markIOfn("cryForHelpMoving(beginPos, destPos)")(mkIOfn(function(beginPos, destPos)
 		workState.cryingFor = "moving"
-		log.cry("Cannot move from "..show(beginPos).." to "..show(destPos)..", please help")
+		log.cry("Help! cannot move from "..show(beginPos).." to "..show(destPos)..", now my pos is "..show(workState.pos))
 		printC(colors.green)("Press Ctrl+G to continue...")
 		_waitForKeyCombination(keys.leftCtrl, keys.g)
 		workState.cryingFor = false
-		move.to(destPos)
+		return (move.to(destPos) + cryForHelpMoving(beginPos, destPos))()
 	end))
 
 	turn.toward = markIOfn("turn.toward(destPos,dirFilter,ioCond)")(function(destPos, dirFilter, ioCond)
@@ -127,9 +127,14 @@ if turtle then
 
 	savePos = markIOfn("savePos(io)")(function(io)
 		return mkIO(function()
-			local saved_pos = workState.pos
+			local saved_pos, saved_gpsCorrected = workState.pos, workState.gpsCorrected
 			local r = {io()}
-			move.to(saved_pos)()
+			local p1 = workState.pos
+			if workState.gpsCorrected == saved_gpsCorrected then
+				(move.to(saved_pos) + cryForHelpMoving(p1, saved_pos))()
+			else
+				error("[savePos] this case not implemented yet :(")
+			end
 			return unpack(r)
 		end)
 	end)
@@ -144,10 +149,17 @@ if turtle then
 		return savePosture(savePos(io))
 	end
 
-	-- | recover saved pos and posture and sn
+	-- | recover saved pos and posture and selected sn
 	-- , fails when move.to(back.pos) fail
 	recover = markIOfn("recover(back)")(mkIOfn(function(back)
-		local ok = move.to(back.pos)()
+		assert(back.pos ~= nil and back.gpsCorrected ~= nil)
+		local ok = false
+		if back.gpsCorrected == workState.gpsCorrected then
+			local p1 = workState.pos
+			ok = (move.to(back.pos) + cryForHelpMoving(p1, back.pos))()
+		else
+			error("[recover] this case not implemented yet :(")
+		end
 		if ok then
 			if back.facing and back.aiming then
 				turn.to(back.facing)()

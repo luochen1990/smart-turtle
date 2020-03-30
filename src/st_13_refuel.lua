@@ -184,7 +184,7 @@ if turtle then
 			destPos = destPos,
 			availableLowBar = availableLowBar,
 			availableHighBar = availableHighBar,
-			destState = {pos = destPos},
+			destState = {pos = destPos, gpsCorrected = workState.gpsCorrected},
 		})
 	end)
 
