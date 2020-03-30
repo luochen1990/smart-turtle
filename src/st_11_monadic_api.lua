@@ -168,12 +168,12 @@ if turtle then
 		usage = "local succ = suck()",
 		desc = {
 			"suck items from the aiming dir, into the selected slot",
-			"fails when reserveSlot fails or nothing to suck",
+			"fails when (reserveSlot + unload) fails or nothing to suck",
 			"sub-commands of suck provide more precise control",
 		},
 	})
 	suck = markIO("suck")(mkIO(function()
-		return ( reserveSlot * _aiming.suck() )()
+		return ( (reserveSlot + unload) * _aiming.suck() )()
 	end))
 
 	help.suck.hold = doc({
@@ -181,11 +181,11 @@ if turtle then
 		usage = "local succ = suck.hold(n)()",
 		desc = {
 			"suck into an isolate slot, this will change selected slot",
-			"fails when reserveSlot fails or suck fails",
+			"fails when (reserveSlot + unload) fails or suck fails",
 		},
 	})
 	suck.hold = markIOfn("suck.hold(n)")(mkIOfn(function(n)
-		return ( reserveSlot * select(slot.isEmpty) * _aiming.suck(n) )()
+		return ( (reserveSlot + unload) * select(slot.isEmpty) * _aiming.suck(n) )()
 	end))
 
 	help.suck.exact = doc({
@@ -291,23 +291,23 @@ if turtle then
 		usage = "local succ = dig()",
 		desc = {
 			"dig a block toward the aiming dir",
-			"fails when reserveSlot fails or dig fails",
+			"fails when (reserveSlot + unload) fails or dig fails",
 		},
 	})
 	dig = markIO("dig")(mkIO(function()
-		return ( reserveSlot * _aiming.dig )()
+		return ( (reserveSlot + unload) * _aiming.dig )()
 	end))
 
-	help.digHold = doc({
-		signature = "digHold : IO Bool",
-		usage = "local succ = digHold()",
+	help.dig.hold = doc({
+		signature = "dig.hold : IO Bool",
+		usage = "local succ = dig.hold()",
 		desc = {
 			"dig into an isolate slot, this will change selected slot",
-			"fails when reserveSlot fails or dig fails",
+			"fails when (reserveSlot + unload) fails or dig fails",
 		},
 	})
-	digHold = markIO("digHold")(mkIO(function()
-		return ( reserveSlot * select(slot.isEmpty) * _aiming.dig )()
+	dig.hold = markIO("dig.hold")(mkIO(function()
+		return ( (reserveSlot + unload) * select(slot.isEmpty) * _aiming.dig )()
 	end))
 
 	help.place = doc({

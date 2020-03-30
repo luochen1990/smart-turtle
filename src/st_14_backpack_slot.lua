@@ -165,13 +165,16 @@ if turtle then
 
 	cryForHelpUnloading = markIO("cryForHelpUnloading")(mkIO(function()
 		workState.cryingFor = "unloading"
-		log.cry("Help me! I need to unload backpack at "..show(workState.pos).." (first "..#workMode.pinnedSlot.."slots pinned)")
+		log.cry("Help me! I need to unload backpack at "..show(workState.pos).." (first "..#workMode.pinnedSlot.." slots pinned)")
 		retry(-mkIO(slot._findThat, slot.isNonEmpty, #workMode.pinnedSlot + 1))()
 		workState.cryingFor = false
 	end))
 
 	-- | unload turtle's backpack to depot or station
 	unload = markIO("unload")(mkIO(function()
+		if workState.isUnloading  then -- avoid recursion
+			return false
+		end
 		local succ = false
 		if workMode.preferLocal then
 			succ = (unloadToDepot + pure(workMode.allowInterruption) * unloadToStation)()
@@ -237,7 +240,8 @@ if turtle then
 
 	-- | tidy backpack to reserve at least 1 empty slot
 	-- , when success, return the sn of one reserved empty slot
-	-- , there will be at least 3 empty unpinned slots if tidied/dropped/unloaded
+	-- , there will be at least 3 empty unpinned slots if tidied/dropped
+	-- , if you need to ensure empty slot, use (reserveSlot + unload)
 	reserveSlot = markIO("reserveSlot")(mkIO(function()
 		local sn = slot._findLastThat(slot.isEmpty, #workMode.pinnedSlot + 1)
 		if sn then return true end -- have at least 1 empty slot
@@ -250,13 +254,7 @@ if turtle then
 		local discarded = saveSelected(replicate(3 - empty_cnt)(mkIO(slot.findDroppable, keepLevel):pipe(select) * discard))()
 		empty_cnt = empty_cnt + discarded
 
-		if empty_cnt >= 3 then return true end -- have at least 3 empty slot after discarded
-
-		if not (workState.isUnloading or workState.isRefueling) then -- avoid recursion
-			local ok = unload()
-			if ok then return true end
-		end
-		return false
+		return empty_cnt >= 3
 	end))
 
 	-- | if specified item count is less than lowBar, then restock it to highBar

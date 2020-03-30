@@ -364,11 +364,12 @@ _updateInventoryCo = function(stationDef, needReport)
 end
 
 serveAsProvider = mkIO(function()
-	local getAndHold
-	if isContainer() then -- suck items from chest
-		getAndHold = function(n) return suck.hold(n) end
-	else -- dig or attack --TODO: check tool
-		getAndHold = function(n) return (isContainer * suck.hold(n) + -isContainer * (digHold + try(attack) * suck.hold(n))) end
+	local suckHold = function(n) return reserveSlot * select(slot.isEmpty) * _aiming.suck(n) end
+	local getHold
+	if isContainer() then
+		getHold = suckHold
+	else -- dig or attack
+		getHold = function(n) return (isContainer * suckHold(n) + -isContainer * (dig.hold + try(attack) * suckHold(n))) end
 	end
 
 	local stationDef = {
@@ -385,7 +386,7 @@ serveAsProvider = mkIO(function()
 
 	local registerCo = function()
 		printC(colors.gray)("[provider] detecting item")
-		local det = retry((select(slot.isNonEmpty) + getAndHold(1)) * selected.detail)()
+		local det = retry((select(slot.isNonEmpty) + getHold(1)) * selected.detail)()
 		stationDef.itemType = det.name
 		stationDef.itemStackLimit = det.count + turtle.getItemSpace()
 		stationDef.restockBar = stationDef.itemStackLimit * const.turtle.backpackSlotsNum * 0.25
@@ -412,7 +413,7 @@ serveAsProvider = mkIO(function()
 		with({allowInterruption = false})(function()
 			while true do
 				-- retry to get items
-				local det = retry(getAndHold() * selected.detail)()
+				local det = retry(getHold() * selected.detail)()
 				if det.name == stationDef.itemType then -- got target item
 					print("inventory +"..det.count)
 				else -- got unconcerned item
