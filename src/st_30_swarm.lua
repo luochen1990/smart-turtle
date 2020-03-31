@@ -59,12 +59,15 @@ swarm.config = {
 	asFuel = {"minecraft:charcoal", "minecraft:coal", "minecraft:white_carpet"},
 }
 
-swarm._state = unpickle(".st_swarm_state", {
+swarm._state = defaultDict({
 	stationPool = {},
 	workerPool = {},
 	jobPool = {},
 	vars = {},
-})
+	syncingData = { --NOTE: need to clear saved file when adding fields here
+		protectedAreas = {},
+	},
+})(unpickle(".st_swarm_state", {}))
 
 --------------------------------- swarm service --------------------------------
 
@@ -188,6 +191,38 @@ swarm.services.getVar = function(k)
 	else
 		return false, "variable not found"
 	end
+end
+
+swarm.services.getSyncingData = function(k)
+	local v
+	if k then
+		v = swarm._state.syncingData[k]
+	else
+		v = swarm._state.syncingData
+	end
+	if v then
+		return true, v
+	else
+		return false, "key not found"
+	end
+end
+
+swarm.services.updateSyncingData = function(k, v)
+	swarm._state.syncingData[k] = v
+	local msg = literal('update', k, v)
+	rednet.broadcast(msg, "swarm-sync-#"..k)
+	rednet.broadcast(msg, "swarm-sync")
+	return true, "updated"
+end
+
+swarm.services.appendSyncingData = function(k, v)
+	local ls = swarm._state.syncingData[k]
+	if not ls then return false, "key not found" end
+	table.insert(ls, v)
+	local msg = literal('append', k, v)
+	rednet.broadcast(msg, "swarm-sync-#"..k)
+	rednet.broadcast(msg, "swarm-sync")
+	return true, "appended"
 end
 
 swarm.services.registerStation = function(opts)
@@ -747,6 +782,20 @@ setmetatable(swarm.vars, {
 		end
 	end,
 })
+
+protectArea = function(area)
+	local ok, res = foldSuccFlag(swarm.client.request("swarm.services.appendSyncingData("..literal("protectedAreas", area)..")")())
+	if ok then
+		printC(colors.green)(res)
+	else
+		printC(colors.yellow)("failed to add protected area", res)
+	end
+end
+
+getSyncingData = function(key)
+	local ok, res = foldSuccFlag(swarm.client.request("swarm.services.getSyncingData("..literal(key)..")")())
+	return ok, res
+end
 
 ---------------------------------- swarm roles ---------------------------------
 

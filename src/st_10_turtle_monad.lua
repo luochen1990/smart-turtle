@@ -53,7 +53,6 @@ if turtle then
 		isRunningSwarmTask = false,
 		moveNotCommitted = false,
 		interruptionStack = {}, -- save interruption reason and back state
-		hasModem = false,
 	}
 	O = vec.zero -- pos when process begin, this init value is used before gps corrected
 
@@ -72,7 +71,7 @@ if turtle then
 			return {U, d0, d1, leftSide(d1), rightSide(d0), D}
 		end,
 		isOnline = function()
-			if not workState.hasModem then return false, "wireless modem not available" end
+			if not _computer.hasModem then return false, "wireless modem not available" end
 			if not workState.gpsCorrected then return false, "gps not available" end
 			--if not workState.fuelStation or workState.unloadStation then return false, "swarm server not available" end
 			return true

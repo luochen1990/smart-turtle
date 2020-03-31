@@ -78,7 +78,7 @@ if turtle then
 	end)
 
 	_initTurtleCo = markFn("_initTurtleCo")(function()
-		if not workState.hasModem then return false end
+		if not _computer.hasModem then return false end
 
 		local ok1 = _correctCoordinateSystemWithGps()
 		if not ok1 then
@@ -124,6 +124,8 @@ _inspectCo = function()
 	para_(_printCallStackCo, _inspectSystemStateCo)()
 end
 
+_computer = {}
+
 _initComputerCo = function()
 	local succ = openWirelessModem()
 	if not succ and turtle then
@@ -141,7 +143,7 @@ _initComputerCo = function()
 		end
 	end
 	if succ then
-		if turtle then workState.hasModem = true end
+		_computer.hasModem = true
 		os.queueEvent("computer-modem-ready")
 	else
 		printC(colors.yellow)("WARN: wireless modem not found!")
@@ -150,12 +152,22 @@ _initComputerCo = function()
 	return succ
 end
 
+syncing = {}
+
 -- | init system state
 -- , including computer general state and turtle specific state
 _initSystemCo = function()
 	_initComputerCo()
 	if turtle then
 		_initTurtleCo()
+	end
+	if _computer.hasModem then
+		local ok, res = getSyncingData()
+		if ok then
+			syncing = res
+		else
+			printC(colors.orange)("[_initSystemCo] failed to get syncing data: "..showLit(res))
+		end
 	end
 	os.queueEvent("system-ready")
 end
