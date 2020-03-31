@@ -508,7 +508,7 @@ serveAsRequester = mkIO(function()
 		retry(_reg)()
 	end
 
-	local keepDroppingCo = rep(retry(isChest * select(slot.isNonEmpty) * drop))
+	local keepDroppingCo = rep(retry(isContainer * select(slot.isNonEmpty) * drop))
 
 	registerCo()
 	para_(keepDroppingCo, _updateInventoryCo(stationDef))()

@@ -54,6 +54,8 @@ const = {
 		"minecraft:shulker_box",
 	},
 	otherContainerBlocks = { -- containers other than turtle or chest
+		"minecraft:lit_furnace",
+		"minecraft:hopper",
 	},
 	fuelHeatContent = {
 		["minecraft:lava_bucket"] = 1000,
@@ -98,7 +100,7 @@ _item = {
 	isChest = glob(const.chestBlocks),
 	isContainer = (function()
 		local p = glob(const.otherContainerBlocks)
-		return function(name) return _item.isChest(name) or _item.isTurtle(name) or p(name) end
+		return function(name) return _item.isChest(name) or p(name) end
 	end)(),
 	isCheap = glob(const.cheapItems),
 	isValuable = glob(const.valuableItems),
