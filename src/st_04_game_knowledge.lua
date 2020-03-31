@@ -43,6 +43,7 @@ const = {
 		"minecraft:grass", -- 1.12
 		"minecraft:stone",
 		"minecraft:cobblestone",
+		"minecraft:leaves", -- avoid growing leaves block road
 		"minecraft:sand",
 		"minecraft:end_stone",
 		"minecraft:netherrack",
