@@ -151,11 +151,11 @@ end))
 help.app.clearChunk = doc({
 	signature = "app.clearChunk : IO Bool",
 	usage = "app.clearChunk()",
-	desc = "clear current chunk, dig all blocks and discard not-valuable items",
+	desc = "clear current chunk, dig all blocks below and discard not-valuable items",
 })
 app.clearChunk = markIO("app.clearChunk")(mkIO(function()
-	local area = chunkPartOf(workState.pos)
-	local a1 = area:expandToInclude(area:shift(D * 100))
+	local area = entireChunkOf(workState.pos)
+	local a1 = area:shift(D * (1 + area.high.y - workState.pos.y))
 	return savePosp( with({destroy = true})( scan(a1, D, 3)(try(turn.U * dig) * (turn.D * dig)) ) )()
 end))
 
