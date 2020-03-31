@@ -281,6 +281,9 @@ if turtle then
 		local ok, res = _aiming.inspect()
 		return ok and (_item.isTurtle(res.name) or _item.isChest(res.name))
 	end)
+	isProtected = mkIO(function()
+		return false
+	end)
 
 	isWorkArea = mkIO(function()
 		return not (workMode.workArea and workMode.workArea:contains(workState.pos) and not workMode.workArea:contains(workState.pos + workState:aimingDir()))
@@ -359,9 +362,9 @@ if turtle then
 
 		local mov = _aiming.move
 		if workMode.destroy == 1 then
-			mov = mov + rep(isGround * try(reserveSlot) * _aiming.dig) * mov
+			mov = mov + try(-isProtected * isGround * rep(try(reserveSlot) * _aiming.dig)) * mov
 		elseif workMode.destroy == 2 or workMode.destroy == true then
-			mov = mov + rep(-isStation * try(reserveSlot) * _aiming.dig) * mov
+			mov = mov + try(-isProtected * -isTurtle * -isContainer * rep(try(reserveSlot) * _aiming.dig)) * mov
 		end
 		if workMode.violence then
 			mov = mov + rep(attack) * mov
