@@ -271,6 +271,7 @@ swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft
 	-- ]]
 	-- boolean conditions
 	local tooFar = function(st) return vec.manhat(st.pos - startPos) > fuelLeft end
+	local roleCorrect = function(st) if itemCount >= 0 then return st.deliverPriority else return st.restockPriority end end
 	local itemEnough = function(st) return st.itemCount and st.itemCount >= itemCount end
 	local queueNotFull = function(st) return st.currentQueueLength < st.maxQueueLength end
 	-- number conditions
@@ -283,7 +284,7 @@ swarm.services.requestStation = function(itemType, itemCount, startPos, fuelLeft
 	local better = comparator(nearEnough, queEmpty, dist, que)
 	local best
 	for _, st in pairs(swarm._state.stationPool[itemType]) do
-		if itemEnough(st) and queueNotFull(st) then
+		if roleCorrect(st) and itemEnough(st) and queueNotFull(st) then
 			if best == nil or better(st, best) then
 				best = st
 			end
