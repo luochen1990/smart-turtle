@@ -84,12 +84,18 @@ swarm._startService = (function()
 				log.verb("station: "..literal(station.role, station.itemType, station.itemCount, station.pos))
 				if station.restockPriority and cnt < station.restockBar then
 					local intent = station.deliverBar - cnt
-					local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.restockPriority}
+					local info = {
+						itemType = station.itemType, pos = station.pos, dir = station.dir,
+						intent = intent, priority = station.restockPriority,
+					}
 					table.insert(requesters, info)
 				end
 				if station.deliverPriority and cnt > station.deliverBar then
 					local intent = cnt - station.restockBar
-					local info = {pos = station.pos, dir = station.dir, intent = intent, priority = station.deliverPriority}
+					local info = {
+						itemType = station.itemType, pos = station.pos, dir = station.dir,
+						intent = intent, priority = station.deliverPriority,
+					}
 					table.insert(providers, info)
 				end
 			end
