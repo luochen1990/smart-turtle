@@ -277,6 +277,7 @@ if turtle then
 	isChest = fmap(_item.isChest)(inspect)
 	isContainer = fmap(_item.isContainer)(inspect)
 	isGround = fmap(glob(const.groundBlocks))(inspect)
+	isUnstable = fmap(glob(const.unstableBlocks))(inspect)
 	isStation = mkIO(function()
 		local ok, res = _aiming.inspect()
 		return ok and (_item.isTurtle(res.name) or _item.isChest(res.name))
@@ -367,9 +368,9 @@ if turtle then
 
 		local mov = _aiming.move
 		if workMode.destroy == 1 then
-			mov = mov + try(isGround * -isProtected * rep(try(reserveSlot) * _aiming.dig)) * mov
+			mov = mov + try((isUnstable + isGround * -isProtected) * rep(try(reserveSlot) * _aiming.dig)) * mov
 		elseif workMode.destroy == 2 or workMode.destroy == true then
-			mov = mov + try(-isTurtle * -isContainer * -isProtected * rep(try(reserveSlot) * _aiming.dig)) * mov
+			mov = mov + try((isUnstable + -isTurtle * -isContainer * -isProtected) * rep(try(reserveSlot) * _aiming.dig)) * mov
 		end
 		if workMode.violence then
 			mov = mov + rep(attack) * mov
