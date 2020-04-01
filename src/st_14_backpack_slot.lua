@@ -188,9 +188,9 @@ if turtle then
 		if not workMode.depot then return false, "workMode.depot is not provided" end
 
 		workState.isUnloading = true
-		local succ = saveSelected(savePosp(visitDepot(workMode.depot) * isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop)))()
+		saveSelected(savePosp(visitDepot(workMode.depot) * isStation * rep(select(slot.isNonEmpty, #workMode.pinnedSlot + 1) * drop)))()
 		workState.isUnloading = false
-		return succ
+		return slot.count(slot.isEmpty, #workMode.pinnedSlot + 1, 3) >= 3
 	end))
 
 	-- | the unload interrput: back to unload station and clear the backpack
