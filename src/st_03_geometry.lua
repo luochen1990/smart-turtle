@@ -175,6 +175,13 @@ mkArea, isArea = (function()
 				end
 				return near
 			end,
+			longestAxis = function(a)
+				if a.diag.x >= a.diag.y then
+					if a.diag.x >= a.diag.z then return vec.axis.X else return vec.axis.Z end
+				else
+					if a.diag.y >= a.diag.z then return vec.axis.Y else return vec.axis.Z end
+				end
+			end,
 			face = function(a, dir)
 				local projLen = a.diag:dot(dir)
 				if projLen > 0 then
