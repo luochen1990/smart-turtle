@@ -410,12 +410,16 @@ _updateInventoryCo = function(stationDef, needReport)
 end
 
 serveAsProvider = mkIO(function()
+	workMode.allowInterruption = false
+	workMode.depot = false
+
 	local suckHold = function(n) return reserveSlot * select(slot.isEmpty) * _aiming.suck(n) end
+	local digHold = reserveSlot * select(slot.isEmpty) * _aiming.dig
 	local getHold
 	if isContainer() then
 		getHold = suckHold
 	else -- dig or attack
-		getHold = function(n) return (isContainer * suckHold(n) + -isContainer * (dig.hold + try(attack) * suckHold(n))) end
+		getHold = function(n) return (isContainer * suckHold(n) + -isContainer * (digHold + try(attack) * suckHold(n))) end
 	end
 
 	local stationDef = {
@@ -456,18 +460,16 @@ serveAsProvider = mkIO(function()
 	end
 
 	local produceCo = function()
-		with({allowInterruption = false})(function()
-			while true do
-				-- retry to get items
-				local det = retry(getHold() * selected.detail)()
-				if det.name == stationDef.itemType then -- got target item
-					print("inventory +"..det.count)
-				else -- got unconcerned item
-					saveDir(turn.lateral * drop)()
-				end
-				sleep(0.01)
+		while true do
+			-- retry to get items
+			local det = retry(getHold() * selected.detail)()
+			if det.name == stationDef.itemType then -- got target item
+				print("inventory +"..det.count)
+			else -- got unconcerned item
+				saveDir(turn.lateral * drop)()
 			end
-		end)()
+			sleep(0.01)
+		end
 	end
 
 	registerCo()
@@ -475,6 +477,9 @@ serveAsProvider = mkIO(function()
 end)
 
 serveAsUnloader = mkIO(function()
+	workMode.allowInterruption = false
+	workMode.depot = false
+
 	local stationDef = {
 		role = "unloader",
 		pos = workState.pos - workState:aimingDir(),
@@ -512,6 +517,9 @@ serveAsUnloader = mkIO(function()
 end)
 
 serveAsRequester = mkIO(function()
+	workMode.allowInterruption = false
+	workMode.depot = false
+
 	local stationDef = {
 		role = "requester",
 		pos = workState.pos - workState:aimingDir(),
@@ -556,6 +564,9 @@ serveAsRequester = mkIO(function()
 end)
 
 serveAsStorage = mkIO(function()
+	workMode.allowInterruption = false
+	workMode.depot = false
+
 	local stationDef = {
 		role = "storage",
 		pos = workState.pos - workState:aimingDir(),

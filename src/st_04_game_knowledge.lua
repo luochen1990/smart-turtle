@@ -58,6 +58,7 @@ const = {
 	otherContainerBlocks = { -- containers other than turtle or chest
 		"minecraft:lit_furnace",
 		"minecraft:hopper",
+		"ic2:te", --NOTE: this is not very precise since ic2 mod calls many items as `te`
 	},
 	fuelHeatContent = {
 		["minecraft:lava_bucket"] = 1000,

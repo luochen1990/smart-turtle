@@ -181,7 +181,7 @@ if turtle then
 		else -- prefer swarm
 			succ = (pure(workMode.allowInterruption) * unloadToStation + unloadToDepot)()
 		end
-		return succ or (try(visitDepot(workMode.depot)) * cryForHelpUnloading)()
+		return succ or (try(pure(workMode.depot) * visitDepot(workMode.depot)) * cryForHelpUnloading)()
 	end))
 
 	unloadToDepot = markIO("unloadToDepot")(mkIO(function()
