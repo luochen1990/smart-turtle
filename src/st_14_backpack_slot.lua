@@ -324,7 +324,8 @@ if turtle then
 		local depot = (pinned and pinned.depot)
 		if depot then
 			local fetch = suck.exact(required, itemType) * try(suck.exact(need - required, itemType))
-			local mayCall = (ensureItemFromBackpack(itemType, lowBar) + callForRestocking(itemType, need, slot.count(itemType) >= requiredBar))
+			local gotRequiredItem = mkIO(function() return (slot.count(itemType, 1, requiredBar) >= requiredBar) end)
+			local mayCall = ensureItemFromBackpack(itemType, lowBar) + gotRequiredItem:bind(function(async) return callForRestocking(itemType, need, async) end)
 			return (savePosp(visitDepot(depot) * (fetch / mayCall)))()
 		else
 			return (savePosp(visitDepot({pos = O, dir = F}) * waitForHelpRestocking(itemType, need)))()
